@@ -2,12 +2,12 @@
 #define CONFIG_H
 
 // Pin definitions
-#define IR_EMITTER_PIN D5
-#define OLED_SDA_PIN D2
+#define TOUCH_BUTTON_PIN D0
 #define OLED_SCL_PIN D1
+#define OLED_SDA_PIN D2
+#define SPEAKER_PIN D3
+#define IR_EMITTER_PIN D5
 #define IR_RECEIVER_PIN D6
 #define NEOPIXEL_PIN D7
-#define TOUCH_BUTTON_PIN D0
-#define SPEAKER_PIN D3
 
 #endif // CONFIG_H
