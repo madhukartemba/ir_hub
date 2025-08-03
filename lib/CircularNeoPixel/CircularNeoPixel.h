@@ -15,6 +15,9 @@ private:
     unsigned long lastUpdate;
     uint8_t animationStep;
     bool animationRunning;
+    uint8_t currentAnimation; // Track which animation is running
+    CRGB animationColor;      // Store the current animation color
+    uint8_t animationSpeed;   // Store the current animation speed
     
 public:
     // Constructor
@@ -47,6 +50,12 @@ public:
     void wave(CRGB color, uint8_t speed = 50);
     void rainbow(uint8_t speed = 50);
     
+    // Timed effects (run for specified duration)
+    void rotateFor(CRGB color, uint8_t speed, unsigned long duration);
+    void pulseFor(CRGB color, uint8_t speed, unsigned long duration);
+    void waveFor(CRGB color, uint8_t speed, unsigned long duration);
+    void rainbowFor(uint8_t speed, unsigned long duration);
+    
     // Utility functions
     uint8_t getNumLeds();
     bool isInitialized();
@@ -55,6 +64,11 @@ public:
     // Animation control
     void update();
     bool isAnimationRunning();
+    
+    // Private variables for timed animations
+private:
+    unsigned long animationEndTime;
+    bool timedAnimation;
 };
 
 #endif // CIRCULAR_NEOPIXEL_H 
