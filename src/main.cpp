@@ -1,19 +1,22 @@
 #include <Arduino.h>
 #include "config.h"
+#include <Speaker.h>
 
-// put function declarations here:
-int myFunction(int, int);
+// Create speaker instance
+Speaker speaker(SPEAKER_PIN);
 
 void setup() {
   // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  Serial.begin(115200);
+  Serial.println("Starting up...");
+  
+  // Initialize the speaker
+  speaker.begin();
+  
+  // Test the speaker with a startup beep
+  speaker.shortBeep();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
 }
