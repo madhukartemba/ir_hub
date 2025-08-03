@@ -10,4 +10,7 @@
 #define IR_RECEIVER_PIN D6
 #define NEOPIXEL_PIN D7
 
+// LED ring configuration
+#define NUM_LEDS 9
+
 #endif // CONFIG_H
