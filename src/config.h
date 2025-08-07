@@ -11,6 +11,6 @@
 #define NEOPIXEL_PIN D7
 
 // LED configuration
-#define NUM_LEDS 9  // Number of LEDs in the circular strip
+#define NUM_LEDS 13  // Number of LEDs in the circular strip
 
 #endif // CONFIG_H
