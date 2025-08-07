@@ -1,96 +1,64 @@
 #include <Arduino.h>
+#include "LedRing.h"
+#include "Speaker.h"
 #include "config.h"
-#include <Speaker.h>
-#include <CircularNeoPixel.h>
 
-// Create speaker instance
+
+LedRing ring(NEOPIXEL_PIN, NUM_LEDS);
 Speaker speaker(SPEAKER_PIN);
 
-// Create LED ring instance
-CircularNeoPixel ledRing(NEOPIXEL_PIN, NUM_LEDS);
+// Use all available modes
+const LedRingMode modes[] = {
+    OFF, LOADING, BREATHE, PROGRESS, WAVE, PULSE, FLASH, RAINBOW
+};
+const int modeCount = sizeof(modes) / sizeof(modes[0]);
+int currentModeIndex = 0;
 
-// Touch button state variables
+unsigned long lastButtonTime = 0;
 bool lastButtonState = HIGH;
-bool buttonPressed = false;
-unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 50; // 50ms debounce time
 
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-  Serial.println("Starting up...");
-  
-  // Initialize the speaker
-  speaker.begin();
-  
-  // Initialize LED ring
-  ledRing.init();
-  
-  // Initialize touch button pin
-  pinMode(TOUCH_BUTTON_PIN, INPUT_PULLUP);
-  
-  // Test the speaker with a startup beep
-  speaker.shortBeep();
-  
-  // Run LED ring startup animation
-  ledRing.startUp(CRGB::Blue);
-  
-  // Stop any running animations after startup
-  ledRing.stopAnimation();
-  
-  Serial.println("Touch button test ready - press the button to beep!");
+    Serial.begin(9600);
+
+    pinMode(TOUCH_BUTTON_PIN, INPUT); // assumes active LOW button
+
+    speaker.begin();
+
+    ring.begin();
+    ring.setBrightness(255);
+    ring.setColor(CRGB::Green); // Default color for all but rainbow
+    ring.setMode(modes[currentModeIndex]);
+
+    Serial.println("LedRing Test: Touch D0 to cycle animations");
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  
-  // Update LED animations
-  ledRing.update();
-  
-  // Read the current button state
-  bool reading = digitalRead(TOUCH_BUTTON_PIN);
-  
-  // Check if the button state has changed
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();
-  }
-  
-  // If enough time has passed since the last change, check if the button was pressed
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    // If the button state has changed and is now LOW (pressed)
-    if (reading == LOW && !buttonPressed) {
-      buttonPressed = true;
-      Serial.println("Button pressed - BEEP!");
-      speaker.beep(200); // Beep for 200ms
-      
-      // Change LED effect when button is pressed (run for 2 seconds each)
-      static uint8_t effect = 0;
-      switch (effect) {
-        case 0:
-          ledRing.rotateFor(CRGB::Red, 100, 2000);
-          break;
-        case 1:
-          ledRing.pulseFor(CRGB::Green, 50, 2000);
-          break;
-        case 2:
-          ledRing.waveFor(CRGB::Blue, 75, 2000);
-          break;
-        case 3:
-          ledRing.rainbowFor(25, 2000);
-          break;
-      }
-      effect = (effect + 1) % 4;
+    ring.update();
+
+    // Button debounce
+    bool currentButtonState = digitalRead(TOUCH_BUTTON_PIN);
+    if (lastButtonState == LOW && currentButtonState == HIGH) {
+        unsigned long now = millis();
+        if (now - lastButtonTime > 250) { // debounce delay
+            // Next mode
+            currentModeIndex = (currentModeIndex + 1) % modeCount;
+            LedRingMode mode = modes[currentModeIndex];
+
+            // Set color for all except rainbow
+            if (mode != RAINBOW) {
+                ring.setColor(CRGB::Green);
+            }
+            // Set progress for PROGRESS mode (demo: 50%)
+            if (mode == PROGRESS) {
+                ring.setProgress(0.5f);
+            }
+
+            ring.setMode(mode);
+            Serial.print("Switched to mode: ");
+            Serial.println(currentModeIndex);
+
+            lastButtonTime = now;
+        }
     }
-    // If the button is released
-    else if (reading == HIGH && buttonPressed) {
-      buttonPressed = false;
-      Serial.println("Button released");
-    }
-  }
-  
-  // Update the last button state
-  lastButtonState = reading;
-  
-  // Small delay to prevent overwhelming the serial output
-  delay(10);
+    lastButtonState = currentButtonState;
 }

@@ -16,6 +16,7 @@ public:
     void begin() {
         pinMode(pin, OUTPUT);
         isInitialized = true;
+        stop(); // Ensure no sound is playing on startup
     }
     
     // Basic beep with default duration (100ms)
