@@ -32,6 +32,10 @@ Button::~Button() {
 
 void Button::begin() {
     if (oneButton) {
+
+        // Initialize OneButton
+        oneButton->setClickMs(50);        // Default is 200ms for single click
+
         // Set up internal callbacks using static methods
         oneButton->attachClick(staticClickCallback, this);
         oneButton->attachDoubleClick(staticDoubleClickCallback, this);

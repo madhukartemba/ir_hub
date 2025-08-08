@@ -12,5 +12,6 @@
 
 // LED configuration
 #define NUM_LEDS 13  // Number of LEDs in the circular strip
+#define CENTER_LED 8
 
 #endif // CONFIG_H

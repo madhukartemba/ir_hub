@@ -51,6 +51,7 @@ void setup() {
     button.setSoundEnabled(true);
 
     ring.begin();
+    ring.setCenterLed(CENTER_LED);
     ring.setBrightness(255);
     ring.setColor(CRGB::Green); // Default color for all but rainbow
     ring.setMode(modes[currentModeIndex]);
