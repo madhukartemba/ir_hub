@@ -1,13 +1,10 @@
 #include "Button.h"
 
-Button::Button(uint8_t buttonPin, Speaker& speakerRef)
+Button::Button()
     : oneButton(nullptr),
-      speaker(speakerRef),
-      buttonPin(buttonPin),
+      speaker(nullptr),
+      buttonPin(0),
       soundEnabled(true) {
-    // Initialize OneButton
-    oneButton = new OneButton(buttonPin, false, false);
-
     // Set default sound settings
     clickSound = {1000, 25};        // 1kHz, 25ms
     doubleClickSound = {1000, 25};  // 1kHz, 25ms
@@ -28,9 +25,14 @@ Button::~Button() {
     }
 }
 
-void Button::begin() {
-    if (oneButton) {
+void Button::begin(uint8_t buttonPin, Speaker& speakerRef) {
+    this->buttonPin = buttonPin;
+    this->speaker = &speakerRef;
+    
+    // Initialize OneButton
+    oneButton = new OneButton(buttonPin, false, false);
 
+    if (oneButton) {
         // Initialize OneButton
         oneButton->setClickMs(50);        // Default is 200ms for single click
 
@@ -132,7 +134,9 @@ void Button::onButtonLongPressStop() {
 }
 
 void Button::playSound(const SoundSettings& sound) {
-    speaker.beep(sound.frequency, sound.duration);
+    if (speaker) {
+        speaker->beep(sound.frequency, sound.duration);
+    }
 }
 
 // Static callback implementations

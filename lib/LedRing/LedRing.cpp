@@ -1,4 +1,5 @@
 #include "LedRing.h"
+#include "../Log/Log.h"
 #include <math.h>
 
 LedRing::LedRing(uint8_t pin, uint8_t numLeds)
@@ -14,7 +15,30 @@ LedRing::~LedRing() {
 }
 
 void LedRing::begin() {
-    FastLED.addLeds<WS2812B, D7, GRB>(leds, numLeds);
+    begin(pin, numLeds);
+}
+
+void LedRing::begin(uint8_t pin, uint8_t numLeds) {
+    if (pin == -1) {
+        LOG_ERROR("LedRing pin not set");
+        return;
+    }
+
+    if (numLeds == 0) {
+        LOG_ERROR("LedRing numLeds not set");
+        return;
+    }
+
+    this->pin = pin;
+    this->numLeds = numLeds;
+    switch (pin) {  
+        case D7:
+            FastLED.addLeds<WS2812B, D7, GRB>(leds, numLeds);
+            break;
+        default:
+            LOG_ERROR("LedRing pin not supported");
+            return;
+    }
     FastLED.setBrightness(brightness);
     clear();
     show();

@@ -2,6 +2,7 @@
 #define SPEAKER_H
 
 #include <Arduino.h>
+#include "../Log/Log.h"
 
 class Speaker {
 private:
@@ -11,9 +12,20 @@ private:
 public:
     // Constructor
     Speaker(uint8_t speakerPin) : pin(speakerPin), isInitialized(false) {}
-    
-    // Initialize the speaker pin
+
+    Speaker() : pin(-1), isInitialized(false) {}
+
     void begin() {
+        if (pin == -1) {
+            LOG_ERROR("Speaker pin not set");
+            return;
+        }
+        begin(pin);
+    }
+
+    // Initialize the speaker pin
+    void begin(uint8_t speakerPin) {
+        pin = speakerPin;
         pinMode(pin, OUTPUT);
         isInitialized = true;
         stop(); // Ensure no sound is playing on startup

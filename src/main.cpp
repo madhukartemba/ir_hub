@@ -1,14 +1,6 @@
 #include <Arduino.h>
-#include "LedRing.h"
-#include "Speaker.h"
-#include "Button.h"
 #include "config.h"
-#include "Router.h"
-
-
-LedRing ring(NEOPIXEL_PIN, NUM_LEDS);
-Speaker speaker(SPEAKER_PIN);
-Button button(TOUCH_BUTTON_PIN, speaker);
+#include "Global/Global.h"
 
 // Use all available modes
 const LedRingMode modes[] = {
@@ -42,15 +34,12 @@ void setup() {
     Serial.begin(9600);
 
     speaker.begin();
-    button.begin();
+    button.begin(TOUCH_BUTTON_PIN, speaker);
     
     // Set up button callbacks
     button.setClickCallback(onButtonClick);
-    
-    // Configure button sounds (optional)
-    button.setSoundEnabled(true);
 
-    ring.begin();
+    ring.begin(NEOPIXEL_PIN, NUM_LEDS);
     ring.setCenterLed(CENTER_LED);
     ring.setBrightness(255);
     ring.setColor(CRGB::Green); // Default color for all but rainbow

@@ -105,7 +105,4 @@ class Router {
         }
       }
     };
-
-// Global router instance
-extern Router router;
     

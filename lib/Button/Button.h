@@ -7,12 +7,12 @@
 
 class Button {
 public:
-    // Constructor - accepts Speaker object reference
-    Button(uint8_t buttonPin, Speaker& speakerRef);
+    // Empty constructor
+    Button();
     ~Button();
 
-    // Initialize the button
-    void begin();
+    // Initialize the button with pin and speaker
+    void begin(uint8_t buttonPin, Speaker& speakerRef);
 
     // Button event callbacks
     void setClickCallback(void (*callback)());
@@ -35,7 +35,7 @@ public:
 
 private:
     OneButton* oneButton;
-    Speaker& speaker;
+    Speaker* speaker;
     uint8_t buttonPin;
     bool soundEnabled;
 
