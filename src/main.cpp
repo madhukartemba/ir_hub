@@ -1,11 +1,13 @@
 #include <Arduino.h>
 #include "LedRing.h"
 #include "Speaker.h"
+#include "Button.h"
 #include "config.h"
 
 
 LedRing ring(NEOPIXEL_PIN, NUM_LEDS);
 Speaker speaker(SPEAKER_PIN);
+Button button(TOUCH_BUTTON_PIN, speaker);
 
 // Use all available modes
 const LedRingMode modes[] = {
@@ -14,15 +16,39 @@ const LedRingMode modes[] = {
 const int modeCount = sizeof(modes) / sizeof(modes[0]);
 int currentModeIndex = 0;
 
-unsigned long lastButtonTime = 0;
-bool lastButtonState = HIGH;
+// Function to handle button clicks
+void onButtonClick() {
+    // Next mode
+    currentModeIndex = (currentModeIndex + 1) % modeCount;
+    LedRingMode currentMode = modes[currentModeIndex];
+
+    // Set random color for all except rainbow
+    if (currentMode != RAINBOW) {
+        CRGB randomColor = CRGB(random(0, 256), random(0, 256), random(0, 256));
+        ring.setColor(randomColor);
+    }
+    // Set progress for PROGRESS mode (demo: 50%)
+    if (currentMode == PROGRESS) {
+        ring.setProgress(0.5f);
+    }
+
+    ring.setMode(currentMode);
+    Serial.print("Switched to mode: ");
+    Serial.println(currentModeIndex);
+}
 
 void setup() {
     Serial.begin(9600);
 
-    pinMode(TOUCH_BUTTON_PIN, INPUT); // assumes active LOW button
-
     speaker.begin();
+    button.begin();
+    
+    // Set up button callbacks
+    button.setClickCallback(onButtonClick);
+    
+    // Configure button sounds (optional)
+    button.setClickSoundBeep();
+    button.setSoundEnabled(true);
 
     ring.begin();
     ring.setBrightness(255);
@@ -34,32 +60,5 @@ void setup() {
 
 void loop() {
     ring.update();
-
-    // Button debounce
-    bool currentButtonState = digitalRead(TOUCH_BUTTON_PIN);
-    if (lastButtonState == LOW && currentButtonState == HIGH) {
-        unsigned long now = millis();
-        if (now - lastButtonTime > 250) { // debounce delay
-            // Next mode
-            currentModeIndex = (currentModeIndex + 1) % modeCount;
-            LedRingMode currentMode = modes[currentModeIndex];
-
-            // Set random color for all except rainbow
-            if (currentMode != RAINBOW) {
-                CRGB randomColor = CRGB(random(0, 256), random(0, 256), random(0, 256));
-                ring.setColor(randomColor);
-            }
-            // Set progress for PROGRESS mode (demo: 50%)
-            if (currentMode == PROGRESS) {
-                ring.setProgress(0.5f);
-            }
-
-            ring.setMode(currentMode);
-            Serial.print("Switched to mode: ");
-            Serial.println(currentModeIndex);
-
-            lastButtonTime = now;
-        }
-    }
-    lastButtonState = currentButtonState;
+    button.update(); // Update button state
 }

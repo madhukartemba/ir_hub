@@ -1,0 +1,194 @@
+#include "Button.h"
+
+Button::Button(uint8_t buttonPin, Speaker& speakerRef)
+    : buttonPin(buttonPin), speaker(speakerRef), soundEnabled(true) {
+    
+    // Initialize OneButton
+    oneButton = new OneButton(buttonPin, true, true);
+    
+    // Set default sound settings
+    clickSound = {1000, 50};        // 1kHz, 50ms
+    doubleClickSound = {1200, 50};  // 1.2kHz, 50ms
+    longPressSound = {800, 100};    // 800Hz, 100ms
+    longPressStartSound = {600, 30}; // 600Hz, 30ms
+    longPressStopSound = {400, 30};  // 400Hz, 30ms
+    
+    // Initialize user callbacks to nullptr
+    userClickCallback = nullptr;
+    userDoubleClickCallback = nullptr;
+    userLongPressCallback = nullptr;
+    userLongPressStartCallback = nullptr;
+    userLongPressStopCallback = nullptr;
+}
+
+Button::~Button() {
+    if (oneButton) {
+        delete oneButton;
+        oneButton = nullptr;
+    }
+}
+
+void Button::begin() {
+    if (oneButton) {
+        // Set up internal callbacks using static methods
+        oneButton->attachClick(staticClickCallback, this);
+        oneButton->attachDoubleClick(staticDoubleClickCallback, this);
+        oneButton->attachLongPressStart(staticLongPressStartCallback, this);
+        oneButton->attachLongPressStop(staticLongPressStopCallback, this);
+        oneButton->attachDuringLongPress(staticDuringLongPressCallback, this);
+    }
+}
+
+void Button::setClickCallback(void (*callback)()) {
+    userClickCallback = callback;
+}
+
+void Button::setDoubleClickCallback(void (*callback)()) {
+    userDoubleClickCallback = callback;
+}
+
+void Button::setLongPressCallback(void (*callback)()) {
+    userLongPressCallback = callback;
+}
+
+void Button::setLongPressStartCallback(void (*callback)()) {
+    userLongPressStartCallback = callback;
+}
+
+void Button::setLongPressStopCallback(void (*callback)()) {
+    userLongPressStopCallback = callback;
+}
+
+void Button::setSoundEnabled(bool enabled) {
+    soundEnabled = enabled;
+}
+
+void Button::setClickSound(unsigned int frequency, unsigned long duration) {
+    clickSound.frequency = frequency;
+    clickSound.duration = duration;
+}
+
+void Button::setDoubleClickSound(unsigned int frequency, unsigned long duration) {
+    doubleClickSound.frequency = frequency;
+    doubleClickSound.duration = duration;
+}
+
+void Button::setLongPressSound(unsigned int frequency, unsigned long duration) {
+    longPressSound.frequency = frequency;
+    longPressSound.duration = duration;
+}
+
+void Button::setLongPressStartSound(unsigned int frequency, unsigned long duration) {
+    longPressStartSound.frequency = frequency;
+    longPressStartSound.duration = duration;
+}
+
+void Button::setLongPressStopSound(unsigned int frequency, unsigned long duration) {
+    longPressStopSound.frequency = frequency;
+    longPressStopSound.duration = duration;
+}
+
+void Button::setClickSoundBeep() {
+    setClickSound(1000, 50);
+}
+
+void Button::setDoubleClickSoundBeep() {
+    setDoubleClickSound(1200, 50);
+}
+
+void Button::setLongPressSoundBeep() {
+    setLongPressSound(800, 100);
+}
+
+void Button::setLongPressStartSoundBeep() {
+    setLongPressStartSound(600, 30);
+}
+
+void Button::setLongPressStopSoundBeep() {
+    setLongPressStopSound(400, 30);
+}
+
+void Button::update() {
+    if (oneButton) {
+        oneButton->tick();
+    }
+}
+
+OneButton* Button::getOneButton() {
+    return oneButton;
+}
+
+void Button::onButtonClick() {
+    if (soundEnabled) {
+        playSound(clickSound);
+    }
+    if (userClickCallback) {
+        userClickCallback();
+    }
+}
+
+void Button::onButtonDoubleClick() {
+    if (soundEnabled) {
+        playSound(doubleClickSound);
+    }
+    if (userDoubleClickCallback) {
+        userDoubleClickCallback();
+    }
+}
+
+void Button::onButtonLongPress() {
+    if (soundEnabled) {
+        playSound(longPressSound);
+    }
+    if (userLongPressCallback) {
+        userLongPressCallback();
+    }
+}
+
+void Button::onButtonLongPressStart() {
+    if (soundEnabled) {
+        playSound(longPressStartSound);
+    }
+    if (userLongPressStartCallback) {
+        userLongPressStartCallback();
+    }
+}
+
+void Button::onButtonLongPressStop() {
+    if (soundEnabled) {
+        playSound(longPressStopSound);
+    }
+    if (userLongPressStopCallback) {
+        userLongPressStopCallback();
+    }
+}
+
+void Button::playSound(const SoundSettings& sound) {
+    speaker.beep(sound.frequency, sound.duration);
+}
+
+// Static callback implementations
+void Button::staticClickCallback(void* context) {
+    Button* button = static_cast<Button*>(context);
+    button->onButtonClick();
+}
+
+void Button::staticDoubleClickCallback(void* context) {
+    Button* button = static_cast<Button*>(context);
+    button->onButtonDoubleClick();
+}
+
+void Button::staticLongPressStartCallback(void* context) {
+    Button* button = static_cast<Button*>(context);
+    button->onButtonLongPressStart();
+}
+
+void Button::staticLongPressStopCallback(void* context) {
+    Button* button = static_cast<Button*>(context);
+    button->onButtonLongPressStop();
+}
+
+void Button::staticDuringLongPressCallback(void* context) {
+    Button* button = static_cast<Button*>(context);
+    button->onButtonLongPress();
+}
