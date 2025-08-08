@@ -3,6 +3,7 @@
 #include "Speaker.h"
 #include "Button.h"
 #include "config.h"
+#include "Router.h"
 
 
 LedRing ring(NEOPIXEL_PIN, NUM_LEDS);
@@ -55,10 +56,17 @@ void setup() {
     ring.setColor(CRGB::Green); // Default color for all but rainbow
     ring.setMode(modes[currentModeIndex]);
 
+    // Initialize the global router
+    // You can set a default screen here if needed
+    // router.setDefaultScreen(&someDefaultScreen);
+
     Serial.println("LedRing Test: Touch D0 to cycle animations");
 }
 
 void loop() {
     ring.update();
     button.update(); // Update button state
+    
+    // Update the global router
+    router.update();
 }

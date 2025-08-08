@@ -1,7 +1,7 @@
 #include <stack>
 #include <Arduino.h>
 #include "../Screen/Screen.h"
-#include "../../Log/Log.h"
+#include "../Log/Log.h"
 
 class Router {
     private:
@@ -105,4 +105,7 @@ class Router {
         }
       }
     };
+
+// Global router instance
+extern Router router;
     
