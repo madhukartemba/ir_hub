@@ -47,7 +47,6 @@ void setup() {
     button.setClickCallback(onButtonClick);
     
     // Configure button sounds (optional)
-    button.setClickSoundBeep();
     button.setSoundEnabled(true);
 
     ring.begin();
