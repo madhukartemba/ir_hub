@@ -12,8 +12,6 @@ Button::Button(uint8_t buttonPin, Speaker& speakerRef)
     clickSound = {1000, 25};        // 1kHz, 25ms
     doubleClickSound = {1000, 25};  // 1kHz, 25ms
     longPressSound = {1000, 25};    // 1kHz, 25ms
-    longPressStartSound = {1000, 25}; // 1kHz, 25ms
-    longPressStopSound = {1000, 25};  // 1kHz, 25ms
 
     // Initialize user callbacks to nullptr
     userClickCallback = nullptr;
@@ -84,36 +82,6 @@ void Button::setLongPressSound(unsigned int frequency, unsigned long duration) {
     longPressSound.duration = duration;
 }
 
-void Button::setLongPressStartSound(unsigned int frequency, unsigned long duration) {
-    longPressStartSound.frequency = frequency;
-    longPressStartSound.duration = duration;
-}
-
-void Button::setLongPressStopSound(unsigned int frequency, unsigned long duration) {
-    longPressStopSound.frequency = frequency;
-    longPressStopSound.duration = duration;
-}
-
-void Button::setClickSoundBeep() {
-    setClickSound(1000, 50);
-}
-
-void Button::setDoubleClickSoundBeep() {
-    setDoubleClickSound(1200, 50);
-}
-
-void Button::setLongPressSoundBeep() {
-    setLongPressSound(800, 100);
-}
-
-void Button::setLongPressStartSoundBeep() {
-    setLongPressStartSound(600, 30);
-}
-
-void Button::setLongPressStopSoundBeep() {
-    setLongPressStopSound(400, 30);
-}
-
 void Button::update() {
     if (oneButton) {
         oneButton->tick();
@@ -152,18 +120,12 @@ void Button::onButtonLongPress() {
 }
 
 void Button::onButtonLongPressStart() {
-    if (soundEnabled) {
-        playSound(longPressStartSound);
-    }
     if (userLongPressStartCallback) {
         userLongPressStartCallback();
     }
 }
 
 void Button::onButtonLongPressStop() {
-    if (soundEnabled) {
-        playSound(longPressStopSound);
-    }
     if (userLongPressStopCallback) {
         userLongPressStopCallback();
     }

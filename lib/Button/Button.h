@@ -26,15 +26,6 @@ public:
     void setClickSound(unsigned int frequency, unsigned long duration);
     void setDoubleClickSound(unsigned int frequency, unsigned long duration);
     void setLongPressSound(unsigned int frequency, unsigned long duration);
-    void setLongPressStartSound(unsigned int frequency, unsigned long duration);
-    void setLongPressStopSound(unsigned int frequency, unsigned long duration);
-
-    // Convenience sound methods
-    void setClickSoundBeep();
-    void setDoubleClickSoundBeep();
-    void setLongPressSoundBeep();
-    void setLongPressStartSoundBeep();
-    void setLongPressStopSoundBeep();
 
     // Update method (call in loop)
     void update();
@@ -57,8 +48,6 @@ private:
     SoundSettings clickSound;
     SoundSettings doubleClickSound;
     SoundSettings longPressSound;
-    SoundSettings longPressStartSound;
-    SoundSettings longPressStopSound;
 
     // Internal callback methods
     void onButtonClick();
