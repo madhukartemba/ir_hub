@@ -5,6 +5,7 @@ class Screen {
         bool pauseNavigation = false;
         
     public:
+        virtual ~Screen() = default;
         virtual void onEnter() = 0;
         virtual void onUpdate() = 0;
         virtual void onExit() = 0;
