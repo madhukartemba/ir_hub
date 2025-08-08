@@ -1,18 +1,20 @@
 #include "Button.h"
 
 Button::Button(uint8_t buttonPin, Speaker& speakerRef)
-    : buttonPin(buttonPin), speaker(speakerRef), soundEnabled(true) {
-    
+    : oneButton(nullptr),
+      speaker(speakerRef),
+      buttonPin(buttonPin),
+      soundEnabled(true) {
     // Initialize OneButton
     oneButton = new OneButton(buttonPin, false, false);
-    
+
     // Set default sound settings
     clickSound = {1000, 25};        // 1kHz, 25ms
     doubleClickSound = {1000, 25};  // 1kHz, 25ms
     longPressSound = {1000, 25};    // 1kHz, 25ms
     longPressStartSound = {1000, 25}; // 1kHz, 25ms
     longPressStopSound = {1000, 25};  // 1kHz, 25ms
-    
+
     // Initialize user callbacks to nullptr
     userClickCallback = nullptr;
     userDoubleClickCallback = nullptr;
