@@ -4,7 +4,7 @@ Button::Button(uint8_t buttonPin, Speaker& speakerRef)
     : buttonPin(buttonPin), speaker(speakerRef), soundEnabled(true) {
     
     // Initialize OneButton
-    oneButton = new OneButton(buttonPin, true, true);
+    oneButton = new OneButton(buttonPin, false, false);
     
     // Set default sound settings
     clickSound = {1000, 50};        // 1kHz, 50ms
