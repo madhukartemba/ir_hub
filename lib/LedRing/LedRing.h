@@ -17,6 +17,7 @@ enum LedRingMode {
 class LedRing {
 public:
     LedRing(uint8_t pin, uint8_t numLeds);
+    ~LedRing();
 
     void begin();
     void setBrightness(uint8_t brightness);

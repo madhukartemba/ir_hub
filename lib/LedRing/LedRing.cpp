@@ -1,8 +1,16 @@
 #include "LedRing.h"
+#include <math.h>
 
 LedRing::LedRing(uint8_t pin, uint8_t numLeds)
     : pin(pin), numLeds(numLeds), brightness(128) {
     leds = new CRGB[numLeds];
+}
+
+LedRing::~LedRing() {
+    if (leds) {
+        delete[] leds;
+        leds = nullptr;
+    }
 }
 
 void LedRing::begin() {
@@ -54,6 +62,11 @@ void LedRing::update() {
             }
             break;
         case BREATHE:
+            if (now - lastUpdate > 20) {
+                updateBreathe();
+                lastUpdate = now;
+            }
+            break;
         case PULSE:
             if (now - lastUpdate > 20) {
                 updatePulse();
@@ -102,12 +115,27 @@ void LedRing::updateProgress() {
     show();
 }
 
+void LedRing::updateBreathe() {
+    float scale = sin(breatheStep * PI / 255.0);
+    uint8_t b = uint8_t(scale * brightness);
+
+    CRGB breatheColor = color;
+    breatheColor.nscale8(b);
+    fill_solid(leds, numLeds, breatheColor);
+    show();
+
+    breatheStep += breatheUp ? 4 : -4;
+    if (breatheStep >= 255) breatheUp = false;
+    else if (breatheStep <= 0) breatheUp = true;
+}
+
 void LedRing::updatePulse() {
     float scale = sin(breatheStep * PI / 255.0);
     uint8_t b = uint8_t(scale * brightness);
 
-    fill_solid(leds, numLeds, color);
-    FastLED.setBrightness(b);
+    CRGB pulseColor = color;
+    pulseColor.nscale8(b);
+    fill_solid(leds, numLeds, pulseColor);
     show();
 
     breatheStep += breatheUp ? 4 : -4;
@@ -143,7 +171,8 @@ void LedRing::updateFlash() {
 
 void LedRing::updateRainbow() {
     for (uint8_t i = 0; i < numLeds; i++) {
-        leds[i] = CHSV(rainbowHue + i * 255 / numLeds, 255, brightness);
+        leds[i] = CHSV(rainbowHue + i * 255 / numLeds, 255, 255);
+        leds[i].nscale8(brightness);
     }
     rainbowHue++;
     show();

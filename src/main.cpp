@@ -42,18 +42,19 @@ void loop() {
         if (now - lastButtonTime > 250) { // debounce delay
             // Next mode
             currentModeIndex = (currentModeIndex + 1) % modeCount;
-            LedRingMode mode = modes[currentModeIndex];
+            LedRingMode currentMode = modes[currentModeIndex];
 
-            // Set color for all except rainbow
-            if (mode != RAINBOW) {
-                ring.setColor(CRGB::Green);
+            // Set random color for all except rainbow
+            if (currentMode != RAINBOW) {
+                CRGB randomColor = CRGB(random(0, 256), random(0, 256), random(0, 256));
+                ring.setColor(randomColor);
             }
             // Set progress for PROGRESS mode (demo: 50%)
-            if (mode == PROGRESS) {
+            if (currentMode == PROGRESS) {
                 ring.setProgress(0.5f);
             }
 
-            ring.setMode(mode);
+            ring.setMode(currentMode);
             Serial.print("Switched to mode: ");
             Serial.println(currentModeIndex);
 
