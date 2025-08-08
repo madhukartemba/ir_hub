@@ -2,7 +2,7 @@
 #include <math.h>
 
 LedRing::LedRing(uint8_t pin, uint8_t numLeds)
-    : pin(pin), numLeds(numLeds), brightness(128) {
+    : pin(pin), numLeds(numLeds), brightness(128), speed(128) {
     leds = new CRGB[numLeds];
 }
 
@@ -23,6 +23,10 @@ void LedRing::begin() {
 void LedRing::setBrightness(uint8_t b) {
     brightness = b;
     FastLED.setBrightness(brightness);
+}
+
+void LedRing::setSpeed(uint8_t s) {
+    speed = s;
 }
 
 void LedRing::setMode(LedRingMode m) {
@@ -51,24 +55,32 @@ void LedRing::show() {
     FastLED.show();
 }
 
+unsigned long LedRing::getUpdateInterval() {
+    // Convert speed (0-255) to interval (1-100ms)
+    // Higher speed = lower interval = faster animation
+    if (speed == 0) return 1000; // Very slow
+    return map(speed, 1, 255, 100, 1);
+}
+
 void LedRing::update() {
     unsigned long now = millis();
+    unsigned long interval = getUpdateInterval();
 
     switch (mode) {
         case LOADING:
-            if (now - lastUpdate > 60) {
+            if (now - lastUpdate > interval) {
                 updateLoading();
                 lastUpdate = now;
             }
             break;
         case BREATHE:
-            if (now - lastUpdate > 20) {
+            if (now - lastUpdate > interval) {
                 updateBreathe();
                 lastUpdate = now;
             }
             break;
         case PULSE:
-            if (now - lastUpdate > 20) {
+            if (now - lastUpdate > interval) {
                 updatePulse();
                 lastUpdate = now;
             }
@@ -77,7 +89,7 @@ void LedRing::update() {
             updateProgress();
             break;
         case WAVE:
-            if (now - lastUpdate > 30) {
+            if (now - lastUpdate > interval) {
                 updateWave();
                 lastUpdate = now;
             }
@@ -86,7 +98,7 @@ void LedRing::update() {
             updateFlash();
             break;
         case RAINBOW:
-            if (now - lastUpdate > 20) {
+            if (now - lastUpdate > interval) {
                 updateRainbow();
                 lastUpdate = now;
             }
@@ -124,7 +136,8 @@ void LedRing::updateBreathe() {
     fill_solid(leds, numLeds, breatheColor);
     show();
 
-    breatheStep += breatheUp ? 4 : -4;
+    uint8_t stepSize = map(speed, 1, 255, 1, 8);
+    breatheStep += breatheUp ? stepSize : -stepSize;
     if (breatheStep >= 255) breatheUp = false;
     else if (breatheStep <= 0) breatheUp = true;
 }
@@ -138,7 +151,8 @@ void LedRing::updatePulse() {
     fill_solid(leds, numLeds, pulseColor);
     show();
 
-    breatheStep += breatheUp ? 4 : -4;
+    uint8_t stepSize = map(speed, 1, 255, 1, 8);
+    breatheStep += breatheUp ? stepSize : -stepSize;
     if (breatheStep >= 255) breatheUp = false;
     else if (breatheStep <= 0) breatheUp = true;
 }
@@ -174,6 +188,7 @@ void LedRing::updateRainbow() {
         leds[i] = CHSV(rainbowHue + i * 255 / numLeds, 255, 255);
         leds[i].nscale8(brightness);
     }
-    rainbowHue++;
+    uint8_t hueStep = map(speed, 1, 255, 1, 4);
+    rainbowHue += hueStep;
     show();
 }

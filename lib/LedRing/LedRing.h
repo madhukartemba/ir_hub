@@ -24,12 +24,14 @@ public:
     void setMode(LedRingMode mode);
     void setProgress(float progress);
     void setColor(CRGB color); // for applicable modes
+    void setSpeed(uint8_t speed); // 0-255, higher = faster
     void update();
 
 private:
     CRGB* leds;
     uint8_t pin, numLeds;
     uint8_t brightness;
+    uint8_t speed = 128; // Animation speed (0-255, higher = faster)
     LedRingMode mode = OFF;
     CRGB color = CRGB::White;
 
@@ -53,6 +55,7 @@ private:
 
     void clear();
     void show();
+    unsigned long getUpdateInterval();
 
     void updateLoading();
     void updateBreathe();
