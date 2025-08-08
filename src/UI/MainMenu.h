@@ -1,7 +1,5 @@
 #include <Arduino.h>
-#include "Screen.h"
-#include "Log.h"
-#include "Router.h"
+#include "../global/Global.h"
 
 class MainMenu : public Screen {
     public:
