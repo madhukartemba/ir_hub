@@ -2,7 +2,7 @@
 #include <math.h>
 
 LedRing::LedRing(uint8_t pin, uint8_t numLeds)
-    : pin(pin), numLeds(numLeds), brightness(128), speed(128) {
+    : pin(pin), numLeds(numLeds), brightness(128), speed(128), centerLed(0) {
     leds = new CRGB[numLeds];
 }
 
@@ -27,6 +27,10 @@ void LedRing::setBrightness(uint8_t b) {
 
 void LedRing::setSpeed(uint8_t s) {
     speed = s;
+}
+
+void LedRing::setCenterLed(uint8_t centerIndex) {
+    centerLed = centerIndex % numLeds; // Ensure it's within bounds
 }
 
 void LedRing::setMode(LedRingMode m) {
@@ -113,7 +117,8 @@ void LedRing::update() {
 
 void LedRing::updateLoading() {
     clear();
-    leds[index] = color;
+    uint8_t ledIndex = (centerLed + index) % numLeds;
+    leds[ledIndex] = color;
     index = (index + 1) % numLeds;
     show();
 }
@@ -122,7 +127,8 @@ void LedRing::updateProgress() {
     clear();
     uint8_t lit = progress * numLeds;
     for (uint8_t i = 0; i < numLeds; i++) {
-        leds[i] = (i < lit) ? color : CRGB::Black;
+        uint8_t ledIndex = (centerLed + i) % numLeds;
+        leds[ledIndex] = (i < lit) ? color : CRGB::Black;
     }
     show();
 }
@@ -161,8 +167,9 @@ void LedRing::updateWave() {
     for (uint8_t i = 0; i < numLeds; i++) {
         float angle = (float)(index + i) / numLeds * 2 * PI;
         float intensity = (sin(angle) + 1.0f) / 2.0f;
-        leds[i] = color;
-        leds[i].fadeToBlackBy(255 - (int)(intensity * 255));
+        uint8_t ledIndex = (centerLed + i) % numLeds;
+        leds[ledIndex] = color;
+        leds[ledIndex].fadeToBlackBy(255 - (int)(intensity * 255));
     }
     index = (index + 1) % numLeds;
     show();
@@ -185,8 +192,9 @@ void LedRing::updateFlash() {
 
 void LedRing::updateRainbow() {
     for (uint8_t i = 0; i < numLeds; i++) {
-        leds[i] = CHSV(rainbowHue + i * 255 / numLeds, 255, 255);
-        leds[i].nscale8(brightness);
+        uint8_t ledIndex = (centerLed + i) % numLeds;
+        leds[ledIndex] = CHSV(rainbowHue + i * 255 / numLeds, 255, 255);
+        leds[ledIndex].nscale8(brightness);
     }
     uint8_t hueStep = map(speed, 1, 255, 1, 4);
     rainbowHue += hueStep;

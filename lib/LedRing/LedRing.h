@@ -25,6 +25,7 @@ public:
     void setProgress(float progress);
     void setColor(CRGB color); // for applicable modes
     void setSpeed(uint8_t speed); // 0-255, higher = faster
+    void setCenterLed(uint8_t centerIndex); // Set the center/starting LED index
     void update();
 
 private:
@@ -32,6 +33,7 @@ private:
     uint8_t pin, numLeds;
     uint8_t brightness;
     uint8_t speed = 128; // Animation speed (0-255, higher = faster)
+    uint8_t centerLed = 0; // Center/starting LED index for animations
     LedRingMode mode = OFF;
     CRGB color = CRGB::White;
 
