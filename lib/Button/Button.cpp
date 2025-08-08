@@ -7,11 +7,11 @@ Button::Button(uint8_t buttonPin, Speaker& speakerRef)
     oneButton = new OneButton(buttonPin, false, false);
     
     // Set default sound settings
-    clickSound = {1000, 50};        // 1kHz, 50ms
-    doubleClickSound = {1200, 50};  // 1.2kHz, 50ms
-    longPressSound = {800, 100};    // 800Hz, 100ms
-    longPressStartSound = {600, 30}; // 600Hz, 30ms
-    longPressStopSound = {400, 30};  // 400Hz, 30ms
+    clickSound = {1000, 25};        // 1kHz, 25ms
+    doubleClickSound = {1000, 25};  // 1kHz, 25ms
+    longPressSound = {1000, 25};    // 1kHz, 25ms
+    longPressStartSound = {1000, 25}; // 1kHz, 25ms
+    longPressStopSound = {1000, 25};  // 1kHz, 25ms
     
     // Initialize user callbacks to nullptr
     userClickCallback = nullptr;
