@@ -32,7 +32,7 @@ void setup() {
     LOG_DEBUG("LED ring initialized on pin");
 
     // Initialize the global router
-    router.setDefaultScreen(new MainMenu()); // Replace with your actual default screen object
+    router.setDefaultScreen(new MainMenu());  // Replace with your actual default screen object
 
     // Show ready message on display
     delay(1000);
@@ -46,6 +46,6 @@ void setup() {
 }
 
 void loop() {
-    router.update(); // Main app logic now handled by router
+    router.update();  // Main app logic now handled by router
     button.update();
 }
