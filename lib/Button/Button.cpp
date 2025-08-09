@@ -10,7 +10,7 @@ Button::Button()
     doubleClickSound = {1000, 25};  // 1kHz, 25ms
     longPressSound = {1000, 25};    // 1kHz, 25ms
 
-    // Initialize user callbacks to nullptr
+    // Initialize user callbacks to empty
     userClickCallback = nullptr;
     userDoubleClickCallback = nullptr;
     userLongPressCallback = nullptr;
@@ -45,23 +45,23 @@ void Button::begin(uint8_t buttonPin, Speaker& speakerRef) {
     }
 }
 
-void Button::setClickCallback(void (*callback)()) {
+void Button::setClickCallback(std::function<void()> callback) {
     userClickCallback = callback;
 }
 
-void Button::setDoubleClickCallback(void (*callback)()) {
+void Button::setDoubleClickCallback(std::function<void()> callback) {
     userDoubleClickCallback = callback;
 }
 
-void Button::setLongPressCallback(void (*callback)()) {
+void Button::setLongPressCallback(std::function<void()> callback) {
     userLongPressCallback = callback;
 }
 
-void Button::setLongPressStartCallback(void (*callback)()) {
+void Button::setLongPressStartCallback(std::function<void()> callback) {
     userLongPressStartCallback = callback;
 }
 
-void Button::setLongPressStopCallback(void (*callback)()) {
+void Button::setLongPressStopCallback(std::function<void()> callback) {
     userLongPressStopCallback = callback;
 }
 

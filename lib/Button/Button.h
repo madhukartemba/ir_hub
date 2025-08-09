@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <OneButton.h>
+#include <functional>
 #include "../Speaker/Speaker.h"
 
 class Button {
@@ -15,11 +16,11 @@ public:
     void begin(uint8_t buttonPin, Speaker& speakerRef);
 
     // Button event callbacks
-    void setClickCallback(void (*callback)());
-    void setDoubleClickCallback(void (*callback)());
-    void setLongPressCallback(void (*callback)());
-    void setLongPressStartCallback(void (*callback)());
-    void setLongPressStopCallback(void (*callback)());
+    void setClickCallback(std::function<void()> callback);
+    void setDoubleClickCallback(std::function<void()> callback);
+    void setLongPressCallback(std::function<void()> callback);
+    void setLongPressStartCallback(std::function<void()> callback);
+    void setLongPressStopCallback(std::function<void()> callback);
 
     // Sound settings
     void setSoundEnabled(bool enabled);
@@ -57,11 +58,11 @@ private:
     void onButtonLongPressStop();
 
     // User callbacks
-    void (*userClickCallback)();
-    void (*userDoubleClickCallback)();
-    void (*userLongPressCallback)();
-    void (*userLongPressStartCallback)();
-    void (*userLongPressStopCallback)();
+    std::function<void()> userClickCallback;
+    std::function<void()> userDoubleClickCallback;
+    std::function<void()> userLongPressCallback;
+    std::function<void()> userLongPressStartCallback;
+    std::function<void()> userLongPressStopCallback;
 
     // Helper method to play sound
     void playSound(const SoundSettings& sound);
