@@ -59,6 +59,7 @@ class Router {
 
         if (!screenStack.empty()) {
             LOG_DEBUG("Screen stack not empty after pop");
+            screenStack.top()->onEnter();
             // Screen is now active again
         } else {
             LOG_INFO("Screen stack is now empty");
