@@ -42,6 +42,7 @@ class SingleModeIRLearn : public Screen {
                     break;
                 case State::RECORDING:
                     stopRecording();
+                    router.pop();
                     break;
                 case State::SUCCESS:
                 case State::ERROR:
