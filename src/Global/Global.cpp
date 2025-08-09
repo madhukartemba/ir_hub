@@ -5,3 +5,4 @@ Button button;
 Router router;
 Speaker speaker;
 LedRing ring;
+Display display;
