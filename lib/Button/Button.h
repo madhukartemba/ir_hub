@@ -1,78 +1,107 @@
-#ifndef BUTTON_H
-#define BUTTON_H
-
 #include <Arduino.h>
-#include <OneButton.h>
 #include <functional>
-#include "../Speaker/Speaker.h"
+#include "Speaker.h"
+#include "Log.h"
 
 class Button {
-public:
-    // Empty constructor
-    Button();
-    ~Button();
+    private:
+        int pin;
+        boolean initialized = false;
+        std::function<void()> singleClickCallback;
+        std::function<void()> longPressCallback;
+        bool lastState = LOW;
+        bool currentState = LOW;
+        unsigned long pressStartTime = 0;
+        unsigned long debounceTime = 50;
+        unsigned long longPressTime = 500;
+        bool longPressTriggered = false;
+        bool buttonPressed = false;
+        
+        Speaker* speaker;
+        bool soundEnabled = true;
 
-    // Initialize the button with pin and speaker
-    void begin(uint8_t buttonPin, Speaker& speakerRef);
+    public:
+        Button() {}
+        ~Button() {}
 
-    // Button event callbacks
-    void setClickCallback(std::function<void()> callback);
-    void setDoubleClickCallback(std::function<void()> callback);
-    void setLongPressCallback(std::function<void()> callback);
-    void setLongPressStartCallback(std::function<void()> callback);
-    void setLongPressStopCallback(std::function<void()> callback);
+        void begin(int pin, uint8_t mode) {
+            this->pin = pin;
+            pinMode(pin, mode);
+            initialized = true;
+        }
 
-    // Sound settings
-    void setSoundEnabled(bool enabled);
-    void setClickSound(unsigned int frequency, unsigned long duration);
-    void setDoubleClickSound(unsigned int frequency, unsigned long duration);
-    void setLongPressSound(unsigned int frequency, unsigned long duration);
+        void setSpeaker(Speaker& speakerRef) {
+            this->speaker = &speakerRef;
+        }
 
-    // Update method (call in loop)
-    void update();
+        void setSoundEnabled(bool enabled) {
+            soundEnabled = enabled;
+        }
 
-    // Get OneButton instance for advanced usage
-    OneButton* getOneButton();
+        void setClickCallback(std::function<void()> callback) {
+            singleClickCallback = callback;
+        }
 
-private:
-    OneButton* oneButton;
-    Speaker* speaker;
-    uint8_t buttonPin;
-    bool soundEnabled;
+        void setLongPressCallback(std::function<void()> callback) {
+            longPressCallback = callback;
+        }
 
-    // Sound settings
-    struct SoundSettings {
-        unsigned int frequency;
-        unsigned long duration;
-    };
+        void setDebounceTime(unsigned long debounceMs) {
+            debounceTime = debounceMs;
+        }
 
-    SoundSettings clickSound;
-    SoundSettings doubleClickSound;
-    SoundSettings longPressSound;
+        void setLongPressTime(unsigned long longPressMs) {
+            longPressTime = longPressMs;
+        }
 
-    // Internal callback methods
-    void onButtonClick();
-    void onButtonDoubleClick();
-    void onButtonLongPress();
-    void onButtonLongPressStart();
-    void onButtonLongPressStop();
+        void update() {
+            if (!initialized) {
+                LOG_ERROR("Button not initialized");
+                return;
+            }
 
-    // User callbacks
-    std::function<void()> userClickCallback;
-    std::function<void()> userDoubleClickCallback;
-    std::function<void()> userLongPressCallback;
-    std::function<void()> userLongPressStartCallback;
-    std::function<void()> userLongPressStopCallback;
-
-    // Helper method to play sound
-    void playSound(const SoundSettings& sound);
-    
-    // Static callback methods for OneButton
-    static void staticClickCallback(void* context);
-    static void staticDoubleClickCallback(void* context);
-    static void staticLongPressStartCallback(void* context);
-    static void staticLongPressStopCallback(void* context);
-    static void staticDuringLongPressCallback(void* context);
+            currentState = digitalRead(pin);
+            unsigned long currentTime = millis();
+            
+            // Button press detected (transition from LOW to HIGH)
+            if (currentState == HIGH && lastState == LOW) {
+                pressStartTime = currentTime;
+                buttonPressed = true;
+                longPressTriggered = false;
+            }
+            
+            // Button is currently pressed
+            if (currentState == HIGH && buttonPressed) {
+                // Check if long press time has been reached
+                if (!longPressTriggered && (currentTime - pressStartTime) >= longPressTime) {
+                    longPressTriggered = true;
+                    if (soundEnabled && speaker != nullptr) {
+                        speaker->longBeep();
+                    }
+                    if (longPressCallback) {
+                        longPressCallback();
+                    }
+                }
+            }
+            
+            // Button release detected (transition from HIGH to LOW)
+            if (currentState == LOW && lastState == HIGH && buttonPressed) {
+                unsigned long pressDuration = currentTime - pressStartTime;
+                
+                // Only trigger single click if debounce time has passed and it wasn't a long press
+                if (pressDuration >= debounceTime && !longPressTriggered) {
+                    if (soundEnabled && speaker != nullptr) {
+                        speaker->shortBeep();
+                    }
+                    if (singleClickCallback) {
+                        singleClickCallback();
+                    }
+                }
+                
+                buttonPressed = false;
+                longPressTriggered = false;
+            }
+            
+            lastState = currentState;
+        }
 };
-
-#endif // BUTTON_H

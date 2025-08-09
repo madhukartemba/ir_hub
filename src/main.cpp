@@ -21,7 +21,8 @@ void setup() {
 
     // Initialize button
     LOG_DEBUG("Starting button setup");
-    button.begin(TOUCH_BUTTON_PIN, speaker);
+    button.begin(TOUCH_BUTTON_PIN, INPUT);
+    button.setSpeaker(speaker);
     LOG_DEBUG("Button initialized on pin");
     // Set up button callbacks if needed
 

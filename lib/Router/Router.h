@@ -16,6 +16,9 @@ class Router {
       
       void setDefaultScreen(Screen* screen) {
         defaultScreen = screen;
+        if(screenStack.empty()) {
+          push(screen);
+        }
         LOG_INFO("Default screen set");
       }
       
@@ -43,6 +46,13 @@ class Router {
         
         if (!screenStack.empty()) {
           Screen* top = screenStack.top();
+          
+          // Don't pop the default screen
+          if (top == defaultScreen) {
+            LOG_WARN("Attempted to pop default screen - operation blocked");
+            return;
+          }
+          
           screenStack.pop();
           LOG_INFO("Popped screen from stack");
           delete top;
