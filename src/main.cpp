@@ -33,6 +33,15 @@ void onButtonClick() {
 void setup() {
     Serial.begin(9600);
 
+    // Initialize display
+    display.begin(OLED_SDA_PIN, OLED_SCL_PIN);
+    display.clear();
+    display.printCentered("IR Hub", 20);
+    display.printCentered("Initializing...", 40);
+    display.update();
+
+    delay(3000);
+
     speaker.begin();
     button.begin(TOUCH_BUTTON_PIN, speaker);
     
@@ -49,7 +58,15 @@ void setup() {
     // You can set a default screen here if needed
     // router.setDefaultScreen(&someDefaultScreen);
 
-    Serial.println("LedRing Test: Touch D0 to cycle animations");
+    // Show ready message on display
+    delay(1000); // Show initialization message briefly
+    display.clear();
+    display.printCentered("IR Hub", 20);
+    display.printCentered("Ready!", 40);
+    display.update();
+    delay(500);
+
+    Serial.println("IR Hub: System Ready");
 }
 
 void loop() {
