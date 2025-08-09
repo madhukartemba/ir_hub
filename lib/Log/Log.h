@@ -16,55 +16,42 @@
 #if LOGGING_ENABLED
   // Debug level logging
   #if MIN_LOG_LEVEL <= LOG_LEVEL_DEBUG
-    #define LOG_DEBUG(msg) Serial.println((String("[DEBUG] ") + msg))
-    #define LOG_DEBUGF(fmt, ...) Serial.printf((String("[DEBUG] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
+    #define LOG_DEBUG(fmt, ...) Serial.printf((String("[DEBUG] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
   #else
     #define LOG_DEBUG(msg)
-    #define LOG_DEBUGF(fmt, ...)
   #endif
 
   // Info level logging
   #if MIN_LOG_LEVEL <= LOG_LEVEL_INFO
-    #define LOG_INFO(msg) Serial.println((String("[INFO] ") + msg))
-    #define LOG_INFOF(fmt, ...) Serial.printf((String("[INFO] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
+    #define LOG_INFO(fmt, ...) Serial.printf((String("[INFO] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
   #else
     #define LOG_INFO(msg)
-    #define LOG_INFOF(fmt, ...)
   #endif
 
   // Warning level logging
   #if MIN_LOG_LEVEL <= LOG_LEVEL_WARN
-    #define LOG_WARN(msg) Serial.println((String("[WARN] ") + msg))
-    #define LOG_WARNF(fmt, ...) Serial.printf((String("[WARN] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
+    #define LOG_WARN(fmt, ...) Serial.printf((String("[WARN] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
   #else
     #define LOG_WARN(msg)
-    #define LOG_WARNF(fmt, ...)
   #endif
 
   // Error level logging
   #if MIN_LOG_LEVEL <= LOG_LEVEL_ERROR
-    #define LOG_ERROR(msg) Serial.println((String("[ERROR] ") + msg))
-    #define LOG_ERRORF(fmt, ...) Serial.printf((String("[ERROR] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
+    #define LOG_ERROR(fmt, ...) Serial.printf((String("[ERROR] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
   #else
     #define LOG_ERROR(msg)
-    #define LOG_ERRORF(fmt, ...)
   #endif
 
   // Legacy macros for backward compatibility
   #define LOG(msg) LOG_INFO(msg)
-  #define LOGF(fmt, ...) LOG_INFOF(fmt, ##__VA_ARGS__)
+  #define LOGF(fmt, ...) LOG_INFO(fmt, ##__VA_ARGS__)
   #define LOG_LINE() Serial.println(F("-------------"))
 #else
   // When logging is disabled, all macros do nothing
   #define LOG_DEBUG(msg)
-  #define LOG_DEBUGF(fmt, ...)
   #define LOG_INFO(msg)
-  #define LOG_INFOF(fmt, ...)
   #define LOG_WARN(msg)
-  #define LOG_WARNF(fmt, ...)
   #define LOG_ERROR(msg)
-  #define LOG_ERRORF(fmt, ...)
   #define LOG(msg)
-  #define LOGF(fmt, ...)
   #define LOG_LINE()
 #endif

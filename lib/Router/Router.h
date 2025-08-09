@@ -86,7 +86,7 @@ class Router {
           screenStack.pop();
           clearedCount++;
         }
-        LOG_INFOF("Cleared %d screens from stack", clearedCount);
+        LOG_INFO("Cleared %d screens from stack", clearedCount);
         
         // Set default screen if available
         if (defaultScreen != nullptr) {

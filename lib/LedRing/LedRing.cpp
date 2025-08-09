@@ -2,10 +2,6 @@
 #include "../Log/Log.h"
 #include <math.h>
 
-LedRing::LedRing(uint8_t pin, uint8_t numLeds)
-    : pin(pin), numLeds(numLeds), brightness(128), speed(128), centerLed(0) {
-    leds = new CRGB[numLeds];
-}
 
 LedRing::~LedRing() {
     if (leds) {
@@ -31,6 +27,11 @@ void LedRing::begin(uint8_t pin, uint8_t numLeds) {
 
     this->pin = pin;
     this->numLeds = numLeds;
+    this->leds = new CRGB[numLeds];
+    this->brightness = 255; // Default brightness
+    this->color = CRGB::White; // Default color
+    this->mode = OFF; // Default mode
+
     switch (pin) {  
         case D7:
             FastLED.addLeds<WS2812B, D7, GRB>(leds, numLeds);
