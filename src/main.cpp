@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "config.h"
-#include "Global/Global.h"
+#include "global/Global.h"
 
 // Use all available modes
 const LedRingMode modes[] = {

@@ -39,14 +39,31 @@ class MainMenu : public Screen {
         }
 
         void onUpdate() override {
-            switch (currentState) {
-                case State::STATUS:
-                    break;
-                case State::IR_LEARN:
-                    break;
-                case State::SETTINGS:
-                    break;
+            // Update display based on current state
+            display.clear();
+            
+            // Show title
+            display.setTextSize(1);
+            display.printCentered("IR Hub - Main Menu", 0);
+            
+            // Draw horizontal line
+            display.drawLine(0, 12, display.getWidth(), 12);
+            
+            // Show menu options with selection indicator
+            const char* menuItems[] = {"Status", "IR Learn", "Settings"};
+            int startY = 20;
+            
+            for (int i = 0; i < 3; i++) {
+                bool isSelected = (i == static_cast<int>(currentState));
+                display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
             }
+            
+            // Show instructions at bottom
+            display.setTextSize(1);
+            display.print("Click: Next", 0, 52);
+            display.print("Hold: Select", 70, 52);
+            
+            display.update();
         }
 
         void onExit() override {
