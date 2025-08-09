@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "../global/Global.h"
-#include "../ui/IRLearn.h"
-#include "../ui/Settings.h"
+#include "../ui/irlearn/IRLearn.h"
+#include "../ui/settings/Settings.h"
 
 class MainMenu : public Screen {
     private:

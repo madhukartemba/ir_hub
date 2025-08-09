@@ -1,4 +1,4 @@
-#include "../global/Global.h"
+#include "../../global/Global.h"
 
 class Settings : public Screen {
 
