@@ -29,7 +29,7 @@ enum VerticalAlign {
 class Display {
 public:
     // Constructor
-    Display() : textSize(1), textColor(1) {
+    Display() : textSize(1), textColor(1), displayFlipped(true) {
     }
     
     // Destructor
@@ -54,6 +54,9 @@ public:
         display->setTextSize(textSize);
         display->setTextColor(textColor);
         display->cp437(true); // Use full 256 char 'Code Page 437' font
+        
+        // Apply display rotation if flipped
+        display->setRotation(displayFlipped ? 2 : 0);
         
         clear();
         return true;
@@ -84,6 +87,21 @@ public:
         if (display) {
             display->ssd1306_command(SSD1306_SETCONTRAST);
             display->ssd1306_command(brightness);
+        }
+    }
+    void setFlip(bool flip) {
+        displayFlipped = flip;
+        if (display) {
+            display->setRotation(displayFlipped ? 2 : 0);
+        }
+    }
+    bool getFlip() const {
+        return displayFlipped;
+    }
+    void toggleFlip() {
+        displayFlipped = !displayFlipped;
+        if (display) {
+            display->setRotation(displayFlipped ? 2 : 0);
         }
     }
     
@@ -336,6 +354,7 @@ private:
     std::unique_ptr<Adafruit_SSD1306> display;
     uint8_t textSize;
     uint16_t textColor;
+    bool displayFlipped;
     
     // Helper methods
     void wrapText(const String& text, int x, int y, int maxWidth, TextAlign align = ALIGN_LEFT) {
