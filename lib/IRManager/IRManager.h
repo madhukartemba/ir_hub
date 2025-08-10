@@ -7,6 +7,7 @@
 // #define noTone(a) void()
 
 #define RAW_BUFFER_LENGTH 250
+#define EXCLUDE_EXOTIC_PROTOCOLS
 
 #include <ArduinoJson.h>
 #include <IRremote.hpp>
@@ -105,8 +106,7 @@ class IRManager {
                 // Create raw data array, store as microseconds (like the example)
                 JsonArray rawDataArray = doc["raw_data"].to<JsonArray>();
                 for (uint16_t i = 0; i < rawLen; i++) {
-                    rawDataArray.add((uint16_t)compensatedRawCode[i] *
-                                     50);  // Store as microseconds
+                    rawDataArray.add((uint16_t)compensatedRawCode[i]);
                 }
             } else {
                 // For known protocols, store the raw buffer as-is
@@ -171,18 +171,35 @@ class IRManager {
 
                 // Copy raw data from JSON array
                 for (uint16_t i = 0; i < rawLen && i < rawDataArray.size(); i++) {
-                    // For RAW protocols, the data is stored as microseconds, so divide by 50
-                    if (irData.protocol == UNKNOWN || irData.protocol == PULSE_WIDTH ||
-                        irData.protocol == PULSE_DISTANCE) {
-                        irData.rawDataPtr->rawbuf[i] = rawDataArray[i].as<uint16_t>() / 50;
-                    } else {
-                        irData.rawDataPtr->rawbuf[i] = rawDataArray[i].as<uint16_t>();
-                    }
+                    irData.rawDataPtr->rawbuf[i] = rawDataArray[i].as<uint16_t>();
                 }
             }
         }
 
         return true;
+    }
+
+    void debugPrintIRData(const IRData& data, const char* label) {
+        LOG_INFO("---- IRData Dump (%s) ----", label);
+        LOG_INFO("Protocol: %d (%s)", data.protocol, getProtocolString(data.protocol));
+        LOG_INFO("Address: 0x%X", data.address);
+        LOG_INFO("Command: 0x%X", data.command);
+        LOG_INFO("Number of bits: %d", data.numberOfBits);
+        LOG_INFO("Flags: 0x%X", data.flags);
+        LOG_INFO("Decoded raw data: 0x%lX", data.decodedRawData);
+
+        if (data.rawDataPtr) {
+            LOG_INFO("Raw length: %d", data.rawDataPtr->rawlen);
+            String rawBufStr;
+            for (uint16_t i = 0; i < data.rawDataPtr->rawlen; i++) {
+                rawBufStr += String(data.rawDataPtr->rawbuf[i]);
+                if (i < data.rawDataPtr->rawlen - 1) rawBufStr += ", ";
+            }
+            LOG_INFO("Raw buffer: [%s]", rawBufStr.c_str());
+        } else {
+            LOG_INFO("Raw data pointer: NULL");
+        }
+        LOG_INFO("--------------------------");
     }
 
    public:
@@ -269,6 +286,7 @@ class IRManager {
             }
             LOG_DEBUG("Received rawbuf: [%s]", rawBufStr.c_str());
         }
+        debugPrintIRData(data, "RECEIVED");
         return data;
     }
 
@@ -323,6 +341,7 @@ class IRManager {
         IRData irData;
         if (convertFromJson(doc, irData)) {
             LOG_DEBUG("Converted JSON to IRData, protocol=%s", getProtocolString(irData.protocol));
+            debugPrintIRData(irData, "SENT");
             sendIRData(irData);
         } else {
             LOG_ERROR("Failed to convert JSON to IRData");

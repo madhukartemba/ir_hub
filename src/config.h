@@ -6,12 +6,12 @@
 #define OLED_SCL_PIN D1
 #define OLED_SDA_PIN D2
 #define SPEAKER_PIN D3
-#define IR_EMITTER_PIN D5
-#define IR_RECEIVER_PIN D6
+#define IR_RECEIVER_PIN D5
+#define IR_EMITTER_PIN D6
 #define NEOPIXEL_PIN D7
 
 // LED configuration
 #define NUM_LEDS 13  // Number of LEDs in the circular strip
 #define CENTER_LED 8
 
-#endif // CONFIG_H
+#endif  // CONFIG_H
