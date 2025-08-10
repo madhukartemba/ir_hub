@@ -15,6 +15,9 @@ void setup() {
         }
     }
 
+    // Initialize IdGen
+    idGen.begin();
+
     // Initialize display
     display.begin(OLED_SDA_PIN, OLED_SCL_PIN);
     display.clear();

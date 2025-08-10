@@ -6,3 +6,4 @@ Router router;
 Speaker speaker;
 LedRing ring;
 Display display;
+IdGen idGen;
