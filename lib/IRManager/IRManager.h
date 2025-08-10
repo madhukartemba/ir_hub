@@ -251,6 +251,11 @@ class IRManager {
             } else {
                 LOG_WARN("No raw data available for RAW protocol");
             }
+        } else {
+            // Known protocol handling
+            LOG_DEBUG("Sending IR code using protocol: %s", getProtocolString(irData.protocol));
+            IrSender.write(&irData);
+            LOG_INFO("Sent IR code using protocol: %s", getProtocolString(irData.protocol));
         }
     }
 
