@@ -1,10 +1,19 @@
 #include <Arduino.h>
+#include <LittleFS.h>
 #include "config.h"
 #include "global/Global.h"
 #include "ui/MainMenu.h"
 
 void setup() {
     Serial.begin(9600);
+
+    // Initialize LittleFS
+    if (!LittleFS.begin()) {
+        LOG_ERROR("Failed to mount LittleFS");
+        while (1) {
+            delay(100);
+        }
+    }
 
     // Initialize display
     display.begin(OLED_SDA_PIN, OLED_SCL_PIN);
