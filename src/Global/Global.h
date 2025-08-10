@@ -2,7 +2,6 @@
 
 #include "Button.h"
 #include "Display.h"
-#include "IRManager.h"
 #include "IdGen.h"
 #include "LedRing.h"
 #include "Log.h"
@@ -15,4 +14,3 @@ extern Speaker speaker;
 extern LedRing ring;
 extern Display display;
 extern IdGen idGen;
-extern IRManager irManager;

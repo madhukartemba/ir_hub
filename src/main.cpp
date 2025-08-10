@@ -18,10 +18,6 @@ void setup() {
     // Initialize IdGen
     idGen.begin();
 
-    // Initialize IR Manager
-    irManager.begin(IR_RECEIVER_PIN, IR_EMITTER_PIN, idGen);
-    LOG_DEBUG("IR Manager initialized");
-
     // Initialize display
     display.begin(OLED_SDA_PIN, OLED_SCL_PIN);
     display.clear();

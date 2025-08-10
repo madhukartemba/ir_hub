@@ -7,4 +7,3 @@ Speaker speaker;
 LedRing ring;
 Display display;
 IdGen idGen;
-IRManager irManager;
