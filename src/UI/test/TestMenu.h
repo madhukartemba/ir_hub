@@ -57,17 +57,6 @@ class TestMenu : public Screen {
                             if (!tempJsonDoc.isNull()) {
                                 hasJsonData = true;
                                 LOG_DEBUG("JSON serialization successful");
-
-                                // Test JSON deserialization
-                                IRData deserializedData =
-                                    irManager.importIRDataFromJson(tempJsonDoc);
-                                if (deserializedData.protocol != UNKNOWN) {
-                                    LOG_DEBUG("JSON deserialization successful");
-                                    // Store the deserialized data back
-                                    recordedData = deserializedData;
-                                } else {
-                                    LOG_DEBUG("JSON deserialization failed");
-                                }
                             } else {
                                 LOG_DEBUG("JSON serialization failed");
                             }
@@ -79,9 +68,15 @@ class TestMenu : public Screen {
                 }
             } else if (currentState == State::IR_SEND) {
                 if (hasRecordedData) {
-                    // Send the recorded IR data
-                    irManager.sendIRData(recordedData);
-                    LOG_DEBUG("Sent IR data");
+                    if (hasJsonData) {
+                        // Send the JSON document
+                        irManager.sendIRData(tempJsonDoc);
+                        LOG_DEBUG("Sent IR data via JSON document");
+                    } else {
+                        // Send the recorded IR data directly
+                        irManager.sendIRData(recordedData);
+                        LOG_DEBUG("Sent IR data directly");
+                    }
                 }
             } else if (currentState == State::IR_STATUS) {
                 // Clear recorded data
