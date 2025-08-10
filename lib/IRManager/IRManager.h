@@ -94,12 +94,27 @@ class IRManager {
 
         // Add raw data information
         if (irData.rawDataPtr != nullptr) {
-            doc["raw_data_len"] = irData.rawDataPtr->rawlen;
+            if (irData.protocol == UNKNOWN || irData.protocol == PULSE_WIDTH ||
+                irData.protocol == PULSE_DISTANCE) {
+                // For RAW protocols, use compensated data like the example
+                uint8_t compensatedRawCode[RAW_BUFFER_LENGTH];
+                IrReceiver.compensateAndStoreIRResultInArray(compensatedRawCode);
+                int rawLen = irData.rawDataPtr->rawlen;
+                doc["raw_data_len"] = rawLen;
 
-            // Create raw data array
-            JsonArray rawDataArray = doc["raw_data"].to<JsonArray>();
-            for (uint16_t i = 0; i < irData.rawDataPtr->rawlen; i++) {
-                rawDataArray.add(irData.rawDataPtr->rawbuf[i]);
+                // Create raw data array, store as microseconds (like the example)
+                JsonArray rawDataArray = doc["raw_data"].to<JsonArray>();
+                for (uint16_t i = 0; i < rawLen; i++) {
+                    rawDataArray.add((uint16_t)compensatedRawCode[i] *
+                                     50);  // Store as microseconds
+                }
+            } else {
+                // For known protocols, store the raw buffer as-is
+                doc["raw_data_len"] = irData.rawDataPtr->rawlen;
+                JsonArray rawDataArray = doc["raw_data"].to<JsonArray>();
+                for (uint16_t i = 0; i < irData.rawDataPtr->rawlen; i++) {
+                    rawDataArray.add((uint16_t)irData.rawDataPtr->rawbuf[i]);
+                }
             }
         } else {
             doc["raw_data_len"] = 0;
@@ -156,8 +171,13 @@ class IRManager {
 
                 // Copy raw data from JSON array
                 for (uint16_t i = 0; i < rawLen && i < rawDataArray.size(); i++) {
-                    irData.rawDataPtr->rawbuf[i] =
-                        rawDataArray[i].as<uint16_t>() * 50;  // 50us pulse duration
+                    // For RAW protocols, the data is stored as microseconds, so divide by 50
+                    if (irData.protocol == UNKNOWN || irData.protocol == PULSE_WIDTH ||
+                        irData.protocol == PULSE_DISTANCE) {
+                        irData.rawDataPtr->rawbuf[i] = rawDataArray[i].as<uint16_t>() / 50;
+                    } else {
+                        irData.rawDataPtr->rawbuf[i] = rawDataArray[i].as<uint16_t>();
+                    }
                 }
             }
         }
@@ -206,7 +226,46 @@ class IRManager {
         return true;
     }
 
-    IRData getRecordedData() { return IrReceiver.decodedIRData; }
+    void sendIRData(IRData& irData) {
+        IrReceiver.stop();
+
+        LOG_INFO("Sending IR data: protocol=%s, address=0x%X, command=0x%X, bits=%d",
+                 getProtocolString(irData.protocol), irData.address, irData.command,
+                 irData.numberOfBits);
+
+        if (irData.protocol == UNKNOWN || irData.protocol == PULSE_WIDTH ||
+            irData.protocol == PULSE_DISTANCE) {
+            // RAW protocol handling
+            if (irData.rawDataPtr != nullptr) {
+                String rawBufStr;
+                IRRawbufType* rawbuf = irData.rawDataPtr->rawbuf;
+                uint16_t rawlen = irData.rawDataPtr->rawlen;
+
+                for (uint16_t i = 0; i < rawlen; i++) {
+                    rawBufStr += String(rawbuf[i]);
+                    if (i < rawlen - 1) rawBufStr += ", ";
+                }
+                LOG_DEBUG("Sending RAW buffer: [%s]", rawBufStr.c_str());
+                IrSender.sendRaw(rawbuf, rawlen, 38);  // 38kHz default
+                LOG_INFO("Sent RAW IR code");
+            } else {
+                LOG_WARN("No raw data available for RAW protocol");
+            }
+        }
+    }
+
+    IRData getRecordedData() {
+        IRData data = IrReceiver.decodedIRData;
+        if (data.rawDataPtr != nullptr) {
+            String rawBufStr;
+            for (uint16_t i = 0; i < data.rawDataPtr->rawlen; i++) {
+                rawBufStr += String(data.rawDataPtr->rawbuf[i]);
+                if (i < data.rawDataPtr->rawlen - 1) rawBufStr += ",";
+            }
+            LOG_DEBUG("Received rawbuf: [%s]", rawBufStr.c_str());
+        }
+        return data;
+    }
 
     /**
      * Export recorded IR data to a new JsonDocument
@@ -248,24 +307,20 @@ class IRManager {
         }
     }
 
-    void sendIRData(IRData& irData) {
-        IrReceiver.stop();
-
-        if (irData.protocol == UNKNOWN || irData.protocol == PULSE_WIDTH ||
-            irData.protocol == PULSE_DISTANCE) {
-            // Assume 38 KHz for raw protocols
-            if (irData.rawDataPtr != nullptr) {
-                IrSender.sendRaw(irData.rawDataPtr->rawbuf, irData.rawDataPtr->rawlen, 38);
-            }
-        } else {
-            // Use standard protocol sending
-            IrSender.write(&irData);
-        }
-    }
-
     void sendIRData(JsonDocument& doc) {
+        LOG_INFO("Preparing to send IR data from JSON");
+
+        // Print the JSON document
+        String jsonStr;
+        serializeJson(doc, jsonStr);
+        LOG_DEBUG("JSON Document: %s", jsonStr.c_str());
+
         IRData irData;
-        convertFromJson(doc, irData);
-        sendIRData(irData);
+        if (convertFromJson(doc, irData)) {
+            LOG_DEBUG("Converted JSON to IRData, protocol=%s", getProtocolString(irData.protocol));
+            sendIRData(irData);
+        } else {
+            LOG_ERROR("Failed to convert JSON to IRData");
+        }
     }
 };
