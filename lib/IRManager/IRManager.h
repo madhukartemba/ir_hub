@@ -97,7 +97,7 @@ class IRManager {
             doc["raw_data_len"] = irData.rawDataPtr->rawlen;
 
             // Create raw data array
-            JsonArray rawDataArray = doc.createNestedArray("raw_data");
+            JsonArray rawDataArray = doc["raw_data"].to<JsonArray>();
             for (uint16_t i = 0; i < irData.rawDataPtr->rawlen; i++) {
                 rawDataArray.add(irData.rawDataPtr->rawbuf[i]);
             }
@@ -121,8 +121,8 @@ class IRManager {
      */
     bool convertFromJson(JsonDocument& doc, IRData& irData) {
         // Validate required fields exist
-        if (!doc.containsKey("protocol") || !doc.containsKey("address") ||
-            !doc.containsKey("command") || !doc.containsKey("number_of_bits")) {
+        if (!doc["protocol"].is<int>() || !doc["address"].is<uint16_t>() ||
+            !doc["command"].is<uint16_t>() || !doc["number_of_bits"].is<uint8_t>()) {
             LOG_ERROR("Missing required fields in JSON document");
             return false;
         }
@@ -137,15 +137,15 @@ class IRManager {
         irData.numberOfBits = doc["number_of_bits"].as<uint8_t>();
 
         // Set optional fields if they exist
-        if (doc.containsKey("flags")) {
+        if (doc["flags"].is<uint8_t>()) {
             irData.flags = doc["flags"].as<uint8_t>();
         }
-        if (doc.containsKey("decoded_raw_data")) {
+        if (doc["decoded_raw_data"].is<uint32_t>()) {
             irData.decodedRawData = doc["decoded_raw_data"].as<uint32_t>();
         }
 
         // Handle raw data if present
-        if (doc.containsKey("raw_data") && doc["raw_data"].is<JsonArray>()) {
+        if (doc["raw_data"].is<JsonArray>()) {
             JsonArray rawDataArray = doc["raw_data"];
             uint16_t rawLen = doc["raw_data_len"].as<uint16_t>();
 
