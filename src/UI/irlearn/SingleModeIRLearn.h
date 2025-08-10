@@ -113,11 +113,6 @@ class SingleModeIRLearn : public Screen {
         // Show IR icon/indicator
         display.drawRect(54, 30, 20, 8);
         display.print("IR", 58, 32);
-
-        // Show instructions
-        display.setTextSize(1);
-        display.printCentered("Long press to start", 45);
-        display.printCentered("recording IR code", 53);
     }
 
     void drawRecording() {
@@ -140,11 +135,6 @@ class SingleModeIRLearn : public Screen {
 
         // Show progress bar
         display.drawProgressBar(10, 40, 108, 6, 50, 100, false);
-
-        // Show instructions
-        display.setTextSize(1);
-        display.printCentered("Point remote at IR", 50);
-        display.printCentered("Long press to stop", 58);
     }
 
     void drawSuccess() {
@@ -168,10 +158,6 @@ class SingleModeIRLearn : public Screen {
         display.setTextSize(1);
         display.printCentered("IR Code Learned", 44);
         display.printCentered("Protocol: NEC", 52);
-
-        // Show instructions
-        display.setTextSize(1);
-        display.print("Press to continue", 8, 58);
     }
 
     void drawError() {
@@ -195,9 +181,5 @@ class SingleModeIRLearn : public Screen {
         display.setTextSize(1);
         display.printCentered("Failed to record", 44);
         display.printCentered("IR code", 52);
-
-        // Show instructions
-        display.setTextSize(1);
-        display.print("Press to retry", 14, 58);
     }
 };

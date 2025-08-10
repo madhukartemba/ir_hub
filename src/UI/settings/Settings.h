@@ -72,11 +72,6 @@ class Settings : public Screen {
             bool isSelected = (i == 0);  // Reset Settings is selected
             display.drawMenuItem(menuItems[i], i, 2, isSelected, startY);
         }
-
-        // Show instructions at bottom
-        display.setTextSize(1);
-        display.print("Click: Navigate", 2, 50);
-        display.print("Hold: Select", 2, 58);
     }
 
     void drawBack() {
@@ -95,10 +90,5 @@ class Settings : public Screen {
             bool isSelected = (i == 1);  // Back is selected
             display.drawMenuItem(menuItems[i], i, 2, isSelected, startY);
         }
-
-        // Show instructions at bottom
-        display.setTextSize(1);
-        display.print("Click: Navigate", 2, 50);
-        display.print("Hold: Select", 2, 58);
     }
 };

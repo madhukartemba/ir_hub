@@ -142,11 +142,6 @@ class DualModeIRLearn : public Screen {
         display.print("ON", 24, 32);
         display.print("OFF", 90, 32);
         display.fillRect(22, 30, 20, 8);  // Highlight ON
-
-        // Show instructions
-        display.setTextSize(1);
-        display.printCentered("Long press to start", 45);
-        display.printCentered("recording ON code", 53);
     }
 
     void drawRecordingOn() {
@@ -171,11 +166,6 @@ class DualModeIRLearn : public Screen {
 
         // Show progress bar
         display.drawProgressBar(10, 42, 108, 6, 50, 100, false);
-
-        // Show instructions
-        display.setTextSize(1);
-        display.printCentered("Press ON on remote", 52);
-        display.printCentered("Hold to stop", 60);
     }
 
     void drawReadyToRecordOff() {
@@ -198,11 +188,6 @@ class DualModeIRLearn : public Screen {
         display.setTextColor(1);
         display.print("OFF", 90, 32);
         display.drawCircle(30, 42, 3);  // Checkmark for ON
-
-        // Show instructions
-        display.setTextSize(1);
-        display.printCentered("Long press to start", 48);
-        display.printCentered("recording OFF code", 56);
     }
 
     void drawRecordingOff() {
@@ -228,11 +213,6 @@ class DualModeIRLearn : public Screen {
 
         // Show progress bar
         display.drawProgressBar(10, 42, 108, 6, 75, 100, false);
-
-        // Show instructions
-        display.setTextSize(1);
-        display.printCentered("Press OFF on remote", 52);
-        display.printCentered("Hold to stop", 60);
     }
 
     void drawSuccess() {
@@ -263,7 +243,6 @@ class DualModeIRLearn : public Screen {
         // Show code info
         display.setTextSize(1);
         display.printCentered("Both codes learned", 52);
-        display.print("Press to continue", 8, 60);
     }
 
     void drawError() {
@@ -287,9 +266,5 @@ class DualModeIRLearn : public Screen {
         display.setTextSize(1);
         display.printCentered("Failed to record", 44);
         display.printCentered("IR codes", 52);
-
-        // Show instructions
-        display.setTextSize(1);
-        display.print("Press to retry", 14, 60);
     }
 };

@@ -91,11 +91,6 @@ class IRLearn : public Screen {
             bool isSelected = (i == 0);  // Single Mode is selected
             display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
         }
-
-        // Show instructions at bottom
-        display.setTextSize(1);
-        display.print("Click: Navigate", 2, 50);
-        display.print("Hold: Select", 2, 58);
     }
 
     void drawDualMode() {
@@ -114,11 +109,6 @@ class IRLearn : public Screen {
             bool isSelected = (i == 1);  // Dual Mode is selected
             display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
         }
-
-        // Show instructions at bottom
-        display.setTextSize(1);
-        display.print("Click: Navigate", 2, 50);
-        display.print("Hold: Select", 2, 58);
     }
 
     void drawBack() {
@@ -137,10 +127,5 @@ class IRLearn : public Screen {
             bool isSelected = (i == 2);  // Back is selected
             display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
         }
-
-        // Show instructions at bottom
-        display.setTextSize(1);
-        display.print("Click: Navigate", 2, 50);
-        display.print("Hold: Select", 2, 58);
     }
 };
