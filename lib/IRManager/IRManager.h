@@ -8,8 +8,8 @@
 
 #define RAW_BUFFER_LENGTH 250
 
-#include <Log.h>
-#include <IRRemote.hpp>
+#include <IRremote.hpp>
+#include "Log.h"
 
 class IRManager {
    private:
