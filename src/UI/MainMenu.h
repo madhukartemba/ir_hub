@@ -2,6 +2,7 @@
 #include "../global/Global.h"
 #include "../ui/irlearn/IRLearn.h"
 #include "../ui/settings/Settings.h"
+#include "../ui/test/TestMenu.h"
 
 class MainMenu : public Screen {
    private:
@@ -9,6 +10,7 @@ class MainMenu : public Screen {
         STATUS,
         IR_LEARN,
         SETTINGS,
+        TEST,
     };
 
     State currentState;
@@ -22,7 +24,7 @@ class MainMenu : public Screen {
         button.setClickCallback([this]() {
             LOG_DEBUG("MainMenu onButtonClick");
             // Switch to next state using mod operator
-            currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 3);
+            currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 4);
         });
 
         // Change button long press behavior
@@ -34,6 +36,8 @@ class MainMenu : public Screen {
                 router.push(new IRLearn());
             } else if (currentState == State::SETTINGS) {
                 router.push(new Settings());
+            } else if (currentState == State::TEST) {
+                router.push(new TestMenu());
             }
         });
     }
@@ -50,12 +54,12 @@ class MainMenu : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Status", "IR Learn", "Settings"};
+        const char* menuItems[] = {"Status", "IR Learn", "Settings", "Test"};
         int startY = 20;
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             bool isSelected = (i == static_cast<int>(currentState));
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
         }
 
         display.update();
