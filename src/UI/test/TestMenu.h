@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include "../../../lib/IRManager/IRManager.h"
 #include "../../config.h"
 #include "../../global/Global.h"
@@ -16,6 +17,8 @@ class TestMenu : public Screen {
     bool isRecording = false;
     IRData recordedData;
     bool hasRecordedData = false;
+    JsonDocument tempJsonDoc;  // Temporary JSON document for testing
+    bool hasJsonData = false;
 
    public:
     void onEnter() override {
@@ -48,6 +51,26 @@ class TestMenu : public Screen {
                             recordedData = irManager.getRecordedData();
                             hasRecordedData = true;
                             LOG_DEBUG("IR data recorded successfully");
+
+                            // Test JSON serialization
+                            tempJsonDoc = irManager.exportRecordedDataToJson();
+                            if (!tempJsonDoc.isNull()) {
+                                hasJsonData = true;
+                                LOG_DEBUG("JSON serialization successful");
+
+                                // Test JSON deserialization
+                                IRData deserializedData =
+                                    irManager.importIRDataFromJson(tempJsonDoc);
+                                if (deserializedData.protocol != UNKNOWN) {
+                                    LOG_DEBUG("JSON deserialization successful");
+                                    // Store the deserialized data back
+                                    recordedData = deserializedData;
+                                } else {
+                                    LOG_DEBUG("JSON deserialization failed");
+                                }
+                            } else {
+                                LOG_DEBUG("JSON serialization failed");
+                            }
                         } else {
                             LOG_DEBUG("Invalid IR data recorded");
                         }
@@ -63,7 +86,9 @@ class TestMenu : public Screen {
             } else if (currentState == State::IR_STATUS) {
                 // Clear recorded data
                 hasRecordedData = false;
-                LOG_DEBUG("Cleared recorded IR data");
+                hasJsonData = false;
+                tempJsonDoc.clear();
+                LOG_DEBUG("Cleared recorded IR data and JSON");
             }
         });
     }
@@ -96,6 +121,9 @@ class TestMenu : public Screen {
                 display.print("Recording...", 0, 50);
             } else {
                 display.print("Press long to start", 0, 50);
+                if (hasJsonData) {
+                    display.print("JSON: OK", 0, 60);
+                }
             }
         } else if (currentState == State::IR_SEND) {
             if (hasRecordedData) {
@@ -107,6 +135,9 @@ class TestMenu : public Screen {
             if (hasRecordedData) {
                 display.print("Data recorded", 0, 50);
                 display.print("Press long to clear", 0, 60);
+                if (hasJsonData) {
+                    display.print("JSON stored", 0, 70);
+                }
             } else {
                 display.print("No data recorded", 0, 50);
             }
