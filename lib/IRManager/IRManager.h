@@ -9,20 +9,23 @@
 #define RAW_BUFFER_LENGTH 250
 
 #include <IRremote.hpp>
+#include "IdGen.h"
 #include "Log.h"
 
 class IRManager {
    private:
     int irTxPin;
     int irRxPin;
+    IdGen& idGen;
 
    public:
     IRManager() {}
     ~IRManager() {}
 
-    void begin(int rxPin, int txPin) {
+    void begin(int rxPin, int txPin, IdGen& idGen) {
         this->irRxPin = rxPin;
         this->irTxPin = txPin;
+        this->idGen = idGen;
         IrReceiver.begin(irRxPin, true);
         IrSender.begin(irTxPin);
     }
