@@ -16,16 +16,16 @@ class IRManager {
    private:
     int irTxPin;
     int irRxPin;
-    IdGen& idGen;
+    IdGen* idGen;
 
    public:
-    IRManager() {}
+    IRManager() : idGen(nullptr) {}
     ~IRManager() {}
 
     void begin(int rxPin, int txPin, IdGen& idGen) {
         this->irRxPin = rxPin;
         this->irTxPin = txPin;
-        this->idGen = idGen;
+        this->idGen = &idGen;
         IrReceiver.begin(irRxPin, true);
         IrSender.begin(irTxPin);
     }
