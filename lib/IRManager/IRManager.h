@@ -156,7 +156,8 @@ class IRManager {
 
                 // Copy raw data from JSON array
                 for (uint16_t i = 0; i < rawLen && i < rawDataArray.size(); i++) {
-                    irData.rawDataPtr->rawbuf[i] = rawDataArray[i].as<uint16_t>();
+                    irData.rawDataPtr->rawbuf[i] =
+                        rawDataArray[i].as<uint16_t>() * 50;  // 50us pulse duration
                 }
             }
         }
@@ -249,7 +250,17 @@ class IRManager {
 
     void sendIRData(IRData& irData) {
         IrReceiver.stop();
-        IrSender.write(&irData);
+
+        if (irData.protocol == UNKNOWN || irData.protocol == PULSE_WIDTH ||
+            irData.protocol == PULSE_DISTANCE) {
+            // Assume 38 KHz for raw protocols
+            if (irData.rawDataPtr != nullptr) {
+                IrSender.sendRaw(irData.rawDataPtr->rawbuf, irData.rawDataPtr->rawlen, 38);
+            }
+        } else {
+            // Use standard protocol sending
+            IrSender.write(&irData);
+        }
     }
 
     void sendIRData(JsonDocument& doc) {
