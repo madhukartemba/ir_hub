@@ -13,7 +13,6 @@ class TestMenu : public Screen {
     };
 
     State currentState;
-    IRManager irManager;
     bool isRecording = false;
     IRData recordedData;
     bool hasRecordedData = false;
@@ -25,8 +24,7 @@ class TestMenu : public Screen {
         LOG_DEBUG("TestMenu onEnter");
         currentState = State::IR_RECORD;
 
-        // Initialize IR Manager
-        irManager.begin(IR_RECEIVER_PIN, IR_EMITTER_PIN, idGen);
+        // IR Manager is now initialized globally in main.cpp
 
         // Change button behavior
         button.setClickCallback([this]() {
