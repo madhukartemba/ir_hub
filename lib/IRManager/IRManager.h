@@ -18,7 +18,7 @@ class IRManager {
     const uint16_t kCaptureBufferSize = 1024;
     const uint8_t kTimeout = 50;
     const uint16_t kMinUnknownSize = 12;
-    const uint8_t kTolerancePercentage = kTolerance;
+    const uint8_t kTolerancePercentage = 25;  // 25% tolerance
 
     IRrecv *irrecv = nullptr;
     IRsend *irsend = nullptr;
