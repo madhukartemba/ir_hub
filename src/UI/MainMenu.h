@@ -5,12 +5,7 @@
 
 class MainMenu : public Screen {
    private:
-    enum class State {
-        STATUS,
-        IR_LEARN,
-        SETTINGS,
-        TEST,
-    };
+    enum class State { STATUS, IR_LEARN, SETTINGS };
 
     State currentState;
 
