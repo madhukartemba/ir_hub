@@ -2,7 +2,6 @@
 #include "../global/Global.h"
 #include "../ui/irlearn/IRLearn.h"
 #include "../ui/settings/Settings.h"
-#include "../ui/test/TestMenu.h"
 
 class MainMenu : public Screen {
    private:
@@ -36,8 +35,6 @@ class MainMenu : public Screen {
                 router.push(new IRLearn());
             } else if (currentState == State::SETTINGS) {
                 router.push(new Settings());
-            } else if (currentState == State::TEST) {
-                router.push(new TestMenu());
             }
         });
     }
