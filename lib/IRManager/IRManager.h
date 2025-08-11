@@ -72,9 +72,15 @@ class IRManager {
     }
 
    public:
+    IRManager() : rxPin(-1), txPin(-1) {}
     IRManager(int rx, int tx) : rxPin(rx), txPin(tx) {}
 
     void begin() {
+        if (rxPin == -1 || txPin == -1) {
+            Serial.println(
+                "[IRManager] ERROR: Pins not set. Use begin(rx, tx) or constructor with pins.");
+            return;
+        }
         Serial.printf("[IRManager] Initializing with RX=%d, TX=%d\n", rxPin, txPin);
         irrecv = new IRrecv(rxPin, kCaptureBufferSize, kTimeout, true);
         irsend = new IRsend(txPin);
@@ -84,6 +90,12 @@ class IRManager {
         irrecv->enableIRIn();
         irsend->begin();
         Serial.println("[IRManager] IR receiver and sender started");
+    }
+
+    void begin(int rx, int tx) {
+        rxPin = rx;
+        txPin = tx;
+        begin();
     }
 
     bool decode() {

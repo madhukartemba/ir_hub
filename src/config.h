@@ -6,8 +6,8 @@
 #define OLED_SCL_PIN D1
 #define OLED_SDA_PIN D2
 #define SPEAKER_PIN D3
-#define IR_RECEIVER_PIN D5
-#define IR_EMITTER_PIN D6
+#define IR_RX_PIN D5
+#define IR_TX_PIN D6
 #define NEOPIXEL_PIN D7
 
 // LED configuration
