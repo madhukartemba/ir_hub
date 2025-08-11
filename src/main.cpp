@@ -39,8 +39,7 @@ void setup() {
     // Set up button callbacks if needed
 
     LOG_DEBUG("Starting LED ring setup");
-    ring.begin(NEOPIXEL_PIN, NUM_LEDS);
-    ring.setCenterLed(CENTER_LED);
+    ring.begin(NEOPIXEL_PIN, NUM_LEDS, CENTER_LED);
     LOG_DEBUG("LED ring initialized on pin");
 
     // Initialize the global router
