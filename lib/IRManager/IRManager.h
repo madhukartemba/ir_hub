@@ -31,8 +31,8 @@ class IRManager {
         code.protocol = results.decode_type;
         code.value = results.value;
         code.bits = results.bits;
-        Serial.printf("[IRManager] Decoded: protocol=%d, value=0x%llX, bits=%u\n",
-                      (int)code.protocol, code.value, code.bits);
+        LOG_DEBUG("[IRManager] Decoded: protocol=%d, value=0x%llX, bits=%u", (int)code.protocol,
+                  code.value, code.bits);
         return code;
     }
 
@@ -41,8 +41,8 @@ class IRManager {
         code.protocol = (decode_type_t)doc["protocol"].as<int>();
         code.value = doc["value"].as<uint64_t>();
         code.bits = doc["bits"].as<uint16_t>();
-        Serial.printf("[IRManager] Loaded from JSON: protocol=%d, value=0x%llX, bits=%u\n",
-                      (int)code.protocol, code.value, code.bits);
+        LOG_DEBUG("[IRManager] Loaded from JSON: protocol=%d, value=0x%llX, bits=%u",
+                  (int)code.protocol, code.value, code.bits);
         return code;
     }
 
@@ -51,23 +51,23 @@ class IRManager {
             doc["protocol"] = (int)code.protocol;
             doc["value"] = code.value;
             doc["bits"] = code.bits;
-            Serial.println("[IRManager] Saved code to JSON");
+            LOG_DEBUG("[IRManager] Saved code to JSON");
         } else {
-            Serial.println("[IRManager] Skipped saving invalid code");
+            LOG_WARN("[IRManager] Skipped saving invalid code");
         }
     }
 
     void sendProtocol(const IRCode &code) {
         if (!irsend) {
-            Serial.println("[IRManager] ERROR: irsend not initialized");
+            LOG_ERROR("[IRManager] irsend not initialized");
             return;
         }
         if (!code.isValid()) {
-            Serial.println("[IRManager] ERROR: Attempted to send invalid code");
+            LOG_ERROR("[IRManager] Attempted to send invalid code");
             return;
         }
-        Serial.printf("[IRManager] Sending: protocol=%d, value=0x%llX, bits=%u\n",
-                      (int)code.protocol, code.value, code.bits);
+        LOG_DEBUG("[IRManager] Sending: protocol=%d, value=0x%llX, bits=%u", (int)code.protocol,
+                  code.value, code.bits);
         irsend->send(code.protocol, code.value, code.bits);
     }
 
@@ -77,11 +77,10 @@ class IRManager {
 
     void begin() {
         if (rxPin == -1 || txPin == -1) {
-            Serial.println(
-                "[IRManager] ERROR: Pins not set. Use begin(rx, tx) or constructor with pins.");
+            LOG_ERROR("[IRManager] Pins not set. Use begin(rx, tx) or constructor with pins.");
             return;
         }
-        Serial.printf("[IRManager] Initializing with RX=%d, TX=%d\n", rxPin, txPin);
+        LOG_INFO("[IRManager] Initializing with RX=%d, TX=%d", rxPin, txPin);
         irrecv = new IRrecv(rxPin, kCaptureBufferSize, kTimeout, true);
         irsend = new IRsend(txPin);
 
@@ -89,7 +88,7 @@ class IRManager {
         irrecv->setTolerance(kTolerancePercentage);
         irrecv->enableIRIn();
         irsend->begin();
-        Serial.println("[IRManager] IR receiver and sender started");
+        LOG_INFO("[IRManager] IR receiver and sender started");
     }
 
     void begin(int rx, int tx) {
@@ -100,11 +99,11 @@ class IRManager {
 
     bool decode() {
         if (!irrecv) {
-            Serial.println("[IRManager] ERROR: irrecv not initialized");
+            LOG_ERROR("[IRManager] irrecv not initialized");
             return false;
         }
         if (irrecv->decode(&lastResults)) {
-            Serial.println("[IRManager] IR code received");
+            LOG_DEBUG("[IRManager] IR code received");
             lastCode = fromDecodeResults(lastResults);
             return true;
         }
@@ -113,14 +112,14 @@ class IRManager {
 
     bool isValid() {
         bool valid = lastCode.isValid();
-        Serial.printf("[IRManager] isValid() -> %s\n", valid ? "true" : "false");
+        LOG_DEBUG("[IRManager] isValid() -> %s", valid ? "true" : "false");
         return valid;
     }
 
     void resume() {
         if (irrecv) {
             irrecv->resume();
-            Serial.println("[IRManager] IR receiver resumed");
+            LOG_DEBUG("[IRManager] IR receiver resumed");
         }
     }
 
