@@ -225,13 +225,13 @@ class AutoModeAddDevice : public Screen {
         // Show status
         display.setTextSize(1);
         display.printCentered("Click to record", 18);
-        display.printCentered("first code", 26);
+        display.printCentered("ON code", 26);
 
         // Show progress indicator
         display.drawRect(20, 28, 88, 12);
-        display.print("1st", 24, 32);
-        display.print("2nd", 90, 32);
-        display.fillRect(22, 30, 20, 8);  // Highlight 1st
+        display.print("ON", 24, 32);
+        display.print("OFF", 90, 32);
+        display.fillRect(22, 30, 20, 8);  // Highlight ON
     }
 
     void drawRecordingFirst() {
@@ -244,15 +244,15 @@ class AutoModeAddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING 1ST...", 18);
+        display.printCentered("RECORDING ON...", 18);
 
         // Show progress indicator with animation
         display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // Highlight 1st (filled)
+        display.fillRect(22, 30, 20, 8);  // Highlight ON (filled)
         display.setTextColor(0);
-        display.print("1st", 24, 32);
+        display.print("ON", 24, 32);
         display.setTextColor(1);
-        display.print("2nd", 90, 32);
+        display.print("OFF", 90, 32);
 
         // Show progress bar
         display.drawProgressBar(10, 42, 108, 6, 25, 100, false);
@@ -269,16 +269,16 @@ class AutoModeAddDevice : public Screen {
         // Show status
         display.setTextSize(1);
         display.printCentered("Click to record", 18);
-        display.printCentered("second code", 26);
+        display.printCentered("OFF code", 26);
 
         // Show progress indicator
         display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // 1st completed
+        display.fillRect(22, 30, 20, 8);  // ON completed
         display.setTextColor(0);
-        display.print("1st", 24, 32);
+        display.print("ON", 24, 32);
         display.setTextColor(1);
-        display.print("2nd", 90, 32);
-        display.drawCircle(30, 42, 3);  // Checkmark for 1st
+        display.print("OFF", 90, 32);
+        display.drawCircle(30, 42, 3);  // Checkmark for ON
     }
 
     void drawRecordingSecond() {
@@ -291,15 +291,15 @@ class AutoModeAddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING 2ND...", 18);
+        display.printCentered("RECORDING OFF...", 18);
 
         // Show progress indicator with animation
         display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // 1st completed
-        display.fillRect(88, 30, 18, 8);  // 2nd recording
+        display.fillRect(22, 30, 20, 8);  // ON completed
+        display.fillRect(88, 30, 18, 8);  // OFF recording
         display.setTextColor(0);
-        display.print("1st", 24, 32);
-        display.print("2nd", 90, 32);
+        display.print("ON", 24, 32);
+        display.print("OFF", 90, 32);
         display.setTextColor(1);
 
         // Show progress bar
@@ -320,11 +320,11 @@ class AutoModeAddDevice : public Screen {
 
         // Show progress indicator
         display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // 1st completed
-        display.fillRect(88, 30, 18, 8);  // 2nd completed
+        display.fillRect(22, 30, 20, 8);  // ON completed
+        display.fillRect(88, 30, 18, 8);  // OFF completed
         display.setTextColor(0);
-        display.print("1st", 24, 32);
-        display.print("2nd", 90, 32);
+        display.print("ON", 24, 32);
+        display.print("OFF", 90, 32);
         display.setTextColor(1);
 
         // Show checkmarks
@@ -349,11 +349,11 @@ class AutoModeAddDevice : public Screen {
 
         // Show completed progress
         display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // 1st completed
-        display.fillRect(88, 30, 18, 8);  // 2nd completed
+        display.fillRect(22, 30, 20, 8);  // ON completed
+        display.fillRect(88, 30, 18, 8);  // OFF completed
         display.setTextColor(0);
-        display.print("1st", 24, 32);
-        display.print("2nd", 90, 32);
+        display.print("ON", 24, 32);
+        display.print("OFF", 90, 32);
         display.setTextColor(1);
 
         // Show checkmarks
@@ -380,8 +380,8 @@ class AutoModeAddDevice : public Screen {
             if (firstProtocol == secondProtocol) {
                 display.printCentered("Protocol: " + firstProtocol, 68);
             } else {
-                display.printCentered("1st: " + firstProtocol, 68);
-                display.printCentered("2nd: " + secondProtocol, 76);
+                display.printCentered("ON: " + firstProtocol, 68);
+                display.printCentered("OFF: " + secondProtocol, 76);
             }
         }
     }
