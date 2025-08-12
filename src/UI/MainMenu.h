@@ -46,12 +46,12 @@ class MainMenu : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Status", "IR Learn", "Settings", "Test"};
+        const char* menuItems[] = {"Status", "IR Learn", "Settings"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {
             bool isSelected = (i == static_cast<int>(currentState));
-            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
+            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
         }
 
         display.update();
