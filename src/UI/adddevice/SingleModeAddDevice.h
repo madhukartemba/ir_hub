@@ -151,7 +151,7 @@ class SingleModeAddDevice : public Screen {
         display.printCentered("Click to record", 18);
 
         // Show IR icon/indicator
-        display.drawRect(54, 30, 20, 8);
+        display.drawRect(54, 30, 20, 10);
         display.print("IR", 58, 32);
 
         // Show instruction
@@ -172,7 +172,7 @@ class SingleModeAddDevice : public Screen {
         display.printCentered("RECORDING...", 18);
 
         // Show animated IR indicator
-        display.fillRect(54, 30, 20, 8);
+        display.fillRect(54, 30, 20, 10);
         display.setTextColor(0);  // Black text on white background
         display.print("IR", 58, 32);
         display.setTextColor(1);  // Reset to white text
