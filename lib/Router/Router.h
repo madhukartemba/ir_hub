@@ -35,26 +35,50 @@ class Router {
         screen->onEnter();  // Optional
     }
 
-    void pop() {
+    void pop() { pop(1); }
+
+    void pop(int count) {
+        if (count <= 0) {
+            LOG_WARN("Invalid pop count: %d", count);
+            return;
+        }
+
         if (!screenStack.empty() && screenStack.top()->isNavigationPaused()) {
             LOG_WARN("Navigation blocked - current screen has paused navigation");
             return;  // Don't navigate if current screen has paused navigation
         }
 
-        if (!screenStack.empty()) {
-            Screen* top = screenStack.top();
+        int poppedCount = 0;
+        int maxPops = count;
 
-            // Don't pop the default screen
-            if (top == defaultScreen) {
-                LOG_WARN("Attempted to pop default screen - operation blocked");
-                return;
+        // Calculate how many screens we can actually pop
+        // We need to keep at least the default screen
+        if (defaultScreen != nullptr) {
+            int nonDefaultScreens = 0;
+            std::stack<Screen*> tempStack = screenStack;
+            while (!tempStack.empty() && tempStack.top() != defaultScreen) {
+                nonDefaultScreens++;
+                tempStack.pop();
             }
+            maxPops = std::min(count, nonDefaultScreens);
+        }
 
+        if (maxPops == 0) {
+            LOG_WARN("No screens available to pop");
+            return;
+        }
+
+        // Pop the calculated number of screens
+        for (int i = 0; i < maxPops && !screenStack.empty(); i++) {
+            Screen* top = screenStack.top();
             screenStack.pop();
-            LOG_INFO("Popped screen from stack");
+            LOG_INFO("Popped screen %d from stack", i + 1);
             delete top;
-        } else {
-            LOG_WARN("Attempted to pop from empty screen stack");
+            poppedCount++;
+        }
+
+        if (poppedCount < count) {
+            LOG_WARN("Requested to pop %d screens but only popped %d", count, poppedCount);
         }
 
         if (!screenStack.empty()) {

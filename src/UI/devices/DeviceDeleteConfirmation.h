@@ -33,8 +33,7 @@ class DeviceDeleteConfirmation : public Screen {
                 delay(2000);
 
                 // Go back to devices list
-                router.pop();
-                router.pop();  // Pop twice to go back to devices list
+                router.pop(2);  // Pop twice to go back to devices list
             } else {
                 // Go back to device actions
                 router.pop();
