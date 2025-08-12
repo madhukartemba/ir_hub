@@ -14,6 +14,7 @@ struct Device {
     int id;
     DeviceType type;
     String name;
+    String protocolName;
     IRCode onCommand;
     IRCode offCommand;
 };
@@ -46,25 +47,46 @@ class DeviceManager {
     void setStorageDir(char* dir) { storageDir = dir; }
 
     int addSingleCommandDevice(IRCode command) {
+        if (!command.isValid()) {
+            LOG_ERROR("Invalid command");
+            return -1;
+        }
+
         Device device;
         device.id = idGen.generateId();
         device.name = String(device.id);
         device.type = SINGLE_COMMAND;
         device.onCommand = command;
         device.offCommand = command;
-
+        device.protocolName = String(typeToString(command.getProtocol(), false));
         saveDevice(device);
 
         return device.id;
     }
 
     int addDualCommandDevice(IRCode onCommand, IRCode offCommand) {
+        if (!onCommand.isValid() || !offCommand.isValid()) {
+            if (!onCommand.isValid()) {
+                LOG_ERROR("Invalid on command");
+            }
+            if (!offCommand.isValid()) {
+                LOG_ERROR("Invalid off command");
+            }
+            return -1;
+        }
+
         Device device;
         device.id = idGen.generateId();
         device.name = String(device.id);
         device.type = DUAL_COMMAND;
         device.onCommand = onCommand;
         device.offCommand = offCommand;
+        if (onCommand.getProtocol() == offCommand.getProtocol()) {
+            device.protocolName = String(typeToString(onCommand.getProtocol(), false));
+        } else {
+            device.protocolName = String(typeToString(onCommand.getProtocol(), false)) + " & " +
+                                  String(typeToString(offCommand.getProtocol(), false));
+        }
         return device.id;
     }
 
@@ -79,6 +101,7 @@ class DeviceManager {
         doc["id"] = device.id;
         doc["type"] = device.type;
         doc["name"] = device.name;
+        doc["protocolName"] = device.protocolName;
         doc["onCommand"] = device.onCommand.toJson();
         doc["offCommand"] = device.offCommand.toJson();
         file.print(doc.as<String>());
@@ -117,6 +140,8 @@ class DeviceManager {
         Device device;
         device.id = id;
         device.type = (DeviceType)doc["type"];
+        device.name = doc["name"] | "";
+        device.protocolName = doc["protocolName"] | "";
 
         device.onCommand = IRCode::fromJson(doc["onCommand"]);
         device.offCommand = IRCode::fromJson(doc["offCommand"]);
