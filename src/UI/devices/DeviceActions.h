@@ -1,16 +1,19 @@
 #include <Arduino.h>
 #include "../../global/Global.h"
+#include "DeviceDeleteConfirmation.h"
 #include "DeviceDetails.h"
 
 class DeviceActions : public Screen {
    private:
-    enum class ActionType { ON, OFF, DETAILS };
+    enum class ActionType { ON, OFF, DETAILS, REMOVE, BACK };
 
     Device device;
     ActionType selectedAction;
+    int scrollOffset;
 
    public:
-    DeviceActions(Device& device) : device(device), selectedAction(ActionType::ON) {}
+    DeviceActions(Device& device)
+        : device(device), selectedAction(ActionType::ON), scrollOffset(0) {}
 
     void onEnter() override {
         LOG_DEBUG("DeviceActions onEnter for device %d", device.id);
@@ -18,7 +21,7 @@ class DeviceActions : public Screen {
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("DeviceActions onButtonClick");
-            // Navigate through actions: ON, OFF, Details
+            // Navigate through actions: ON, OFF, Details, Remove, Back
             switch (selectedAction) {
                 case ActionType::ON:
                     selectedAction = ActionType::OFF;
@@ -27,20 +30,39 @@ class DeviceActions : public Screen {
                     selectedAction = ActionType::DETAILS;
                     break;
                 case ActionType::DETAILS:
+                    selectedAction = ActionType::REMOVE;
+                    break;
+                case ActionType::REMOVE:
+                    selectedAction = ActionType::BACK;
+                    break;
+                case ActionType::BACK:
                     selectedAction = ActionType::ON;
                     break;
             }
+            updateScrollOffset();
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("DeviceActions onButtonLongPress");
-            if (selectedAction == ActionType::DETAILS) {
-                // Navigate to details
-                router.push(new DeviceDetails(device));
-            } else {
-                // Execute ON or OFF action
-                executeAction();
+            switch (selectedAction) {
+                case ActionType::ON:
+                case ActionType::OFF:
+                    // Execute ON or OFF action
+                    executeAction();
+                    break;
+                case ActionType::DETAILS:
+                    // Navigate to details
+                    router.push(new DeviceDetails(device));
+                    break;
+                case ActionType::REMOVE:
+                    // Navigate to delete confirmation
+                    router.push(new DeviceDeleteConfirmation(device));
+                    break;
+                case ActionType::BACK:
+                    // Go back to devices list
+                    router.pop();
+                    break;
             }
         });
     }
@@ -60,21 +82,18 @@ class DeviceActions : public Screen {
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
-        // Show action options
+        // Show action options with scrolling
         int startY = 20;
-        const char* actions[] = {"Send ON", "Send OFF", "Details"};
+        const char* actions[] = {"Send ON", "Send OFF", "Details", "Delete Device", "Back"};
+        const int totalActions = 5;
+        const int visibleActions = 3;
 
-        for (int i = 0; i < 3; i++) {
-            bool isSelected = (static_cast<ActionType>(i) == selectedAction);
-            display.drawMenuItem(actions[i], i, 3, isSelected, startY);
-        }
-
-        // Show navigation hint
-        display.setTextSize(1);
-        if (selectedAction == ActionType::DETAILS) {
-            display.printCentered("Click to select, Long press for details", 50);
-        } else {
-            display.printCentered("Click to select, Long press to execute", 50);
+        for (int i = 0; i < visibleActions; i++) {
+            int actionIndex = scrollOffset + i;
+            if (actionIndex < totalActions) {
+                bool isSelected = (static_cast<ActionType>(actionIndex) == selectedAction);
+                display.drawMenuItem(actions[actionIndex], i, visibleActions, isSelected, startY);
+            }
         }
     }
 
@@ -117,9 +136,24 @@ class DeviceActions : public Screen {
                 break;
 
             case ActionType::DETAILS:
-                // This should not be called, but handle it gracefully
                 router.push(new DeviceDetails(device));
                 break;
+
+            case ActionType::BACK:
+                router.pop();
+                break;
+        }
+    }
+
+    void updateScrollOffset() {
+        // Calculate scroll offset based on selected action
+        int totalActions = 5;    // ON, OFF, DETAILS, REMOVE, BACK
+        int visibleActions = 3;  // Number of actions that can be displayed at once
+
+        if (static_cast<int>(selectedAction) >= scrollOffset + visibleActions) {
+            scrollOffset = static_cast<int>(selectedAction) - visibleActions + 1;
+        } else if (static_cast<int>(selectedAction) < scrollOffset) {
+            scrollOffset = static_cast<int>(selectedAction);
         }
     }
 

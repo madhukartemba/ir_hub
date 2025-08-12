@@ -59,9 +59,6 @@ class DeviceDetails : public Screen {
         // Protocol
         display.print("Protocol: " + device.protocolName, 0, y);
         y += 10;
-
-        // Show back hint
-        display.printCentered("Click or Long press to go back", 50);
     }
 
     void onExit() override { LOG_DEBUG("DeviceDetails onExit"); }
