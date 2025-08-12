@@ -1,10 +1,12 @@
+#include <ESP.h>
 #include "../../global/Global.h"
+#include "ClearDataConfirmation.h"
 #include "IRTest.h"
 
 class Settings : public Screen {
    private:
     enum class State {
-        RESET_SETTINGS,
+        CLEAR_DATA,
         IR_TEST,
         BACK,
     };
@@ -13,19 +15,19 @@ class Settings : public Screen {
    public:
     void onEnter() override {
         LOG_DEBUG("Settings onEnter");
-        currentState = State::RESET_SETTINGS;
+        currentState = State::CLEAR_DATA;
 
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");
             switch (currentState) {
-                case State::RESET_SETTINGS:
+                case State::CLEAR_DATA:
                     currentState = State::IR_TEST;
                     break;
                 case State::IR_TEST:
                     currentState = State::BACK;
                     break;
                 case State::BACK:
-                    currentState = State::RESET_SETTINGS;
+                    currentState = State::CLEAR_DATA;
                     break;
             }
         });
@@ -33,8 +35,9 @@ class Settings : public Screen {
         button.setLongPressCallback([this]() {
             LOG_DEBUG("Settings onButtonLongPress");
             switch (currentState) {
-                case State::RESET_SETTINGS:
-                    LOG_DEBUG("Settings onButtonLongPress RESET_SETTINGS");
+                case State::CLEAR_DATA:
+                    LOG_DEBUG("Settings onButtonLongPress CLEAR_DATA");
+                    router.push(new ClearDataConfirmation());
                     break;
                 case State::IR_TEST:
                     LOG_DEBUG("Entering IR Test");
@@ -52,8 +55,8 @@ class Settings : public Screen {
         display.clear();
 
         switch (currentState) {
-            case State::RESET_SETTINGS:
-                drawResetSettings();
+            case State::CLEAR_DATA:
+                drawClearData();
                 break;
             case State::IR_TEST:
                 drawIRTest();
@@ -68,7 +71,7 @@ class Settings : public Screen {
 
     void onExit() override { LOG_DEBUG("Settings onExit"); }
 
-    void drawResetSettings() {
+    void drawClearData() {
         // Draw title
         display.setTextSize(1);
         display.printCentered("Settings", 0);
@@ -77,11 +80,11 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Reset Settings", "IR Test", "Back"};
+        const char* menuItems[] = {"Clear Data", "IR Test", "Back"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {
-            bool isSelected = (i == 0);  // Reset Settings is selected
+            bool isSelected = (i == 0);  // Clear Data is selected
             display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
         }
     }
@@ -95,7 +98,7 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Reset Settings", "IR Test", "Back"};
+        const char* menuItems[] = {"Clear Data", "IR Test", "Back"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {
@@ -113,7 +116,7 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Reset Settings", "IR Test", "Back"};
+        const char* menuItems[] = {"Clear Data", "IR Test", "Back"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {
