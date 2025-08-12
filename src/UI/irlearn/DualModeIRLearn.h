@@ -17,7 +17,7 @@ class DualModeIRLearn : public Screen {
     IRCode onCode;
     IRCode offCode;
     unsigned long recordingStartTime;
-    const unsigned long RECORDING_TIMEOUT = 10000;  // 10 seconds timeout
+    const unsigned long RECORDING_TIMEOUT = 5000;  // 5 seconds timeout
 
    public:
     DualModeIRLearn() : currentState(State::READY_TO_RECORD_ON), hasOnCode(false) {}
@@ -33,6 +33,12 @@ class DualModeIRLearn : public Screen {
             LOG_DEBUG("DualModeIRLearn onButtonClick");
             // Click behavior can be customized based on current state
             switch (currentState) {
+                case State::READY_TO_RECORD_ON:
+                    startRecordingOn();
+                    break;
+                case State::READY_TO_RECORD_OFF:
+                    startRecordingOff();
+                    break;
                 case State::SUCCESS:
                 case State::ERROR:
                     // Go back to main IR Learn menu
@@ -46,24 +52,14 @@ class DualModeIRLearn : public Screen {
 
         button.setLongPressCallback([this]() {
             LOG_DEBUG("DualModeIRLearn onButtonLongPress");
-            switch (currentState) {
-                case State::READY_TO_RECORD_ON:
-                    startRecordingOn();
-                    break;
-                case State::RECORDING_ON:
-                    stopRecordingOn();
-                    break;
-                case State::READY_TO_RECORD_OFF:
-                    startRecordingOff();
-                    break;
-                case State::RECORDING_OFF:
-                    stopRecordingOff();
-                    break;
-                case State::SUCCESS:
-                case State::ERROR:
-                    // Go back to main IR Learn menu
-                    router.pop();
-                    break;
+            // Long press cancels operation and goes back
+            if (currentState == State::RECORDING_ON || currentState == State::RECORDING_OFF) {
+                LOG_DEBUG("Cancelling recording via long press");
+                irManager.stopCapture();
+                currentState = State::ERROR;
+            } else {
+                // Go back to main IR Learn menu
+                router.pop();
             }
         });
     }
@@ -199,7 +195,7 @@ class DualModeIRLearn : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Ready for ON Code", 18);
+        display.printCentered("Click to record ON", 18);
 
         // Show progress indicator
         display.drawRect(20, 28, 88, 12);
@@ -230,6 +226,10 @@ class DualModeIRLearn : public Screen {
 
         // Show progress bar
         display.drawProgressBar(10, 42, 108, 6, 50, 100, false);
+
+        // Show instruction
+        display.setTextSize(1);
+        display.printCentered("Long press to cancel", 52);
     }
 
     void drawReadyToRecordOff() {
@@ -242,7 +242,7 @@ class DualModeIRLearn : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Ready for OFF Code", 18);
+        display.printCentered("Click to record OFF", 18);
 
         // Show progress indicator
         display.drawRect(20, 28, 88, 12);
@@ -277,6 +277,10 @@ class DualModeIRLearn : public Screen {
 
         // Show progress bar
         display.drawProgressBar(10, 42, 108, 6, 75, 100, false);
+
+        // Show instruction
+        display.setTextSize(1);
+        display.printCentered("Long press to cancel", 52);
     }
 
     void drawSuccess() {
