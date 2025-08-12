@@ -78,10 +78,8 @@ class IRTest : public Screen {
                     hasStoredCode = true;
                     recordState = RecordState::RECORDED;
                     LOG_DEBUG("IR code recorded successfully");
-                    irManager.resumeIRReceiver();
                 } else {
                     LOG_DEBUG("Invalid IR code received, continuing recording");
-                    irManager.resumeIRReceiver();
                 }
             }
 
