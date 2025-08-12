@@ -87,7 +87,13 @@ class Router {
             // Screen is now active again
         } else {
             LOG_INFO("Screen stack is now empty");
-            // Stack is empty, could set default screen here if needed
+            // Stack is empty, show default screen if available
+            if (defaultScreen != nullptr) {
+                LOG_DEBUG("Setting default screen after stack became empty");
+                push(defaultScreen);
+            } else {
+                LOG_WARN("No default screen available after stack became empty");
+            }
         }
     }
 
