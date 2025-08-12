@@ -20,6 +20,9 @@ class Devices : public Screen {
             // Navigate through devices
             if (devices.size() > 0) {
                 selectedDeviceIndex = (selectedDeviceIndex + 1) % devices.size();
+            } else {
+                // Go back if no devices
+                router.pop();
             }
         });
 
@@ -84,6 +87,9 @@ class Devices : public Screen {
             display.drawMenuItem(deviceText.c_str(), i - startIndex, endIndex - startIndex,
                                  isSelected, startY);
         }
+
+        // Add back option at the bottom
+        display.drawMenuItem("Back", endIndex - startIndex, endIndex - startIndex + 1, false, 50);
     }
 
     void onExit() override { LOG_DEBUG("Devices onExit"); }
