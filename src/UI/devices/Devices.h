@@ -6,35 +6,31 @@
 class Devices : public Screen {
    private:
     std::vector<Device> devices;
-    int selectedDeviceIndex;
+    int selectedIndex;  // Changed from selectedDeviceIndex to handle back button too
 
    public:
     void onEnter() override {
         LOG_DEBUG("Devices onEnter");
-        selectedDeviceIndex = 0;
+        selectedIndex = 0;
         loadDevices();
 
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("Devices onButtonClick");
-            // Navigate through devices
-            if (devices.size() > 0) {
-                selectedDeviceIndex = (selectedDeviceIndex + 1) % devices.size();
-            } else {
-                // Go back if no devices
-                router.pop();
-            }
+            // Navigate through devices and back option
+            int totalItems = devices.size() + 1;  // +1 for back button
+            selectedIndex = (selectedIndex + 1) % totalItems;
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("Devices onButtonLongPress");
-            if (devices.size() > 0) {
+            if (selectedIndex < devices.size()) {
                 // Navigate to device actions page
-                Device selectedDevice = devices[selectedDeviceIndex];
+                Device selectedDevice = devices[selectedIndex];
                 router.push(new DeviceActions(selectedDevice));
             } else {
-                // Exit if no devices found
+                // Back button selected - go back
                 router.pop();
             }
         });
@@ -66,30 +62,47 @@ class Devices : public Screen {
 
         if (devices.empty()) {
             display.printCentered("No devices found", 30);
+            // Still show back button when no devices
+            display.drawMenuItem("Back", 0, 1, selectedIndex == 0, 50);
             return;
         }
 
         // Show devices list
         int startY = 20;
-        int maxVisible = 3;  // Maximum devices visible at once
-        int startIndex = std::max(0, selectedDeviceIndex - 1);
-        int endIndex = std::min((int)devices.size(), startIndex + maxVisible);
+        int maxVisible = 3;                   // Maximum devices visible at once
+        int totalItems = devices.size() + 1;  // +1 for back button
 
-        for (int i = startIndex; i < endIndex; i++) {
-            bool isSelected = (i == selectedDeviceIndex);
-            String deviceText = String(devices[i].id) + ": " + devices[i].name;
+        // Calculate which items to show
+        int startIndex = std::max(0, selectedIndex - 1);
+        int endIndex = std::min(totalItems, startIndex + maxVisible);
 
-            // Truncate if too long
-            if (deviceText.length() > 16) {
-                deviceText = deviceText.substring(0, 13) + "...";
-            }
-
-            display.drawMenuItem(deviceText.c_str(), i - startIndex, endIndex - startIndex,
-                                 isSelected, startY);
+        // Adjust if we're at the end and need to show back button
+        if (selectedIndex == static_cast<int>(devices.size()) &&
+            endIndex <= static_cast<int>(devices.size())) {
+            startIndex = std::max(0, static_cast<int>(devices.size()) - maxVisible + 1);
+            endIndex = totalItems;
         }
 
-        // Add back option at the bottom
-        display.drawMenuItem("Back", endIndex - startIndex, endIndex - startIndex + 1, false, 50);
+        for (int i = startIndex; i < endIndex; i++) {
+            bool isSelected = (i == selectedIndex);
+
+            if (i < devices.size()) {
+                // Show device
+                String deviceText = String(devices[i].id) + ": " + devices[i].name;
+
+                // Truncate if too long
+                if (deviceText.length() > 16) {
+                    deviceText = deviceText.substring(0, 13) + "...";
+                }
+
+                display.drawMenuItem(deviceText.c_str(), i - startIndex, endIndex - startIndex,
+                                     isSelected, startY);
+            } else {
+                // Show back button
+                display.drawMenuItem("Back", i - startIndex, endIndex - startIndex, isSelected,
+                                     startY);
+            }
+        }
     }
 
     void onExit() override { LOG_DEBUG("Devices onExit"); }
