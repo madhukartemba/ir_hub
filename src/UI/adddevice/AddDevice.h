@@ -2,12 +2,14 @@
 #include "../../global/Global.h"
 #include "DualModeAddDevice.h"
 #include "SingleModeAddDevice.h"
+#include "AutoModeAddDevice.h"
 
 class AddDevice : public Screen {
    private:
     enum class State {
         SINGLE_MODE,
         DUAL_MODE,
+        AUTO_MODE,
         BACK,
     };
 
@@ -27,6 +29,9 @@ class AddDevice : public Screen {
                     currentState = State::DUAL_MODE;
                     break;
                 case State::DUAL_MODE:
+                    currentState = State::AUTO_MODE;
+                    break;
+                case State::AUTO_MODE:
                     currentState = State::BACK;
                     break;
                 case State::BACK:
@@ -46,6 +51,10 @@ class AddDevice : public Screen {
                     LOG_DEBUG("Entering Dual Mode Device Addition");
                     router.push(new DualModeAddDevice());
                     break;
+                case State::AUTO_MODE:
+                    LOG_DEBUG("Entering Auto Mode Device Addition");
+                    router.push(new AutoModeAddDevice());
+                    break;
                 case State::BACK:
                     LOG_DEBUG("Going back to previous menu");
                     router.pop();
@@ -63,6 +72,9 @@ class AddDevice : public Screen {
                 break;
             case State::DUAL_MODE:
                 drawDualMode();
+                break;
+            case State::AUTO_MODE:
+                drawAutoMode();
                 break;
             case State::BACK:
                 drawBack();
@@ -84,12 +96,12 @@ class AddDevice : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Single Mode", "Dual Mode", "Back"};
+        const char* menuItems[] = {"Single Mode", "Dual Mode", "Auto Mode", "Back"};
         int startY = 20;
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             bool isSelected = (i == 0);  // Single Mode is selected
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
         }
     }
 
@@ -102,12 +114,30 @@ class AddDevice : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Single Mode", "Dual Mode", "Back"};
+        const char* menuItems[] = {"Single Mode", "Dual Mode", "Auto Mode", "Back"};
         int startY = 20;
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             bool isSelected = (i == 1);  // Dual Mode is selected
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
+        }
+    }
+
+    void drawAutoMode() {
+        // Draw title
+        display.setTextSize(1);
+        display.printCentered("Add Device", 0);
+
+        // Draw horizontal line
+        display.drawLine(0, 12, display.getWidth(), 12);
+
+        // Show menu options with selection indicator
+        const char* menuItems[] = {"Single Mode", "Dual Mode", "Auto Mode", "Back"};
+        int startY = 20;
+
+        for (int i = 0; i < 4; i++) {
+            bool isSelected = (i == 2);  // Auto Mode is selected
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
         }
     }
 
@@ -120,12 +150,12 @@ class AddDevice : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Single Mode", "Dual Mode", "Back"};
+        const char* menuItems[] = {"Single Mode", "Dual Mode", "Auto Mode", "Back"};
         int startY = 20;
 
-        for (int i = 0; i < 3; i++) {
-            bool isSelected = (i == 2);  // Back is selected
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+        for (int i = 0; i < 4; i++) {
+            bool isSelected = (i == 3);  // Back is selected
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
         }
     }
 };

@@ -37,6 +37,13 @@ class IRCode {
     // Validation
     bool isValid() const { return (protocol != UNKNOWN) && (bits > 0) && (value != 0); }
 
+    // Equality operator for comparing IR codes
+    bool operator==(const IRCode& other) const {
+        return (protocol == other.protocol) && (value == other.value) && (bits == other.bits);
+    }
+
+    bool operator!=(const IRCode& other) const { return !(*this == other); }
+
     JsonDocument toJson() const {
         JsonDocument doc;
         toJson(doc);
