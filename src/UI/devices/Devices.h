@@ -1,46 +1,35 @@
 #include <Arduino.h>
 #include <algorithm>
 #include "../../global/Global.h"
+#include "DeviceActions.h"
 
 class Devices : public Screen {
    private:
-    enum class State { LIST, DETAILS };
-    State currentState;
     std::vector<Device> devices;
     int selectedDeviceIndex;
-    Device currentDevice;
 
    public:
     void onEnter() override {
         LOG_DEBUG("Devices onEnter");
-        currentState = State::LIST;
         selectedDeviceIndex = 0;
         loadDevices();
 
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("Devices onButtonClick");
-            if (currentState == State::LIST) {
-                // Navigate through devices
-                if (devices.size() > 0) {
-                    selectedDeviceIndex = (selectedDeviceIndex + 1) % devices.size();
-                }
-            } else if (currentState == State::DETAILS) {
-                // Go back to list
-                currentState = State::LIST;
+            // Navigate through devices
+            if (devices.size() > 0) {
+                selectedDeviceIndex = (selectedDeviceIndex + 1) % devices.size();
             }
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("Devices onButtonLongPress");
-            if (currentState == State::LIST && devices.size() > 0) {
-                // Show device details
-                currentDevice = devices[selectedDeviceIndex];
-                currentState = State::DETAILS;
-            } else if (currentState == State::DETAILS) {
-                // Go back to list
-                currentState = State::LIST;
+            if (devices.size() > 0) {
+                // Navigate to device actions page
+                Device selectedDevice = devices[selectedDeviceIndex];
+                router.push(new DeviceActions(selectedDevice));
             }
         });
     }
@@ -57,13 +46,7 @@ class Devices : public Screen {
 
     void onUpdate() override {
         display.clear();
-
-        if (currentState == State::LIST) {
-            displayList();
-        } else if (currentState == State::DETAILS) {
-            displayDetails();
-        }
-
+        displayList();
         display.update();
     }
 
@@ -101,40 +84,7 @@ class Devices : public Screen {
 
         // Show navigation hint
         display.setTextSize(1);
-        display.printCentered("Long press for details", 50);
-    }
-
-    void displayDetails() {
-        // Show title
-        display.setTextSize(1);
-        display.printCentered("Device Details", 0);
-
-        // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Show device information
-        int y = 20;
-        display.setTextSize(1);
-
-        // Device ID
-        display.print("ID: " + String(currentDevice.id), 0, y);
-        y += 10;
-
-        // Device Name
-        display.print("Name: " + currentDevice.name, 0, y);
-        y += 10;
-
-        // Device Type
-        display.print("Type: " + String(currentDevice.type == SINGLE_COMMAND ? "Single" : "Dual"),
-                      0, y);
-        y += 10;
-
-        // Protocol
-        display.print("Protocol: " + currentDevice.protocolName, 0, y);
-        y += 10;
-
-        // Show back hint
-        display.printCentered("Long press to go back", 50);
+        display.printCentered("Long press for actions", 50);
     }
 
     void onExit() override { LOG_DEBUG("Devices onExit"); }
