@@ -197,9 +197,9 @@ class SingleModeAddDevice : public Screen {
         display.printCentered("SUCCESS!", 18);
 
         // Show checkmark
-        display.drawCircle(64, 32, 8);
-        display.drawLine(60, 32, 62, 34);
-        display.drawLine(62, 34, 68, 28);
+        display.drawCircle(64, 36, 8);
+        display.drawLine(60, 36, 62, 38);
+        display.drawLine(62, 38, 68, 32);
 
         // Show code info
         display.setTextSize(1);
