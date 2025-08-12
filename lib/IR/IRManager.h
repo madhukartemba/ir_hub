@@ -113,4 +113,6 @@ class IRManager {
     const decode_results &getLastResults() const {
         return lastResults;  // optional getter for debugging
     }
+
+    const IRCode &getLastCode() const { return lastCode; }
 };

@@ -87,6 +87,7 @@ class DeviceManager {
             device.protocolName = String(typeToString(onCommand.getProtocol(), false)) + " & " +
                                   String(typeToString(offCommand.getProtocol(), false));
         }
+        saveDevice(device);
         return device.id;
     }
 

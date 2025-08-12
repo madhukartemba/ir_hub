@@ -14,7 +14,10 @@ class DualModeIRLearn : public Screen {
 
     State currentState;
     bool hasOnCode;
-    // TODO: Add variables to store ON and OFF codes
+    IRCode onCode;
+    IRCode offCode;
+    unsigned long recordingStartTime;
+    const unsigned long RECORDING_TIMEOUT = 10000;  // 10 seconds timeout
 
    public:
     DualModeIRLearn() : currentState(State::READY_TO_RECORD_ON), hasOnCode(false) {}
@@ -23,6 +26,8 @@ class DualModeIRLearn : public Screen {
         LOG_DEBUG("DualModeIRLearn onEnter");
         currentState = State::READY_TO_RECORD_ON;
         hasOnCode = false;
+        onCode = IRCode();
+        offCode = IRCode();
 
         button.setClickCallback([this]() {
             LOG_DEBUG("DualModeIRLearn onButtonClick");
@@ -64,6 +69,29 @@ class DualModeIRLearn : public Screen {
     }
 
     void onUpdate() override {
+        // Check for recording timeout
+        if ((currentState == State::RECORDING_ON || currentState == State::RECORDING_OFF) &&
+            (millis() - recordingStartTime) > RECORDING_TIMEOUT) {
+            LOG_DEBUG("Recording timeout reached");
+            if (currentState == State::RECORDING_ON) {
+                stopRecordingOn();
+            } else {
+                stopRecordingOff();
+            }
+            currentState = State::ERROR;
+        }
+
+        // Check for IR code reception during recording
+        if ((currentState == State::RECORDING_ON || currentState == State::RECORDING_OFF) &&
+            irManager.decode()) {
+            LOG_DEBUG("IR code received during recording");
+            if (currentState == State::RECORDING_ON) {
+                stopRecordingOn();
+            } else {
+                stopRecordingOff();
+            }
+        }
+
         display.clear();
 
         switch (currentState) {
@@ -94,7 +122,7 @@ class DualModeIRLearn : public Screen {
         LOG_DEBUG("DualModeIRLearn onExit");
         // Clean up any recording resources if needed
         if (currentState == State::RECORDING_ON || currentState == State::RECORDING_OFF) {
-            // TODO: Stop any active recording
+            irManager.stopCapture();
         }
     }
 
@@ -102,27 +130,63 @@ class DualModeIRLearn : public Screen {
     void startRecordingOn() {
         LOG_DEBUG("Starting ON code IR recording");
         currentState = State::RECORDING_ON;
-        // TODO: Initialize IR receiver for ON code recording
+        recordingStartTime = millis();
+        irManager.startCapture();
     }
 
     void stopRecordingOn() {
         LOG_DEBUG("Stopping ON code IR recording");
-        // TODO: Stop IR receiver and save ON code
-        hasOnCode = true;
-        currentState = State::READY_TO_RECORD_OFF;
+        irManager.stopCapture();
+
+        if (irManager.isValid()) {
+            onCode = irManager.getLastCode();
+            hasOnCode = true;
+            currentState = State::READY_TO_RECORD_OFF;
+            LOG_INFO("ON code recorded successfully");
+        } else {
+            LOG_ERROR("Invalid ON code received");
+            currentState = State::ERROR;
+        }
     }
 
     void startRecordingOff() {
         LOG_DEBUG("Starting OFF code IR recording");
         currentState = State::RECORDING_OFF;
-        // TODO: Initialize IR receiver for OFF code recording
+        recordingStartTime = millis();
+        irManager.startCapture();
     }
 
     void stopRecordingOff() {
         LOG_DEBUG("Stopping OFF code IR recording");
-        // TODO: Stop IR receiver and save OFF code
-        // TODO: Validate and save both codes
-        currentState = State::SUCCESS;
+        irManager.stopCapture();
+
+        if (irManager.isValid()) {
+            offCode = irManager.getLastCode();
+
+            // Validate both codes and save device
+            if (onCode.isValid() && offCode.isValid()) {
+                try {
+                    int deviceId = deviceManager.addDualCommandDevice(onCode, offCode);
+                    if (deviceId != -1) {
+                        LOG_INFO("Dual command device saved with ID: %d", deviceId);
+                        currentState = State::SUCCESS;
+                    } else {
+                        LOG_ERROR("Failed to save dual command device");
+                        currentState = State::ERROR;
+                    }
+                } catch (const std::exception& e) {
+                    LOG_ERROR("Exception while saving device: %s", e.what());
+                    currentState = State::ERROR;
+                }
+            } else {
+                LOG_ERROR("Invalid codes - ON: %s, OFF: %s", onCode.isValid() ? "valid" : "invalid",
+                          offCode.isValid() ? "valid" : "invalid");
+                currentState = State::ERROR;
+            }
+        } else {
+            LOG_ERROR("Invalid OFF code received");
+            currentState = State::ERROR;
+        }
     }
 
     void drawReadyToRecordOn() {
@@ -240,9 +304,17 @@ class DualModeIRLearn : public Screen {
         display.drawCircle(30, 44, 3);
         display.drawCircle(98, 44, 3);
 
-        // Show code info
+        // Show protocol info
         display.setTextSize(1);
-        display.printCentered("Both codes learned", 52);
+        String onProtocol = typeToString(onCode.getProtocol(), false);
+        String offProtocol = typeToString(offCode.getProtocol(), false);
+
+        if (onProtocol == offProtocol) {
+            display.printCentered("Protocol: " + onProtocol, 52);
+        } else {
+            display.printCentered("ON: " + onProtocol, 52);
+            display.printCentered("OFF: " + offProtocol, 60);
+        }
     }
 
     void drawError() {
@@ -262,9 +334,19 @@ class DualModeIRLearn : public Screen {
         display.drawLine(60, 28, 68, 36);
         display.drawLine(60, 36, 68, 28);
 
-        // Show error message
+        // Show error message based on state
         display.setTextSize(1);
-        display.printCentered("Failed to record", 44);
-        display.printCentered("IR codes", 52);
+        if (currentState == State::ERROR) {
+            if (!hasOnCode) {
+                display.printCentered("Failed to record", 44);
+                display.printCentered("ON code", 52);
+            } else {
+                display.printCentered("Failed to record", 44);
+                display.printCentered("OFF code", 52);
+            }
+        } else {
+            display.printCentered("Recording timeout", 44);
+            display.printCentered("or invalid code", 52);
+        }
     }
 };
