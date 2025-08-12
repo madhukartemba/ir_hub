@@ -129,7 +129,7 @@ class IRTest : public Screen {
     void replayCode() {
         if (hasStoredCode) {
             LOG_DEBUG("Replaying stored IR code");
-            irManager.sendFromJson(storedCode);
+            irManager.sendProtocol(IRCode::fromJson(storedCode));
         } else {
             LOG_DEBUG("No stored code to replay");
         }

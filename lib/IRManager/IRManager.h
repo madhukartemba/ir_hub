@@ -4,14 +4,7 @@
 #include <IRrecv.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
-
-struct IRCode {
-    decode_type_t protocol;
-    uint64_t value;
-    uint16_t bits;
-
-    bool isValid() const { return (protocol != UNKNOWN) && (bits > 0) && (value != 0); }
-};
+#include "IRCode.h"
 class IRManager {
    private:
     int rxPin;
@@ -30,12 +23,9 @@ class IRManager {
     bool isPaused = false;
 
     IRCode fromDecodeResults(const decode_results &results) {
-        IRCode code;
-        code.protocol = results.decode_type;
-        code.value = results.value;
-        code.bits = results.bits;
-        LOG_DEBUG("[IRManager] Decoded: protocol=%d, value=0x%llX, bits=%u", (int)code.protocol,
-                  code.value, code.bits);
+        IRCode code = IRCode::fromDecodeResults(results);
+        LOG_DEBUG("[IRManager] Decoded: protocol=%d, value=0x%llX, bits=%u",
+                  (int)code.getProtocol(), code.getValue(), code.getBits());
         return code;
     }
 
@@ -83,27 +73,6 @@ class IRManager {
         }
     }
 
-    IRCode convertJsonToIRCode(const JsonDocument &doc) {
-        IRCode code;
-        code.protocol = (decode_type_t)doc["protocol"].as<int>();
-        code.value = doc["value"].as<uint64_t>();
-        code.bits = doc["bits"].as<uint16_t>();
-        LOG_DEBUG("[IRManager] Loaded from JSON: protocol=%d, value=0x%llX, bits=%u",
-                  (int)code.protocol, code.value, code.bits);
-        return code;
-    }
-
-    void convertIRCodeToJson(const IRCode &code, JsonDocument &doc) {
-        if (code.isValid()) {
-            doc["protocol"] = (int)code.protocol;
-            doc["value"] = code.value;
-            doc["bits"] = code.bits;
-            LOG_DEBUG("[IRManager] Saved code to JSON");
-        } else {
-            LOG_WARN("[IRManager] Skipped saving invalid code");
-        }
-    }
-
     bool decode() {
         if (!irrecv) {
             LOG_ERROR("[IRManager] irrecv not initialized");
@@ -138,17 +107,12 @@ class IRManager {
             LOG_ERROR("[IRManager] Attempted to send invalid code");
             return;
         }
-        LOG_DEBUG("[IRManager] Sending: protocol=%d, value=0x%llX, bits=%u", (int)code.protocol,
-                  code.value, code.bits);
-        irsend->send(code.protocol, code.value, code.bits);
+        LOG_DEBUG("[IRManager] Sending: protocol=%d, value=0x%llX, bits=%u",
+                  (int)code.getProtocol(), code.getValue(), code.getBits());
+        irsend->send(code.getProtocol(), code.getValue(), code.getBits());
     }
 
-    void saveLastCodeToJson(JsonDocument &doc) { convertIRCodeToJson(lastCode, doc); }
-
-    void sendFromJson(const JsonDocument &doc) {
-        IRCode code = convertJsonToIRCode(doc);
-        sendProtocol(code);
-    }
+    void saveLastCodeToJson(JsonDocument &doc) { lastCode.toJson(doc); }
 
     void sendLastCode() { sendProtocol(lastCode); }
 

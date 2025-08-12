@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include "IRManager.h"
+#include "IRCode.h"
 #include "IdGen.h"
 #include "Log.h"
 
@@ -21,11 +21,10 @@ struct Device {
 class DeviceManager {
    private:
     const char* storageDir = "/devices";
-    IRManager& irManager;
     IdGen& idGen;
 
    public:
-    DeviceManager(IRManager& irManager, IdGen& idGen) : irManager(irManager), idGen(idGen) {}
+    DeviceManager(IdGen& idGen) : idGen(idGen) {}
     ~DeviceManager() {}
 
     bool begin() {
@@ -80,12 +79,8 @@ class DeviceManager {
         doc["id"] = device.id;
         doc["type"] = device.type;
         doc["name"] = device.name;
-        JsonDocument onCommandDoc;
-        irManager.convertIRCodeToJson(device.onCommand, onCommandDoc);
-        doc["onCommand"] = onCommandDoc;
-        JsonDocument offCommandDoc;
-        irManager.convertIRCodeToJson(device.offCommand, offCommandDoc);
-        doc["offCommand"] = offCommandDoc;
+        doc["onCommand"] = device.onCommand.toJson();
+        doc["offCommand"] = device.offCommand.toJson();
         file.print(doc.as<String>());
         file.close();
         LOG_INFO("Device saved to %s", filename.c_str());
@@ -123,8 +118,8 @@ class DeviceManager {
         device.id = id;
         device.type = (DeviceType)doc["type"];
 
-        device.onCommand = irManager.convertJsonToIRCode(doc["onCommand"]);
-        device.offCommand = irManager.convertJsonToIRCode(doc["offCommand"]);
+        device.onCommand = IRCode::fromJson(doc["onCommand"]);
+        device.offCommand = IRCode::fromJson(doc["offCommand"]);
         return device;
     }
 };

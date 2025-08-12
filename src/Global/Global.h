@@ -3,6 +3,7 @@
 #include "Button.h"
 #include "DeviceManager.h"
 #include "Display.h"
+#include "IRCode.h"
 #include "IRManager.h"
 #include "IdGen.h"
 #include "LedRing.h"
