@@ -49,7 +49,7 @@ class MainMenu : public Screen {
         const char* menuItems[] = {"Status", "IR Learn", "Settings", "Test"};
         int startY = 20;
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             bool isSelected = (i == static_cast<int>(currentState));
             display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
         }
