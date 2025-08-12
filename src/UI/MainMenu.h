@@ -1,12 +1,12 @@
 #include <Arduino.h>
 #include "../global/Global.h"
+#include "../ui/adddevice/AddDevice.h"
 #include "../ui/devices/Devices.h"
-#include "../ui/irlearn/IRLearn.h"
 #include "../ui/settings/Settings.h"
 
 class MainMenu : public Screen {
    private:
-    enum class State { DEVICES, IR_LEARN, SETTINGS };
+    enum class State { DEVICES, ADD_DEVICE, SETTINGS };
 
     State currentState;
 
@@ -27,8 +27,8 @@ class MainMenu : public Screen {
             LOG_DEBUG("MainMenu onButtonLongPress");
             if (currentState == State::DEVICES) {
                 router.push(new Devices());
-            } else if (currentState == State::IR_LEARN) {
-                router.push(new IRLearn());
+            } else if (currentState == State::ADD_DEVICE) {
+                router.push(new AddDevice());
             } else if (currentState == State::SETTINGS) {
                 router.push(new Settings());
             }
@@ -47,7 +47,7 @@ class MainMenu : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Devices", "IR Learn", "Settings"};
+        const char* menuItems[] = {"Devices", "Add Device", "Settings"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {

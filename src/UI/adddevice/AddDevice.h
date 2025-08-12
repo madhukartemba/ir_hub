@@ -1,9 +1,9 @@
 #pragma once
 #include "../../global/Global.h"
-#include "DualModeIRLearn.h"
-#include "SingleModeIRLearn.h"
+#include "DualModeAddDevice.h"
+#include "SingleModeAddDevice.h"
 
-class IRLearn : public Screen {
+class AddDevice : public Screen {
    private:
     enum class State {
         SINGLE_MODE,
@@ -14,14 +14,14 @@ class IRLearn : public Screen {
     State currentState;
 
    public:
-    IRLearn() : currentState(State::SINGLE_MODE) {}
+    AddDevice() : currentState(State::SINGLE_MODE) {}
 
     void onEnter() override {
-        LOG_DEBUG("IRLearn onEnter");
+        LOG_DEBUG("AddDevice onEnter");
         currentState = State::SINGLE_MODE;
 
         button.setClickCallback([this]() {
-            LOG_DEBUG("IRLearn onButtonClick");
+            LOG_DEBUG("AddDevice onButtonClick");
             switch (currentState) {
                 case State::SINGLE_MODE:
                     currentState = State::DUAL_MODE;
@@ -36,15 +36,15 @@ class IRLearn : public Screen {
         });
 
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("IRLearn onButtonLongPress");
+            LOG_DEBUG("AddDevice onButtonLongPress");
             switch (currentState) {
                 case State::SINGLE_MODE:
-                    LOG_DEBUG("Entering Single Mode IR Learning");
-                    router.push(new SingleModeIRLearn());
+                    LOG_DEBUG("Entering Single Mode Device Addition");
+                    router.push(new SingleModeAddDevice());
                     break;
                 case State::DUAL_MODE:
-                    LOG_DEBUG("Entering Dual Mode IR Learning");
-                    router.push(new DualModeIRLearn());
+                    LOG_DEBUG("Entering Dual Mode Device Addition");
+                    router.push(new DualModeAddDevice());
                     break;
                 case State::BACK:
                     LOG_DEBUG("Going back to previous menu");
@@ -72,13 +72,13 @@ class IRLearn : public Screen {
         display.update();
     }
 
-    void onExit() override { LOG_DEBUG("IRLearn onExit"); }
+    void onExit() override { LOG_DEBUG("AddDevice onExit"); }
 
    private:
     void drawSingleMode() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("IR Learn", 0);
+        display.printCentered("Add Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -96,7 +96,7 @@ class IRLearn : public Screen {
     void drawDualMode() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("IR Learn", 0);
+        display.printCentered("Add Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -114,7 +114,7 @@ class IRLearn : public Screen {
     void drawBack() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("IR Learn", 0);
+        display.printCentered("Add Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);

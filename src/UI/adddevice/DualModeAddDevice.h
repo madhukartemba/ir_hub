@@ -1,7 +1,7 @@
 #pragma once
 #include "../../global/Global.h"
 
-class DualModeIRLearn : public Screen {
+class DualModeAddDevice : public Screen {
    private:
     enum class State {
         READY_TO_RECORD_ON,
@@ -20,17 +20,17 @@ class DualModeIRLearn : public Screen {
     const unsigned long RECORDING_TIMEOUT = 5000;  // 5 seconds timeout
 
    public:
-    DualModeIRLearn() : currentState(State::READY_TO_RECORD_ON), hasOnCode(false) {}
+    DualModeAddDevice() : currentState(State::READY_TO_RECORD_ON), hasOnCode(false) {}
 
     void onEnter() override {
-        LOG_DEBUG("DualModeIRLearn onEnter");
+        LOG_DEBUG("DualModeAddDevice onEnter");
         currentState = State::READY_TO_RECORD_ON;
         hasOnCode = false;
         onCode = IRCode();
         offCode = IRCode();
 
         button.setClickCallback([this]() {
-            LOG_DEBUG("DualModeIRLearn onButtonClick");
+            LOG_DEBUG("DualModeAddDevice onButtonClick");
             // Click behavior can be customized based on current state
             switch (currentState) {
                 case State::READY_TO_RECORD_ON:
@@ -41,7 +41,7 @@ class DualModeIRLearn : public Screen {
                     break;
                 case State::SUCCESS:
                 case State::ERROR:
-                    // Go back to main IR Learn menu
+                    // Go back to main Add Device menu
                     router.pop();
                     break;
                 default:
@@ -51,14 +51,14 @@ class DualModeIRLearn : public Screen {
         });
 
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("DualModeIRLearn onButtonLongPress");
+            LOG_DEBUG("DualModeAddDevice onButtonLongPress");
             // Long press cancels operation and goes back
             if (currentState == State::RECORDING_ON || currentState == State::RECORDING_OFF) {
                 LOG_DEBUG("Cancelling recording via long press");
                 irManager.stopCapture();
                 currentState = State::ERROR;
             } else {
-                // Go back to main IR Learn menu
+                // Go back to main Add Device menu
                 router.pop();
             }
         });
@@ -115,7 +115,7 @@ class DualModeIRLearn : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("DualModeIRLearn onExit");
+        LOG_DEBUG("DualModeAddDevice onExit");
         // Clean up any recording resources if needed
         if (currentState == State::RECORDING_ON || currentState == State::RECORDING_OFF) {
             irManager.stopCapture();
@@ -188,7 +188,7 @@ class DualModeIRLearn : public Screen {
     void drawReadyToRecordOn() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Dual Mode IR", 0);
+        display.printCentered("Dual Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -207,7 +207,7 @@ class DualModeIRLearn : public Screen {
     void drawRecordingOn() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Dual Mode IR", 0);
+        display.printCentered("Dual Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -231,7 +231,7 @@ class DualModeIRLearn : public Screen {
     void drawReadyToRecordOff() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Dual Mode IR", 0);
+        display.printCentered("Dual Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -253,7 +253,7 @@ class DualModeIRLearn : public Screen {
     void drawRecordingOff() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Dual Mode IR", 0);
+        display.printCentered("Dual Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -278,7 +278,7 @@ class DualModeIRLearn : public Screen {
     void drawSuccess() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Dual Mode IR", 0);
+        display.printCentered("Dual Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -316,7 +316,7 @@ class DualModeIRLearn : public Screen {
     void drawError() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Dual Mode IR", 0);
+        display.printCentered("Dual Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);

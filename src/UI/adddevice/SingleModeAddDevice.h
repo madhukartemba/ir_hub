@@ -1,7 +1,7 @@
 #pragma once
 #include "../../global/Global.h"
 
-class SingleModeIRLearn : public Screen {
+class SingleModeAddDevice : public Screen {
    private:
     enum class State {
         READY_TO_RECORD,
@@ -16,15 +16,15 @@ class SingleModeIRLearn : public Screen {
     const unsigned long RECORDING_TIMEOUT = 5000;  // 5 seconds timeout
 
    public:
-    SingleModeIRLearn() : currentState(State::READY_TO_RECORD) {}
+    SingleModeAddDevice() : currentState(State::READY_TO_RECORD) {}
 
     void onEnter() override {
-        LOG_DEBUG("SingleModeIRLearn onEnter");
+        LOG_DEBUG("SingleModeAddDevice onEnter");
         currentState = State::READY_TO_RECORD;
         recordedCode = IRCode();
 
         button.setClickCallback([this]() {
-            LOG_DEBUG("SingleModeIRLearn onButtonClick");
+            LOG_DEBUG("SingleModeAddDevice onButtonClick");
             // Click behavior can be customized based on current state
             switch (currentState) {
                 case State::READY_TO_RECORD:
@@ -32,7 +32,7 @@ class SingleModeIRLearn : public Screen {
                     break;
                 case State::SUCCESS:
                 case State::ERROR:
-                    // Go back to main IR Learn menu
+                    // Go back to main Add Device menu
                     router.pop();
                     break;
                 default:
@@ -42,14 +42,14 @@ class SingleModeIRLearn : public Screen {
         });
 
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("SingleModeIRLearn onButtonLongPress");
+            LOG_DEBUG("SingleModeAddDevice onButtonLongPress");
             // Long press cancels operation and goes back
             if (currentState == State::RECORDING) {
                 LOG_DEBUG("Cancelling recording via long press");
                 irManager.stopCapture();
                 currentState = State::ERROR;
             } else {
-                // Go back to main IR Learn menu
+                // Go back to main Add Device menu
                 router.pop();
             }
         });
@@ -91,7 +91,7 @@ class SingleModeIRLearn : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("SingleModeIRLearn onExit");
+        LOG_DEBUG("SingleModeAddDevice onExit");
         // Clean up any recording resources if needed
         if (currentState == State::RECORDING) {
             irManager.stopCapture();
@@ -141,7 +141,7 @@ class SingleModeIRLearn : public Screen {
     void drawReadyToRecord() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Single Mode IR", 0);
+        display.printCentered("Single Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -162,7 +162,7 @@ class SingleModeIRLearn : public Screen {
     void drawRecording() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Single Mode IR", 0);
+        display.printCentered("Single Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -187,7 +187,7 @@ class SingleModeIRLearn : public Screen {
     void drawSuccess() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Single Mode IR", 0);
+        display.printCentered("Single Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -203,7 +203,7 @@ class SingleModeIRLearn : public Screen {
 
         // Show code info
         display.setTextSize(1);
-        display.printCentered("IR Code Learned", 44);
+        display.printCentered("Device Added", 44);
 
         String protocol = typeToString(recordedCode.getProtocol(), false);
         display.printCentered("Protocol: " + protocol, 52);
@@ -212,7 +212,7 @@ class SingleModeIRLearn : public Screen {
     void drawError() {
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Single Mode IR", 0);
+        display.printCentered("Single Mode Device", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
