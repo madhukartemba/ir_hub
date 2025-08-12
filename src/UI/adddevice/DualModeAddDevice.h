@@ -198,10 +198,12 @@ class DualModeAddDevice : public Screen {
         display.printCentered("Click to record ON", 18);
 
         // Show progress indicator
-        display.drawRect(20, 28, 88, 12);
-        display.print("ON", 24, 32);
-        display.print("OFF", 90, 32);
-        display.fillRect(22, 30, 20, 8);  // Highlight ON
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // Highlight ON
+        display.setTextColor(0);          // Black text on white background
+        display.print("ON", 24, 34);
+        display.setTextColor(1);  // Reset to white text
+        display.print("OFF", 90, 34);
     }
 
     void drawRecordingOn() {
@@ -217,12 +219,12 @@ class DualModeAddDevice : public Screen {
         display.printCentered("RECORDING ON...", 18);
 
         // Show progress indicator with animation
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // Highlight ON (filled)
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // Highlight ON (filled)
         display.setTextColor(0);
-        display.print("ON", 24, 32);
+        display.print("ON", 24, 34);
         display.setTextColor(1);
-        display.print("OFF", 90, 32);
+        display.print("OFF", 90, 34);
 
         // Show timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
@@ -244,13 +246,13 @@ class DualModeAddDevice : public Screen {
         display.printCentered("Click to record OFF", 18);
 
         // Show progress indicator
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // ON completed
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // ON completed
         display.setTextColor(0);
-        display.print("ON", 24, 32);
+        display.print("ON", 24, 34);
         display.setTextColor(1);
-        display.print("OFF", 90, 32);
-        display.drawCircle(30, 42, 3);  // Checkmark for ON
+        display.print("OFF", 90, 34);
+        display.drawCircle(30, 44, 3);  // Checkmark for ON
     }
 
     void drawRecordingOff() {
@@ -266,12 +268,12 @@ class DualModeAddDevice : public Screen {
         display.printCentered("RECORDING OFF...", 18);
 
         // Show progress indicator with animation
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // ON completed
-        display.fillRect(88, 30, 18, 8);  // OFF recording
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // ON completed
+        display.fillRect(88, 32, 18, 8);  // OFF recording
         display.setTextColor(0);
-        display.print("ON", 24, 32);
-        display.print("OFF", 90, 32);
+        display.print("ON", 24, 34);
+        display.print("OFF", 90, 34);
         display.setTextColor(1);
 
         // Show timeout progress bar
@@ -294,17 +296,17 @@ class DualModeAddDevice : public Screen {
         display.printCentered("SUCCESS!", 18);
 
         // Show completed progress
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // ON completed
-        display.fillRect(88, 30, 18, 8);  // OFF completed
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // ON completed
+        display.fillRect(88, 32, 18, 8);  // OFF completed
         display.setTextColor(0);
-        display.print("ON", 24, 32);
-        display.print("OFF", 90, 32);
+        display.print("ON", 24, 34);
+        display.print("OFF", 90, 34);
         display.setTextColor(1);
 
         // Show checkmarks
-        display.drawCircle(30, 44, 3);
-        display.drawCircle(98, 44, 3);
+        display.drawCircle(30, 46, 3);
+        display.drawCircle(98, 46, 3);
 
         // Show protocol info
         display.setTextSize(1);
