@@ -8,3 +8,4 @@ LedRing ring;
 Display display;
 IdGen idGen;
 IRManager irManager;
+DeviceManager deviceManager(irManager, idGen);

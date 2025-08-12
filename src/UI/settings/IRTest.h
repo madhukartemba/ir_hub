@@ -74,14 +74,14 @@ class IRTest : public Screen {
                 if (irManager.isValid()) {
                     // Store the valid code
                     storedCode.clear();
-                    irManager.saveToJson(storedCode);
+                    irManager.saveLastCodeToJson(storedCode);
                     hasStoredCode = true;
                     recordState = RecordState::RECORDED;
                     LOG_DEBUG("IR code recorded successfully");
-                    irManager.resume();
+                    irManager.resumeIRReceiver();
                 } else {
                     LOG_DEBUG("Invalid IR code received, continuing recording");
-                    irManager.resume();
+                    irManager.resumeIRReceiver();
                 }
             }
 

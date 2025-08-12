@@ -21,6 +21,9 @@ void setup() {
     // Initialize IRManager
     irManager.begin(IR_RX_PIN, IR_TX_PIN);
 
+    // Initialize DeviceManager
+    deviceManager.begin();
+
     // Initialize display
     display.begin(OLED_SDA_PIN, OLED_SCL_PIN);
     display.clear();

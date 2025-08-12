@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Button.h"
+#include "DeviceManager.h"
 #include "Display.h"
 #include "IRManager.h"
 #include "IdGen.h"
@@ -16,3 +17,4 @@ extern LedRing ring;
 extern Display display;
 extern IdGen idGen;
 extern IRManager irManager;
+extern DeviceManager deviceManager;
