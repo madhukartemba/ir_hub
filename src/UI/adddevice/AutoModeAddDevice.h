@@ -224,14 +224,15 @@ class AutoModeAddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to record", 18);
-        display.printCentered("ON code", 26);
+        display.printCentered("Click to record ON", 18);
 
         // Show progress indicator
-        display.drawRect(20, 28, 88, 12);
-        display.print("ON", 24, 32);
-        display.print("OFF", 90, 32);
-        display.fillRect(22, 30, 20, 8);  // Highlight ON
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // Highlight ON
+        display.setTextColor(0);          // Black text on white background
+        display.print("ON", 24, 34);
+        display.setTextColor(1);  // Reset to white text
+        display.print("OFF", 90, 34);
     }
 
     void drawRecordingFirst() {
@@ -247,15 +248,18 @@ class AutoModeAddDevice : public Screen {
         display.printCentered("RECORDING ON...", 18);
 
         // Show progress indicator with animation
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // Highlight ON (filled)
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // Highlight ON (filled)
         display.setTextColor(0);
-        display.print("ON", 24, 32);
+        display.print("ON", 24, 34);
         display.setTextColor(1);
-        display.print("OFF", 90, 32);
+        display.print("OFF", 90, 34);
 
-        // Show progress bar
-        display.drawProgressBar(10, 42, 108, 6, 25, 100, false);
+        // Show timeout progress bar
+        unsigned long elapsed = millis() - recordingStartTime;
+        int progress = (elapsed * 100) / RECORDING_TIMEOUT;
+        progress = constrain(progress, 0, 100);
+        display.drawProgressBar(10, 44, 108, 6, progress, 100, false);
     }
 
     void drawReadyToRecordSecond() {
@@ -268,17 +272,16 @@ class AutoModeAddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to record", 18);
-        display.printCentered("OFF code", 26);
+        display.printCentered("Click to record OFF", 18);
 
         // Show progress indicator
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // ON completed
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // ON completed
         display.setTextColor(0);
-        display.print("ON", 24, 32);
+        display.print("ON", 24, 34);
         display.setTextColor(1);
-        display.print("OFF", 90, 32);
-        display.drawCircle(30, 42, 3);  // Checkmark for ON
+        display.print("OFF", 90, 34);
+        display.drawCircle(30, 44, 3);  // Checkmark for ON
     }
 
     void drawRecordingSecond() {
@@ -294,16 +297,19 @@ class AutoModeAddDevice : public Screen {
         display.printCentered("RECORDING OFF...", 18);
 
         // Show progress indicator with animation
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // ON completed
-        display.fillRect(88, 30, 18, 8);  // OFF recording
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // ON completed
+        display.fillRect(88, 32, 18, 8);  // OFF recording
         display.setTextColor(0);
-        display.print("ON", 24, 32);
-        display.print("OFF", 90, 32);
+        display.print("ON", 24, 34);
+        display.print("OFF", 90, 34);
         display.setTextColor(1);
 
-        // Show progress bar
-        display.drawProgressBar(10, 42, 108, 6, 75, 100, false);
+        // Show timeout progress bar
+        unsigned long elapsed = millis() - recordingStartTime;
+        int progress = (elapsed * 100) / RECORDING_TIMEOUT;
+        progress = constrain(progress, 0, 100);
+        display.drawProgressBar(10, 44, 108, 6, progress, 100, false);
     }
 
     void drawComparing() {
@@ -319,17 +325,17 @@ class AutoModeAddDevice : public Screen {
         display.printCentered("COMPARING...", 18);
 
         // Show progress indicator
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // ON completed
-        display.fillRect(88, 30, 18, 8);  // OFF completed
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // ON completed
+        display.fillRect(88, 32, 18, 8);  // OFF completed
         display.setTextColor(0);
-        display.print("ON", 24, 32);
-        display.print("OFF", 90, 32);
+        display.print("ON", 24, 34);
+        display.print("OFF", 90, 34);
         display.setTextColor(1);
 
         // Show checkmarks
-        display.drawCircle(30, 44, 3);
-        display.drawCircle(98, 44, 3);
+        display.drawCircle(30, 46, 3);
+        display.drawCircle(98, 46, 3);
 
         // Show comparison indicator
         display.printCentered("Checking match...", 52);
@@ -348,17 +354,17 @@ class AutoModeAddDevice : public Screen {
         display.printCentered("SUCCESS!", 18);
 
         // Show completed progress
-        display.drawRect(20, 28, 88, 12);
-        display.fillRect(22, 30, 20, 8);  // ON completed
-        display.fillRect(88, 30, 18, 8);  // OFF completed
+        display.drawRect(20, 30, 88, 12);
+        display.fillRect(22, 32, 20, 8);  // ON completed
+        display.fillRect(88, 32, 18, 8);  // OFF completed
         display.setTextColor(0);
-        display.print("ON", 24, 32);
-        display.print("OFF", 90, 32);
+        display.print("ON", 24, 34);
+        display.print("OFF", 90, 34);
         display.setTextColor(1);
 
         // Show checkmarks
-        display.drawCircle(30, 44, 3);
-        display.drawCircle(98, 44, 3);
+        display.drawCircle(30, 46, 3);
+        display.drawCircle(98, 46, 3);
 
         // Show result based on whether codes matched
         if (firstCode == secondCode) {
@@ -399,9 +405,9 @@ class AutoModeAddDevice : public Screen {
         display.printCentered("ERROR!", 18);
 
         // Show X mark
-        display.drawCircle(64, 32, 8);
-        display.drawLine(60, 28, 68, 36);
-        display.drawLine(60, 36, 68, 28);
+        display.drawCircle(64, 40, 8);
+        display.drawLine(60, 36, 68, 44);
+        display.drawLine(60, 44, 68, 36);
 
         // Show error message based on state
         display.setTextSize(1);

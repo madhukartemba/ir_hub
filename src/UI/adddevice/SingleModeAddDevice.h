@@ -222,9 +222,9 @@ class SingleModeAddDevice : public Screen {
         display.printCentered("ERROR!", 18);
 
         // Show X mark
-        display.drawCircle(64, 32, 8);
-        display.drawLine(60, 28, 68, 36);
-        display.drawLine(60, 36, 68, 28);
+        display.drawCircle(64, 40, 8);
+        display.drawLine(60, 36, 68, 44);
+        display.drawLine(60, 44, 68, 36);
 
         // Show error message
         display.setTextSize(1);
