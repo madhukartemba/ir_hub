@@ -134,20 +134,14 @@ class DeviceActions : public Screen {
                     delay(2000);
                 }
                 break;
-
-            case ActionType::DETAILS:
-                router.push(new DeviceDetails(device));
-                break;
-
-            case ActionType::BACK:
-                router.pop();
-                break;
+            default:
+                LOG_ERROR("Unhandled action type in executeAction: %d",
+                          static_cast<int>(selectedAction));
         }
     }
 
     void updateScrollOffset() {
         // Calculate scroll offset based on selected action
-        int totalActions = 5;    // ON, OFF, DETAILS, REMOVE, BACK
         int visibleActions = 3;  // Number of actions that can be displayed at once
 
         if (static_cast<int>(selectedAction) >= scrollOffset + visibleActions) {
