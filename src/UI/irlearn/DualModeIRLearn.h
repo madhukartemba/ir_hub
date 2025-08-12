@@ -226,10 +226,6 @@ class DualModeIRLearn : public Screen {
 
         // Show progress bar
         display.drawProgressBar(10, 42, 108, 6, 50, 100, false);
-
-        // Show instruction
-        display.setTextSize(1);
-        display.printCentered("Long press to cancel", 52);
     }
 
     void drawReadyToRecordOff() {
@@ -277,10 +273,6 @@ class DualModeIRLearn : public Screen {
 
         // Show progress bar
         display.drawProgressBar(10, 42, 108, 6, 75, 100, false);
-
-        // Show instruction
-        display.setTextSize(1);
-        display.printCentered("Long press to cancel", 52);
     }
 
     void drawSuccess() {

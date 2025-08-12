@@ -182,11 +182,9 @@ class IRTest : public Screen {
         if (hasStoredCode) {
             display.setTextSize(1);
             display.print("Code ready", 0, 50);
-            display.print("Long press to send", 0, 60);
         } else {
             display.setTextSize(1);
             display.print("No code stored", 0, 50);
-            display.print("Record first", 0, 60);
         }
     }
 

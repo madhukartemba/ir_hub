@@ -62,10 +62,6 @@ class DeviceDeleteConfirmation : public Screen {
         // Show confirmation options
         display.printCentered(confirmed ? "> YES <" : "YES", 45);
         display.printCentered(confirmed ? "NO" : "> NO <", 55);
-
-        // Show instructions
-        display.printCentered("Click: Toggle", 50);
-        display.printCentered("Long: Confirm", 60);
     }
 
     void onExit() override { LOG_DEBUG("DeviceDeleteConfirmation onExit"); }

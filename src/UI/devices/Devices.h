@@ -30,6 +30,9 @@ class Devices : public Screen {
                 // Navigate to device actions page
                 Device selectedDevice = devices[selectedDeviceIndex];
                 router.push(new DeviceActions(selectedDevice));
+            } else {
+                // Exit if no devices found
+                router.pop();
             }
         });
     }
@@ -81,10 +84,6 @@ class Devices : public Screen {
             display.drawMenuItem(deviceText.c_str(), i - startIndex, endIndex - startIndex,
                                  isSelected, startY);
         }
-
-        // Show navigation hint
-        display.setTextSize(1);
-        display.printCentered("Long press for actions", 50);
     }
 
     void onExit() override { LOG_DEBUG("Devices onExit"); }
