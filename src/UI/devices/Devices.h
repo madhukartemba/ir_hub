@@ -25,7 +25,7 @@ class Devices : public Screen {
         // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("Devices onButtonLongPress");
-            if (selectedIndex < devices.size()) {
+            if (selectedIndex < static_cast<int>(devices.size())) {
                 // Navigate to device actions page
                 Device selectedDevice = devices[selectedIndex];
                 router.push(new DeviceActions(selectedDevice));
@@ -86,7 +86,7 @@ class Devices : public Screen {
         for (int i = startIndex; i < endIndex; i++) {
             bool isSelected = (i == selectedIndex);
 
-            if (i < devices.size()) {
+            if (i < static_cast<int>(devices.size())) {
                 // Show device
                 String deviceText = String(devices[i].id) + ": " + devices[i].name;
 
