@@ -1,31 +1,32 @@
 #include <Arduino.h>
 #include "../global/Global.h"
+#include "../ui/devices/Devices.h"
 #include "../ui/irlearn/IRLearn.h"
 #include "../ui/settings/Settings.h"
 
 class MainMenu : public Screen {
    private:
-    enum class State { STATUS, IR_LEARN, SETTINGS };
+    enum class State { DEVICES, IR_LEARN, SETTINGS };
 
     State currentState;
 
    public:
     void onEnter() override {
         LOG_DEBUG("MainMenu onEnter");
-        currentState = State::STATUS;
+        currentState = State::DEVICES;
 
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("MainMenu onButtonClick");
             // Switch to next state using mod operator
-            currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 4);
+            currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 3);
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("MainMenu onButtonLongPress");
-            if (currentState == State::STATUS) {
-                // Do nothing
+            if (currentState == State::DEVICES) {
+                router.push(new Devices());
             } else if (currentState == State::IR_LEARN) {
                 router.push(new IRLearn());
             } else if (currentState == State::SETTINGS) {
@@ -46,7 +47,7 @@ class MainMenu : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Status", "IR Learn", "Settings"};
+        const char* menuItems[] = {"Devices", "IR Learn", "Settings"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {
