@@ -15,20 +15,21 @@ class Speaker {
 
     Speaker() : pin(-1), isInitialized(false) {}
 
-    void begin() {
+    bool begin() {
         if (pin == -1) {
             LOG_ERROR("Speaker pin not set");
-            return;
+            return false;
         }
-        begin(pin);
+        return begin(pin);
     }
 
     // Initialize the speaker pin
-    void begin(uint8_t speakerPin) {
+    bool begin(uint8_t speakerPin) {
         pin = speakerPin;
         pinMode(pin, OUTPUT);
         isInitialized = true;
         stop();  // Ensure no sound is playing on startup
+        return true;
     }
 
     // Basic beep with default duration (100ms)

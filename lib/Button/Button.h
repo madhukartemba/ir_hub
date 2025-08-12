@@ -24,10 +24,11 @@ class Button {
     Button() {}
     ~Button() {}
 
-    void begin(int pin, uint8_t mode) {
+    bool begin(int pin, uint8_t mode) {
         this->pin = pin;
         pinMode(pin, mode);
         initialized = true;
+        return true;
     }
 
     void setSpeaker(Speaker& speakerRef) { this->speaker = &speakerRef; }

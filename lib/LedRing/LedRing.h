@@ -9,7 +9,7 @@ class LedRing {
     LedRing() {}
     ~LedRing() {}
 
-    void begin(int pin, int numLeds, int centerLed = 0) {
+    bool begin(int pin, int numLeds, int centerLed = 0) {
         this->numLeds = numLeds;
         this->dataPin = pin;
         leds = new CRGB[numLeds];
@@ -29,11 +29,14 @@ class LedRing {
         switch (pin) {
             case D7:
                 FastLED.addLeds<WS2812B, D7, GRB>(leds, numLeds);
+                break;
             default:
                 LOG_ERROR("Led Pin Isn't Defined");
+                return false;
         }
         FastLED.setBrightness(brightness);
         FastLED.clear(true);
+        return true;
     }
 
     void setState(State newState) {

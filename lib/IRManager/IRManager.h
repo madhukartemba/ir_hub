@@ -43,10 +43,10 @@ class IRManager {
     IRManager() : rxPin(-1), txPin(-1) {}
     IRManager(int rx, int tx) : rxPin(rx), txPin(tx) {}
 
-    void begin() {
+    bool begin() {
         if (rxPin == -1 || txPin == -1) {
             LOG_ERROR("[IRManager] Pins not set. Use begin(rx, tx) or constructor with pins.");
-            return;
+            return false;
         }
         LOG_INFO("[IRManager] Initializing with RX=%d, TX=%d", rxPin, txPin);
         irrecv = new IRrecv(rxPin, kCaptureBufferSize, kTimeout, true);
@@ -58,12 +58,13 @@ class IRManager {
         irsend->begin();
         pauseIRReceiver();
         LOG_INFO("[IRManager] IR receiver and sender started (receiver paused)");
+        return true;
     }
 
-    void begin(int rx, int tx) {
+    bool begin(int rx, int tx) {
         rxPin = rx;
         txPin = tx;
-        begin();
+        return begin();
     }
 
     void pauseIRReceiver() {

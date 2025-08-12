@@ -47,15 +47,17 @@ class IdGen {
 
     ~IdGen() { LOG_DEBUG("IdGen destructor called"); }
 
-    void begin() {
+    bool begin() {
         LOG_INFO("Initializing IdGen with default storage file");
         loadNextId();
+        return true;
     }
 
-    void begin(const char* storageFile) {
+    bool begin(const char* storageFile) {
         LOG_INFO("Initializing IdGen with custom storage file: %s", storageFile);
         this->storageFile = storageFile;
         loadNextId();
+        return true;
     }
 
     int generateId() {

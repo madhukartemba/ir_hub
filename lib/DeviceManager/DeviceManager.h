@@ -28,10 +28,10 @@ class DeviceManager {
     DeviceManager(IRManager& irManager, IdGen& idGen) : irManager(irManager), idGen(idGen) {}
     ~DeviceManager() {}
 
-    void begin() {
+    bool begin() {
         if (!LittleFS.begin()) {
             LOG_ERROR("Failed to mount LittleFS");
-            return;
+            return false;
         }
         LOG_INFO("LittleFS mounted");
 
@@ -41,6 +41,7 @@ class DeviceManager {
         } else {
             LOG_INFO("Storage directory exists");
         }
+        return true;
     }
 
     void setStorageDir(char* dir) { storageDir = dir; }
