@@ -224,8 +224,11 @@ class DualModeAddDevice : public Screen {
         display.setTextColor(1);
         display.print("OFF", 90, 32);
 
-        // Show progress bar
-        display.drawProgressBar(10, 42, 108, 6, 50, 100, false);
+        // Show timeout progress bar
+        unsigned long elapsed = millis() - recordingStartTime;
+        int progress = (elapsed * 100) / RECORDING_TIMEOUT;
+        progress = constrain(progress, 0, 100);
+        display.drawProgressBar(10, 44, 108, 6, progress, 100, false);
     }
 
     void drawReadyToRecordOff() {
@@ -271,8 +274,11 @@ class DualModeAddDevice : public Screen {
         display.print("OFF", 90, 32);
         display.setTextColor(1);
 
-        // Show progress bar
-        display.drawProgressBar(10, 42, 108, 6, 75, 100, false);
+        // Show timeout progress bar
+        unsigned long elapsed = millis() - recordingStartTime;
+        int progress = (elapsed * 100) / RECORDING_TIMEOUT;
+        progress = constrain(progress, 0, 100);
+        display.drawProgressBar(10, 44, 108, 6, progress, 100, false);
     }
 
     void drawSuccess() {
@@ -308,8 +314,8 @@ class DualModeAddDevice : public Screen {
         if (onProtocol == offProtocol) {
             display.printCentered("Protocol: " + onProtocol, 52);
         } else {
-            display.printCentered("ON: " + onProtocol, 52);
-            display.printCentered("OFF: " + offProtocol, 60);
+            display.printCentered("ON: " + onProtocol, 48);
+            display.printCentered("OFF: " + offProtocol, 56);
         }
     }
 
