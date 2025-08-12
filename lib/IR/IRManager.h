@@ -20,7 +20,7 @@ class IRManager {
     decode_results lastResults{};
     IRCode lastCode{};
 
-    bool isPaused = false;
+    bool isCapturing = false;
 
     IRCode fromDecodeResults(const decode_results &results) {
         IRCode code = IRCode::fromDecodeResults(results);
@@ -44,9 +44,8 @@ class IRManager {
 
         irrecv->setUnknownThreshold(kMinUnknownSize);
         irrecv->setTolerance(kTolerancePercentage);
-        irrecv->enableIRIn();
         irsend->begin();
-        pauseIRReceiver();
+        stopCapture();
         LOG_INFO("[IRManager] IR receiver and sender started (receiver paused)");
         return true;
     }
@@ -57,20 +56,14 @@ class IRManager {
         return begin();
     }
 
-    void pauseIRReceiver() {
-        if (irrecv) {
-            irrecv->pause();
-            isPaused = true;
-            LOG_DEBUG("[IRManager] IR receiver paused");
-        }
+    void stopCapture() {
+        irrecv->disableIRIn();
+        isCapturing = false;
     }
 
-    void resumeIRReceiver() {
-        if (irrecv) {
-            irrecv->resume();
-            isPaused = false;
-            LOG_DEBUG("[IRManager] IR receiver resumed");
-        }
+    void startCapture() {
+        irrecv->enableIRIn();
+        isCapturing = true;
     }
 
     bool decode() {
@@ -79,14 +72,15 @@ class IRManager {
             return false;
         }
 
-        if (isPaused) {
+        if (!isCapturing) {
             LOG_INFO("[IRManager] IR receiver now capturing data");
-            resumeIRReceiver();
+            startCapture();
         }
 
         if (irrecv->decode(&lastResults)) {
             LOG_DEBUG("[IRManager] IR code received");
             lastCode = fromDecodeResults(lastResults);
+            stopCapture();
             return true;
         }
         return false;
