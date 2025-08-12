@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <vector>
 #include "IRCode.h"
 #include "IdGen.h"
 #include "Log.h"
@@ -147,5 +148,29 @@ class DeviceManager {
         device.onCommand = IRCode::fromJson(doc["onCommand"]);
         device.offCommand = IRCode::fromJson(doc["offCommand"]);
         return device;
+    }
+
+    std::vector<Device> getDevices() {
+        std::vector<Device> devices;
+
+        Dir dir = LittleFS.openDir(storageDir);
+        while (dir.next()) {
+            if (dir.isFile() && String(dir.fileName()).endsWith(".json")) {
+                try {
+                    // Extract device ID from filename (remove .json extension)
+                    String filename = String(dir.fileName());
+                    String idStr = filename.substring(0, filename.lastIndexOf('.'));
+                    int id = idStr.toInt();
+
+                    Device device = getDevice(id);
+                    devices.push_back(device);
+                } catch (const std::runtime_error& e) {
+                    LOG_ERROR("Failed to load device from %s: %s", dir.fileName(), e.what());
+                }
+            }
+        }
+
+        LOG_INFO("Loaded %d devices", devices.size());
+        return devices;
     }
 };
