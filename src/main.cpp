@@ -135,4 +135,5 @@ void setup() {
 void loop() {
     router.update();  // Main app logic now handled by router
     button.update();
+    ring.update();
 }
