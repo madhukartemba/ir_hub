@@ -203,10 +203,10 @@ class SingleModeAddDevice : public Screen {
 
         // Show code info
         display.setTextSize(1);
-        display.printCentered("Device Added", 44);
+        display.printCentered("Device Added", 46);
 
         String protocol = typeToString(recordedCode.getProtocol(), false);
-        display.printCentered("Protocol: " + protocol, 52);
+        display.printCentered("Protocol: " + protocol, 54);
     }
 
     void drawError() {
