@@ -409,35 +409,36 @@ class AddDevice : public Screen {
         // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Show success status
+        // Center the content vertically (display height is 64, so center is around 32)
+        // Success status at y=20
         display.setTextSize(1);
-        display.printCentered("SUCCESS!", 16);
+        display.printCentered("SUCCESS!", 20);
 
-        // Success icon (checkmark in circle)
+        // Success icon (checkmark in circle) at y=32 (center)
         display.drawCircle(64, 32, 8);
         display.drawLine(60, 32, 62, 34);
         display.drawLine(62, 34, 68, 28);
 
-        // Show result based on whether codes matched (compact)
+        // Show result based on whether codes matched at y=44
         if (firstCode == secondCode) {
-            display.printCentered("Single device saved", 48);
+            display.printCentered("Single device saved", 44);
         } else {
-            display.printCentered("Dual device saved", 48);
+            display.printCentered("Dual device saved", 44);
         }
 
-        // Show protocol info (compact)
+        // Show protocol info at y=52
         display.setTextSize(1);
         String firstProtocol = typeToString(firstCode.getProtocol(), false);
         String secondProtocol = typeToString(secondCode.getProtocol(), false);
 
         if (firstCode == secondCode) {
-            display.printCentered("Protocol: " + firstProtocol, 56);
+            display.printCentered("Protocol: " + firstProtocol, 52);
         } else {
             if (firstProtocol == secondProtocol) {
-                display.printCentered("Protocol: " + firstProtocol, 56);
+                display.printCentered("Protocol: " + firstProtocol, 52);
             } else {
                 // Show both protocols in one line
-                display.printCentered("ON:" + firstProtocol + " OFF:" + secondProtocol, 56);
+                display.printCentered("ON:" + firstProtocol + " OFF:" + secondProtocol, 52);
             }
         }
     }
@@ -450,16 +451,17 @@ class AddDevice : public Screen {
         // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Show error status
+        // Center the content vertically (display height is 64, so center is around 32)
+        // Error status at y=20
         display.setTextSize(1);
-        display.printCentered("ERROR!", 16);
+        display.printCentered("ERROR!", 20);
 
-        // Show X mark (smaller)
+        // Show X mark (smaller) at y=32 (center)
         display.drawCircle(64, 32, 6);
         display.drawLine(61, 29, 67, 35);
         display.drawLine(61, 35, 67, 29);
 
-        // Show error message based on state (compact)
+        // Show error message based on state at y=44
         display.setTextSize(1);
         if (currentState == State::ERROR) {
             if (!hasFirstCode) {
