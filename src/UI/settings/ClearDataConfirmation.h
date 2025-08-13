@@ -5,6 +5,9 @@ class ClearDataConfirmation : public Screen {
     void onEnter() override {
         LOG_DEBUG("ClearDataConfirmation onEnter");
 
+        // Set LED to warning state - pulsing red for dangerous action
+        ring.breathe(3, CRGB(255, 50, 0));
+
         button.setClickCallback([this]() {
             LOG_DEBUG("ClearDataConfirmation onButtonClick - Exit");
             router.pop();
@@ -12,6 +15,10 @@ class ClearDataConfirmation : public Screen {
 
         button.setLongPressCallback([this]() {
             LOG_DEBUG("ClearDataConfirmation onButtonLongPress - Confirm");
+
+            // Set LED to destructive action - fast red pulse
+            ring.breathe(8, CRGB(255, 0, 0));
+
             clearAllDataAndRestart();
         });
     }
@@ -40,7 +47,11 @@ class ClearDataConfirmation : public Screen {
         display.update();
     }
 
-    void onExit() override { LOG_DEBUG("ClearDataConfirmation onExit"); }
+    void onExit() override {
+        LOG_DEBUG("ClearDataConfirmation onExit");
+        // Turn off LED when leaving ClearDataConfirmation screen
+        ring.off();
+    }
 
    private:
     void clearAllDataAndRestart() {

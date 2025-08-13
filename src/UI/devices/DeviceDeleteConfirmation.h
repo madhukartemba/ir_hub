@@ -12,6 +12,9 @@ class DeviceDeleteConfirmation : public Screen {
     void onEnter() override {
         LOG_DEBUG("DeviceDeleteConfirmation onEnter for device %d", device.id);
 
+        // Set LED to warning state - pulsing amber for deletion
+        ring.breathe(3, CRGB(255, 100, 0));
+
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("DeviceDeleteConfirmation onButtonClick");
@@ -24,6 +27,10 @@ class DeviceDeleteConfirmation : public Screen {
             if (confirmed) {
                 // Delete the device
                 LOG_INFO("Deleting device %d", device.id);
+
+                // Set LED to deletion in progress - red breathe
+                ring.breathe(6, CRGB(255, 0, 0));
+
                 deviceManager.removeDevice(device.id);
 
                 // Show feedback
@@ -64,5 +71,9 @@ class DeviceDeleteConfirmation : public Screen {
         display.printCentered(confirmed ? "NO" : "> NO <", 55);
     }
 
-    void onExit() override { LOG_DEBUG("DeviceDeleteConfirmation onExit"); }
+    void onExit() override {
+        LOG_DEBUG("DeviceDeleteConfirmation onExit");
+        // Turn off LED when leaving DeviceDeleteConfirmation screen
+        ring.off();
+    }
 };

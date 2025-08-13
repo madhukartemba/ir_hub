@@ -14,6 +14,9 @@ class Devices : public Screen {
         selectedIndex = 0;
         loadDevices();
 
+        // Set LED to devices list state - gentle breathe with soft blue
+        ring.breathe(2, CRGB(40, 70, 120));
+
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("Devices onButtonClick");
@@ -105,5 +108,9 @@ class Devices : public Screen {
         }
     }
 
-    void onExit() override { LOG_DEBUG("Devices onExit"); }
+    void onExit() override {
+        LOG_DEBUG("Devices onExit");
+        // Turn off LED when leaving Devices screen
+        ring.off();
+    }
 };

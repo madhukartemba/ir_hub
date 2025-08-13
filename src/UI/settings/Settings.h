@@ -17,6 +17,9 @@ class Settings : public Screen {
         LOG_DEBUG("Settings onEnter");
         currentState = State::CLEAR_DATA;
 
+        // Set LED to settings state - gentle wave with warm white
+        ring.wave(2, CRGB(90, 80, 60), 160);
+
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");
             switch (currentState) {
@@ -69,7 +72,11 @@ class Settings : public Screen {
         display.update();
     }
 
-    void onExit() override { LOG_DEBUG("Settings onExit"); }
+    void onExit() override {
+        LOG_DEBUG("Settings onExit");
+        // Turn off LED when leaving Settings screen
+        ring.off();
+    }
 
     void drawClearData() {
         // Draw title

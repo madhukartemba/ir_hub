@@ -31,6 +31,9 @@ class IRTest : public Screen {
         currentState = State::RECORD;
         recordState = RecordState::IDLE;
 
+        // Set LED to IR test state - gentle wave with purple/blue
+        ring.wave(2, CRGB(80, 60, 120), 200);
+
         button.setClickCallback([this]() {
             LOG_DEBUG("IRTest onButtonClick");
             switch (currentState) {
@@ -78,6 +81,9 @@ class IRTest : public Screen {
                     hasStoredCode = true;
                     recordState = RecordState::RECORDED;
                     LOG_DEBUG("IR code recorded successfully");
+
+                    // Set LED to success state - green breathe
+                    ring.breathe(4, CRGB(0, 255, 0));
                 } else {
                     LOG_DEBUG("Invalid IR code received, continuing recording");
                 }
@@ -87,6 +93,9 @@ class IRTest : public Screen {
             if (millis() - recordingStartTime > RECORDING_TIMEOUT) {
                 recordState = RecordState::IDLE;
                 LOG_DEBUG("Recording timeout");
+
+                // Set LED to timeout error - red breathe
+                ring.breathe(4, CRGB(255, 0, 0));
             }
         }
 
@@ -113,6 +122,9 @@ class IRTest : public Screen {
         if (recordState == RecordState::RECORDING) {
             recordState = RecordState::IDLE;
         }
+
+        // Turn off LED when leaving IRTest screen
+        ring.off();
     }
 
    private:
@@ -122,14 +134,25 @@ class IRTest : public Screen {
         recordingStartTime = millis();
         storedCode.clear();
         hasStoredCode = false;
+
+        // Set LED to recording state - orange breathe
+        ring.breathe(5, CRGB(255, 140, 0));
     }
 
     void replayCode() {
         if (hasStoredCode) {
             LOG_DEBUG("Replaying stored IR code");
             irManager.sendProtocol(IRCode::fromJson(storedCode));
+
+            // Set LED to transmit state - bright white flash then back to normal
+            ring.breathe(8, CRGB(255, 255, 255));
+            delay(200);
+            ring.wave(2, CRGB(80, 60, 120), 200);
         } else {
             LOG_DEBUG("No stored code to replay");
+
+            // Set LED to error state - red breathe for no code
+            ring.breathe(4, CRGB(255, 0, 0));
         }
     }
 
