@@ -201,9 +201,9 @@ class DualModeAddDevice : public Screen {
         display.drawRect(20, 32, 88, 12);
         display.fillRect(22, 34, 20, 8);  // Highlight ON
         display.setTextColor(0);          // Black text on white background
-        display.print("ON", 24, 36);
+        display.print("ON", 24, 34);
         display.setTextColor(1);  // Reset to white text
-        display.print("OFF", 90, 36);
+        display.print("OFF", 90, 34);
     }
 
     void drawRecordingOn() {
@@ -222,9 +222,9 @@ class DualModeAddDevice : public Screen {
         display.drawRect(20, 32, 88, 12);
         display.fillRect(22, 34, 20, 8);  // Highlight ON (filled)
         display.setTextColor(0);
-        display.print("ON", 24, 36);
+        display.print("ON", 24, 34);
         display.setTextColor(1);
-        display.print("OFF", 90, 36);
+        display.print("OFF", 90, 34);
 
         // Show timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
@@ -249,9 +249,9 @@ class DualModeAddDevice : public Screen {
         display.drawRect(20, 32, 88, 12);
         display.fillRect(22, 34, 20, 8);  // ON completed
         display.setTextColor(0);
-        display.print("ON", 24, 36);
+        display.print("ON", 24, 34);
         display.setTextColor(1);
-        display.print("OFF", 90, 36);
+        display.print("OFF", 90, 34);
         display.drawCircle(30, 46, 3);  // Checkmark for ON
     }
 
@@ -272,8 +272,8 @@ class DualModeAddDevice : public Screen {
         display.fillRect(22, 34, 20, 8);  // ON completed
         display.fillRect(88, 34, 18, 8);  // OFF recording
         display.setTextColor(0);
-        display.print("ON", 24, 36);
-        display.print("OFF", 90, 36);
+        display.print("ON", 24, 34);
+        display.print("OFF", 90, 34);
         display.setTextColor(1);
 
         // Show timeout progress bar
@@ -300,8 +300,8 @@ class DualModeAddDevice : public Screen {
         display.fillRect(22, 34, 20, 8);  // ON completed
         display.fillRect(88, 34, 18, 8);  // OFF completed
         display.setTextColor(0);
-        display.print("ON", 24, 36);
-        display.print("OFF", 90, 36);
+        display.print("ON", 24, 34);
+        display.print("OFF", 90, 34);
         display.setTextColor(1);
 
         // Show checkmarks
