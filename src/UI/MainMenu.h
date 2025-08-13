@@ -18,6 +18,7 @@ class MainMenu : public Screen {
         // Change button behavior
         button.setClickCallback([this]() {
             // Switch to next state using mod operator
+            LOG_DEBUG("MainMenu onButtonClick");
             currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 3);
         });
 
