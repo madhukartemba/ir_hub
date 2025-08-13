@@ -11,9 +11,6 @@ class DeviceDetails : public Screen {
     void onEnter() override {
         LOG_DEBUG("DeviceDetails onEnter for device %d", device.id);
 
-        // Set LED to info state - gentle wave with soft blue
-        ring.wave(2, CRGB(50, 100, 150), 220);
-
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("DeviceDetails onButtonClick");
@@ -64,9 +61,5 @@ class DeviceDetails : public Screen {
         y += 10;
     }
 
-    void onExit() override {
-        LOG_DEBUG("DeviceDetails onExit");
-        // Turn off LED when leaving DeviceDetails screen
-        ring.off();
-    }
+    void onExit() override { LOG_DEBUG("DeviceDetails onExit"); }
 };

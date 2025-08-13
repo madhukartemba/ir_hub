@@ -118,9 +118,6 @@ void setup() {
     }
     LOG_DEBUG("LED ring initialized on pin");
 
-    // Startup LED animation - slow rainbow to indicate successful initialization
-    ring.rainbow(3);
-
     // Initialize the global router
     router.setDefaultScreen(new MainMenu());  // Replace with your actual default screen object
 
@@ -130,13 +127,10 @@ void setup() {
     display.printCentered("IR Hub", 20);
     display.printCentered("Ready!", 40);
     display.update();
-
-    // Set LED to success/ready state - green pulse then off (will be set by MainMenu)
-    ring.breathe(5, CRGB(0, 255, 0));
-    delay(1000);
-    ring.off();
-
     delay(500);
+
+    ring.setState(LedRing::State::RAINBOW);
+    ring.setSpeed(10);
 
     Serial.println("IR Hub: System Ready");
 }

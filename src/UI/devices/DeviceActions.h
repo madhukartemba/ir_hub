@@ -18,9 +18,6 @@ class DeviceActions : public Screen {
     void onEnter() override {
         LOG_DEBUG("DeviceActions onEnter for device %d", device.id);
 
-        // Set LED to device actions state - gentle breathe with cyan
-        ring.breathe(2, CRGB(60, 120, 120));
-
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("DeviceActions onButtonClick");
@@ -105,64 +102,36 @@ class DeviceActions : public Screen {
             case ActionType::ON:
                 if (device.onCommand.isValid()) {
                     LOG_INFO("Sending ON command for device %d", device.id);
-
-                    // Set LED to transmit state - bright green flash
-                    ring.breathe(8, CRGB(0, 255, 0));
-
                     irManager.sendProtocol(device.onCommand);
                     // Show feedback
                     display.clear();
                     display.printCentered("Sending ON...", 30);
                     display.update();
                     delay(1000);
-
-                    // Return to normal state
-                    ring.breathe(2, CRGB(60, 120, 120));
                 } else {
                     LOG_ERROR("Invalid ON command for device %d", device.id);
-
-                    // Set LED to error state - red breathe
-                    ring.breathe(4, CRGB(255, 0, 0));
-
                     display.clear();
                     display.printCentered("Invalid ON command", 30);
                     display.update();
                     delay(2000);
-
-                    // Return to normal state
-                    ring.breathe(2, CRGB(60, 120, 120));
                 }
                 break;
 
             case ActionType::OFF:
                 if (device.offCommand.isValid()) {
                     LOG_INFO("Sending OFF command for device %d", device.id);
-
-                    // Set LED to transmit state - bright orange flash for OFF
-                    ring.breathe(8, CRGB(255, 140, 0));
-
                     irManager.sendProtocol(device.offCommand);
                     // Show feedback
                     display.clear();
                     display.printCentered("Sending OFF...", 30);
                     display.update();
                     delay(1000);
-
-                    // Return to normal state
-                    ring.breathe(2, CRGB(60, 120, 120));
                 } else {
                     LOG_ERROR("Invalid OFF command for device %d", device.id);
-
-                    // Set LED to error state - red breathe
-                    ring.breathe(4, CRGB(255, 0, 0));
-
                     display.clear();
                     display.printCentered("Invalid OFF command", 30);
                     display.update();
                     delay(2000);
-
-                    // Return to normal state
-                    ring.breathe(2, CRGB(60, 120, 120));
                 }
                 break;
             default:
@@ -182,9 +151,5 @@ class DeviceActions : public Screen {
         }
     }
 
-    void onExit() override {
-        LOG_DEBUG("DeviceActions onExit");
-        // Turn off LED when leaving DeviceActions screen
-        ring.off();
-    }
+    void onExit() override { LOG_DEBUG("DeviceActions onExit"); }
 };
