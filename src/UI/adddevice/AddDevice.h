@@ -15,18 +15,21 @@ class AddDevice : public Screen {
 
     State currentState;
     bool hasFirstCode;
+    bool isTimeoutError;
     IRCode firstCode;
     IRCode secondCode;
     unsigned long recordingStartTime;
     const unsigned long RECORDING_TIMEOUT = 5000;  // 5 seconds timeout
 
    public:
-    AddDevice() : currentState(State::READY_TO_RECORD_FIRST), hasFirstCode(false) {}
+    AddDevice()
+        : currentState(State::READY_TO_RECORD_FIRST), hasFirstCode(false), isTimeoutError(false) {}
 
     void onEnter() override {
         LOG_DEBUG("AddDevice onEnter");
         currentState = State::READY_TO_RECORD_FIRST;
         hasFirstCode = false;
+        isTimeoutError = false;
         firstCode = IRCode();
         secondCode = IRCode();
 
@@ -70,6 +73,7 @@ class AddDevice : public Screen {
         if ((currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) &&
             (millis() - recordingStartTime) > RECORDING_TIMEOUT) {
             LOG_DEBUG("Recording timeout reached");
+            isTimeoutError = true;
             if (currentState == State::RECORDING_FIRST) {
                 stopRecordingFirst();
             } else {
@@ -441,12 +445,14 @@ class AddDevice : public Screen {
 
         // Show specific error cause
         display.setTextSize(1);
-        if (currentState == State::ERROR) {
+        if (isTimeoutError) {
+            display.printCentered("Timeout", 46);
+        } else if (currentState == State::ERROR) {
             if (!hasFirstCode) {
                 // Show protocol info for first code failure
                 String protocol = typeToString(firstCode.getProtocol(), false);
                 if (protocol == "Unknown") {
-                    display.printCentered("Timeout or no signal", 46);
+                    display.printCentered("No signal detected", 46);
                 } else {
                     display.printCentered("Protocol: " + protocol, 46);
                 }
@@ -454,13 +460,11 @@ class AddDevice : public Screen {
                 // Show protocol info for second code failure
                 String protocol = typeToString(secondCode.getProtocol(), false);
                 if (protocol == "Unknown") {
-                    display.printCentered("Timeout or no signal", 46);
+                    display.printCentered("No signal detected", 46);
                 } else {
                     display.printCentered("Protocol: " + protocol, 46);
                 }
             }
-        } else {
-            display.printCentered("Recording timeout", 46);
         }
     }
 };
