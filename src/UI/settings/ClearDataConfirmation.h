@@ -1,42 +1,18 @@
 #include "../../global/Global.h"
 
 class ClearDataConfirmation : public Screen {
-   private:
-    enum class State {
-        YES,
-        NO,
-    };
-    State currentState;
-
    public:
     void onEnter() override {
         LOG_DEBUG("ClearDataConfirmation onEnter");
-        currentState = State::NO;  // Default to NO for safety
 
         button.setClickCallback([this]() {
-            LOG_DEBUG("ClearDataConfirmation onButtonClick");
-            switch (currentState) {
-                case State::YES:
-                    currentState = State::NO;
-                    break;
-                case State::NO:
-                    currentState = State::YES;
-                    break;
-            }
+            LOG_DEBUG("ClearDataConfirmation onButtonClick - Exit");
+            router.pop();
         });
 
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("ClearDataConfirmation onButtonLongPress");
-            switch (currentState) {
-                case State::YES:
-                    LOG_DEBUG("ClearDataConfirmation onButtonLongPress YES");
-                    clearAllDataAndRestart();
-                    break;
-                case State::NO:
-                    LOG_DEBUG("ClearDataConfirmation onButtonLongPress NO");
-                    router.pop();
-                    break;
-            }
+            LOG_DEBUG("ClearDataConfirmation onButtonLongPress - Confirm");
+            clearAllDataAndRestart();
         });
     }
 
@@ -56,14 +32,10 @@ class ClearDataConfirmation : public Screen {
         display.printCentered("ALL stored data", 30);
         display.printCentered("and restart device", 40);
 
-        // Show confirmation options with selection indicator
-        const char* menuItems[] = {"Yes", "No"};
-        int startY = 55;
-
-        for (int i = 0; i < 2; i++) {
-            bool isSelected = (i == (currentState == State::YES ? 0 : 1));
-            display.drawMenuItem(menuItems[i], i, 2, isSelected, startY);
-        }
+        // Draw instructions
+        display.setTextSize(1);
+        display.printCentered("Long press to confirm", 55);
+        display.printCentered("Click to exit", 65);
 
         display.update();
     }
