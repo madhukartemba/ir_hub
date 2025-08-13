@@ -257,7 +257,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to record Power ON", 16);
+        display.printCentered("Press to record ON", 16);
 
         // LED-style indicators with power symbols
         // Power ON indicator (active - filled circle)
@@ -266,8 +266,7 @@ class AddDevice : public Screen {
         display.print("ON", 20, 42);
 
         // Power OFF indicator (inactive - outline circle)
-        display.drawCircle(96, 32, 6);   // Inactive indicator
-        drawPowerSymbol(96, 32, false);  // Power symbol inside
+        display.drawCircle(96, 32, 6);  // Inactive indicator (empty)
         display.print("OFF", 84, 42);
     }
 
@@ -281,7 +280,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING Power ON...", 16);
+        display.printCentered("RECORDING ON...", 16);
 
         // LED-style indicators with recording animation
         // Power ON indicator with pulsing animation
@@ -319,7 +318,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to record Power OFF", 16);
+        display.printCentered("Press to record OFF", 16);
 
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
@@ -327,8 +326,8 @@ class AddDevice : public Screen {
         drawPowerSymbol(32, 32, true);
         // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
-        display.drawLine(29, 32, 31, 34);
-        display.drawLine(31, 34, 35, 30);
+        display.drawLine(29, 33, 31, 35);
+        display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
         display.print("ON", 20, 42);
 
@@ -348,7 +347,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING Power OFF...", 16);
+        display.printCentered("RECORDING OFF...", 16);
 
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
@@ -356,8 +355,8 @@ class AddDevice : public Screen {
         drawPowerSymbol(32, 32, true);
         // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
-        display.drawLine(29, 32, 31, 34);
-        display.drawLine(31, 34, 35, 30);
+        display.drawLine(29, 33, 31, 35);
+        display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
         display.print("ON", 20, 42);
 
@@ -399,8 +398,8 @@ class AddDevice : public Screen {
         drawPowerSymbol(32, 32, true);
         // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
-        display.drawLine(29, 32, 31, 34);
-        display.drawLine(31, 34, 35, 30);
+        display.drawLine(29, 33, 31, 35);
+        display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
         display.print("ON", 20, 42);
 
@@ -409,8 +408,8 @@ class AddDevice : public Screen {
         drawPowerSymbol(96, 32, true);
         // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
-        display.drawLine(93, 32, 95, 34);
-        display.drawLine(95, 34, 99, 30);
+        display.drawLine(93, 33, 95, 35);
+        display.drawLine(95, 35, 99, 31);
         display.setTextColor(1);  // Reset to white
         display.print("OFF", 84, 42);
 
@@ -445,16 +444,16 @@ class AddDevice : public Screen {
         if (firstCode == secondCode) {
             // Single device - show centered success icon and protocol
             display.drawCircle(64, 44, 8);
-            display.drawLine(60, 44, 62, 46);
-            display.drawLine(62, 46, 68, 40);
-            display.printCentered("Protocol: " + firstProtocol, 58);
+            display.drawLine(60, 45, 62, 47);
+            display.drawLine(62, 47, 68, 41);
+            display.printCentered("Protocol: " + firstProtocol, 56);
         } else {
             if (firstProtocol == secondProtocol) {
                 // Same protocol - show centered success icon and protocol
                 display.drawCircle(64, 44, 8);
-                display.drawLine(60, 44, 62, 46);
-                display.drawLine(62, 46, 68, 40);
-                display.printCentered("Protocol: " + firstProtocol, 58);
+                display.drawLine(60, 45, 62, 47);
+                display.drawLine(62, 47, 68, 41);
+                display.printCentered("Protocol: " + firstProtocol, 56);
             } else {
                 // Different protocols - center the protocol info vertically
                 display.printCentered("ON: " + firstProtocol, 42);
