@@ -220,19 +220,20 @@ class AddDevice : public Screen {
         display.printCentered("Add Device", 0);
 
         // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
+        display.drawLine(0, 10, display.getWidth(), 10);
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to record ON", 18);
+        display.printCentered("Click to record ON", 16);
 
-        // Show progress indicator
-        display.drawRect(20, 30, 88, 12);
-        display.fillRect(22, 32, 20, 8);  // Highlight ON
-        display.setTextColor(0);          // Black text on white background
-        display.print("ON", 24, 34);
+        // Compact ON/OFF indicator
+        display.drawRect(25, 26, 78, 8);
+        display.fillRect(27, 28, 18, 4);  // Highlight ON
+        display.setTextSize(1);
+        display.setTextColor(0);  // Black text on white background
+        display.print("ON", 30, 29);
         display.setTextColor(1);  // Reset to white text
-        display.print("OFF", 90, 34);
+        display.print("OFF", 85, 29);
     }
 
     void drawRecordingFirst() {
@@ -241,25 +242,26 @@ class AddDevice : public Screen {
         display.printCentered("Add Device", 0);
 
         // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
+        display.drawLine(0, 10, display.getWidth(), 10);
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING ON...", 18);
+        display.printCentered("RECORDING ON...", 16);
 
-        // Show progress indicator with animation
-        display.drawRect(20, 30, 88, 12);
-        display.fillRect(22, 32, 20, 8);  // Highlight ON (filled)
+        // Compact ON/OFF indicator with animation
+        display.drawRect(25, 26, 78, 8);
+        display.fillRect(27, 28, 18, 4);  // Highlight ON (filled)
+        display.setTextSize(1);
         display.setTextColor(0);
-        display.print("ON", 24, 34);
+        display.print("ON", 30, 29);
         display.setTextColor(1);
-        display.print("OFF", 90, 34);
+        display.print("OFF", 85, 29);
 
-        // Show timeout progress bar
+        // Compact timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
         int progress = (elapsed * 100) / RECORDING_TIMEOUT;
         progress = constrain(progress, 0, 100);
-        display.drawProgressBar(10, 44, 108, 6, progress, 100, false);
+        display.drawProgressBar(15, 38, 98, 4, progress, 100, false);
     }
 
     void drawReadyToRecordSecond() {
@@ -268,20 +270,23 @@ class AddDevice : public Screen {
         display.printCentered("Add Device", 0);
 
         // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
+        display.drawLine(0, 10, display.getWidth(), 10);
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to record OFF", 18);
+        display.printCentered("Click to record OFF", 16);
 
-        // Show progress indicator
-        display.drawRect(20, 30, 88, 12);
-        display.fillRect(22, 32, 20, 8);  // ON completed
+        // Compact ON/OFF indicator
+        display.drawRect(25, 26, 78, 8);
+        display.fillRect(27, 28, 18, 4);  // ON completed
+        display.setTextSize(1);
         display.setTextColor(0);
-        display.print("ON", 24, 34);
+        display.print("ON", 30, 29);
         display.setTextColor(1);
-        display.print("OFF", 90, 34);
-        display.drawCircle(30, 44, 3);  // Checkmark for ON
+        display.print("OFF", 85, 29);
+
+        // Small checkmark for ON
+        display.fillCircle(32, 40, 2);
     }
 
     void drawRecordingSecond() {
@@ -290,26 +295,27 @@ class AddDevice : public Screen {
         display.printCentered("Add Device", 0);
 
         // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
+        display.drawLine(0, 10, display.getWidth(), 10);
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING OFF...", 18);
+        display.printCentered("RECORDING OFF...", 16);
 
-        // Show progress indicator with animation
-        display.drawRect(20, 30, 88, 12);
-        display.fillRect(22, 32, 20, 8);  // ON completed
-        display.fillRect(88, 32, 18, 8);  // OFF recording
+        // Compact ON/OFF indicator with animation
+        display.drawRect(25, 26, 78, 8);
+        display.fillRect(27, 28, 18, 4);  // ON completed
+        display.fillRect(85, 28, 16, 4);  // OFF recording
+        display.setTextSize(1);
         display.setTextColor(0);
-        display.print("ON", 24, 34);
-        display.print("OFF", 90, 34);
+        display.print("ON", 30, 29);
+        display.print("OFF", 87, 29);
         display.setTextColor(1);
 
-        // Show timeout progress bar
+        // Compact timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
         int progress = (elapsed * 100) / RECORDING_TIMEOUT;
         progress = constrain(progress, 0, 100);
-        display.drawProgressBar(10, 44, 108, 6, progress, 100, false);
+        display.drawProgressBar(15, 38, 98, 4, progress, 100, false);
     }
 
     void drawComparing() {
@@ -318,27 +324,28 @@ class AddDevice : public Screen {
         display.printCentered("Add Device", 0);
 
         // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
+        display.drawLine(0, 10, display.getWidth(), 10);
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("COMPARING...", 18);
+        display.printCentered("COMPARING...", 16);
 
-        // Show progress indicator
-        display.drawRect(20, 30, 88, 12);
-        display.fillRect(22, 32, 20, 8);  // ON completed
-        display.fillRect(88, 32, 18, 8);  // OFF completed
+        // Compact ON/OFF indicator
+        display.drawRect(25, 26, 78, 8);
+        display.fillRect(27, 28, 18, 4);  // ON completed
+        display.fillRect(85, 28, 16, 4);  // OFF completed
+        display.setTextSize(1);
         display.setTextColor(0);
-        display.print("ON", 24, 34);
-        display.print("OFF", 90, 34);
+        display.print("ON", 30, 29);
+        display.print("OFF", 87, 29);
         display.setTextColor(1);
 
-        // Show checkmarks
-        display.drawCircle(30, 46, 3);
-        display.drawCircle(98, 46, 3);
+        // Small checkmarks
+        display.fillCircle(32, 40, 2);
+        display.fillCircle(95, 40, 2);
 
         // Show comparison indicator
-        display.printCentered("Checking match...", 52);
+        display.printCentered("Checking match...", 48);
     }
 
     void drawSuccess() {
@@ -347,47 +354,46 @@ class AddDevice : public Screen {
         display.printCentered("Add Device", 0);
 
         // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
+        display.drawLine(0, 10, display.getWidth(), 10);
 
         // Show success status
         display.setTextSize(1);
-        display.printCentered("SUCCESS!", 18);
+        display.printCentered("SUCCESS!", 16);
 
-        // Show completed progress
-        display.drawRect(20, 30, 88, 12);
-        display.fillRect(22, 32, 20, 8);  // ON completed
-        display.fillRect(88, 32, 18, 8);  // OFF completed
+        // Compact ON/OFF indicator
+        display.drawRect(25, 26, 78, 8);
+        display.fillRect(27, 28, 18, 4);  // ON completed
+        display.fillRect(85, 28, 16, 4);  // OFF completed
+        display.setTextSize(1);
         display.setTextColor(0);
-        display.print("ON", 24, 34);
-        display.print("OFF", 90, 34);
+        display.print("ON", 30, 29);
+        display.print("OFF", 87, 29);
         display.setTextColor(1);
 
-        // Show checkmarks
-        display.drawCircle(30, 46, 3);
-        display.drawCircle(98, 46, 3);
+        // Small checkmarks
+        display.fillCircle(32, 40, 2);
+        display.fillCircle(95, 40, 2);
 
-        // Show result based on whether codes matched
+        // Show result based on whether codes matched (compact)
         if (firstCode == secondCode) {
-            display.printCentered("Codes match!", 52);
-            display.printCentered("Single device saved", 60);
+            display.printCentered("Single device saved", 48);
         } else {
-            display.printCentered("Codes different!", 52);
-            display.printCentered("Dual device saved", 60);
+            display.printCentered("Dual device saved", 48);
         }
 
-        // Show protocol info
+        // Show protocol info (compact)
         display.setTextSize(1);
         String firstProtocol = typeToString(firstCode.getProtocol(), false);
         String secondProtocol = typeToString(secondCode.getProtocol(), false);
 
         if (firstCode == secondCode) {
-            display.printCentered("Protocol: " + firstProtocol, 68);
+            display.printCentered("Protocol: " + firstProtocol, 56);
         } else {
             if (firstProtocol == secondProtocol) {
-                display.printCentered("Protocol: " + firstProtocol, 68);
+                display.printCentered("Protocol: " + firstProtocol, 56);
             } else {
-                display.printCentered("ON: " + firstProtocol, 68);
-                display.printCentered("OFF: " + secondProtocol, 76);
+                // Show both protocols in one line
+                display.printCentered("ON:" + firstProtocol + " OFF:" + secondProtocol, 56);
             }
         }
     }
@@ -398,30 +404,27 @@ class AddDevice : public Screen {
         display.printCentered("Add Device", 0);
 
         // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
+        display.drawLine(0, 10, display.getWidth(), 10);
 
         // Show error status
         display.setTextSize(1);
-        display.printCentered("ERROR!", 18);
+        display.printCentered("ERROR!", 16);
 
-        // Show X mark
-        display.drawCircle(64, 36, 8);
-        display.drawLine(60, 32, 68, 40);
-        display.drawLine(60, 40, 68, 32);
+        // Show X mark (smaller)
+        display.drawCircle(64, 32, 6);
+        display.drawLine(61, 29, 67, 35);
+        display.drawLine(61, 35, 67, 29);
 
-        // Show error message based on state
+        // Show error message based on state (compact)
         display.setTextSize(1);
         if (currentState == State::ERROR) {
             if (!hasFirstCode) {
-                display.printCentered("Failed to record", 44);
-                display.printCentered("first code", 52);
+                display.printCentered("Failed to record first code", 44);
             } else {
-                display.printCentered("Failed to record", 44);
-                display.printCentered("second code", 52);
+                display.printCentered("Failed to record second code", 44);
             }
         } else {
-            display.printCentered("Recording timeout", 44);
-            display.printCentered("or invalid code", 52);
+            display.printCentered("Recording timeout or invalid code", 44);
         }
     }
 };
