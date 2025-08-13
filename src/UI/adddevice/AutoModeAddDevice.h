@@ -405,9 +405,9 @@ class AutoModeAddDevice : public Screen {
         display.printCentered("ERROR!", 18);
 
         // Show X mark
-        display.drawCircle(64, 40, 8);
-        display.drawLine(60, 36, 68, 44);
-        display.drawLine(60, 44, 68, 36);
+        display.drawCircle(64, 36, 8);
+        display.drawLine(60, 32, 68, 40);
+        display.drawLine(60, 40, 68, 32);
 
         // Show error message based on state
         display.setTextSize(1);
