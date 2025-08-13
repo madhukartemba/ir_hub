@@ -129,6 +129,9 @@ void setup() {
     display.update();
     delay(500);
 
+    ring.setState(LedRing::State::RAINBOW);
+    ring.setSpeed(10);
+
     Serial.println("IR Hub: System Ready");
 }
 

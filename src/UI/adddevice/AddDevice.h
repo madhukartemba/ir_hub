@@ -200,9 +200,6 @@ class AddDevice : public Screen {
             if (firstCode.isValid() && secondCode.isValid()) {
                 currentState = State::COMPARING;
 
-                // Add a small delay to show the comparing state
-                delay(1000);
-
                 if (firstCode == secondCode) {
                     // Codes match, save as single command device
                     try {
