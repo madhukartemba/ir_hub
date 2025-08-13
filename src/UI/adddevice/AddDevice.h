@@ -131,35 +131,6 @@ class AddDevice : public Screen {
     }
 
    private:
-    void drawPowerSymbol(int centerX, int centerY, bool inverted = false) {
-        // Draw power symbol (circle with line at top)
-        int radius = 3;
-
-        if (inverted) {
-            // For filled circles - draw in black (inverted)
-            display.setTextColor(0);
-            // Draw partial circle (power symbol)
-            for (int angle = 45; angle <= 315; angle += 15) {
-                int x = centerX + (radius - 1) * cos(angle * PI / 180);
-                int y = centerY + (radius - 1) * sin(angle * PI / 180);
-                display.drawPixel(x, y);
-            }
-            // Draw vertical line in center
-            display.drawLine(centerX, centerY - 2, centerX, centerY + 1);
-            display.setTextColor(1);  // Reset to white
-        } else {
-            // For outline circles - draw in white
-            // Draw partial circle (power symbol)
-            for (int angle = 45; angle <= 315; angle += 15) {
-                int x = centerX + (radius - 1) * cos(angle * PI / 180);
-                int y = centerY + (radius - 1) * sin(angle * PI / 180);
-                display.drawPixel(x, y);
-            }
-            // Draw vertical line in center
-            display.drawLine(centerX, centerY - 2, centerX, centerY + 1);
-        }
-    }
-
     void startRecordingFirst() {
         LOG_DEBUG("Starting first code IR recording");
         currentState = State::RECORDING_FIRST;
@@ -259,12 +230,11 @@ class AddDevice : public Screen {
         // LED-style indicators with power symbols
         // Power ON indicator (active - filled circle)
         display.fillCircle(32, 32, 6);  // Active indicator
-        drawPowerSymbol(32, 32, true);  // Power symbol inside
-        display.print("ON", 20, 42);
+        display.print("ON", 27, 42);
 
         // Power OFF indicator (inactive - outline circle)
         display.drawCircle(96, 32, 6);  // Inactive indicator (empty)
-        display.print("OFF", 84, 42);
+        display.print("OFF", 88, 42);
     }
 
     void drawRecordingFirst() {
@@ -285,18 +255,15 @@ class AddDevice : public Screen {
         if (pulse) {
             // Pulsing filled circle with larger radius
             display.fillCircle(32, 32, 7);
-            drawPowerSymbol(32, 32, true);
         } else {
             // Normal filled circle
             display.fillCircle(32, 32, 6);
-            drawPowerSymbol(32, 32, true);
         }
-        display.print("ON", 20, 42);
+        display.print("ON", 27, 42);
 
         // Power OFF indicator (inactive - outline circle)
         display.drawCircle(96, 32, 6);
-        drawPowerSymbol(96, 32, false);
-        display.print("OFF", 84, 42);
+        display.print("OFF", 88, 42);
 
         // Compact timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
@@ -320,18 +287,16 @@ class AddDevice : public Screen {
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
         display.fillCircle(32, 32, 6);
-        drawPowerSymbol(32, 32, true);
         // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
-        display.print("ON", 20, 42);
+        display.print("ON", 27, 42);
 
         // Power OFF indicator (active - filled circle, ready to record)
         display.fillCircle(96, 32, 6);
-        drawPowerSymbol(96, 32, true);
-        display.print("OFF", 84, 42);
+        display.print("OFF", 88, 42);
     }
 
     void drawRecordingSecond() {
@@ -349,26 +314,23 @@ class AddDevice : public Screen {
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
         display.fillCircle(32, 32, 6);
-        drawPowerSymbol(32, 32, true);
         // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
-        display.print("ON", 20, 42);
+        display.print("ON", 27, 42);
 
         // Power OFF indicator with pulsing animation
         unsigned long pulse = (millis() / 300) % 2;
         if (pulse) {
             // Pulsing filled circle with larger radius
             display.fillCircle(96, 32, 7);
-            drawPowerSymbol(96, 32, true);
         } else {
             // Normal filled circle
             display.fillCircle(96, 32, 6);
-            drawPowerSymbol(96, 32, true);
         }
-        display.print("OFF", 84, 42);
+        display.print("OFF", 88, 42);
 
         // Compact timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
@@ -392,23 +354,21 @@ class AddDevice : public Screen {
         // LED-style indicators - both completed
         // Power ON indicator (completed - filled circle with checkmark)
         display.fillCircle(32, 32, 6);
-        drawPowerSymbol(32, 32, true);
         // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
-        display.print("ON", 20, 42);
+        display.print("ON", 27, 42);
 
         // Power OFF indicator (completed - filled circle with checkmark)
         display.fillCircle(96, 32, 6);
-        drawPowerSymbol(96, 32, true);
         // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
         display.drawLine(93, 33, 95, 35);
         display.drawLine(95, 35, 99, 31);
         display.setTextColor(1);  // Reset to white
-        display.print("OFF", 84, 42);
+        display.print("OFF", 88, 42);
 
         // Show comparison indicator
         display.printCentered("Checking match...", 52);
@@ -430,7 +390,7 @@ class AddDevice : public Screen {
         if (firstCode == secondCode) {
             display.printCentered("Single device saved", 30);
         } else {
-            display.printCentered("Dual device saved", 30);
+            display.printCentered("Device saved", 30);
         }
 
         // Show protocol info with better centering
@@ -440,7 +400,7 @@ class AddDevice : public Screen {
 
         if (firstCode == secondCode) {
             // Single device - show centered success icon and protocol
-            display.drawCircle(64, 44, 8);
+            display.drawCircle(64, 46, 8);
             display.drawLine(60, 45, 62, 47);
             display.drawLine(62, 47, 68, 41);
             display.printCentered("Protocol: " + firstProtocol, 56);
