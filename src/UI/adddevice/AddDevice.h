@@ -426,41 +426,39 @@ class AddDevice : public Screen {
         // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Move content up for better spacing
-        // Success status at y=16
-
+        // Better centered content layout
         display.setTextSize(1);
-        display.printCentered("SUCCESS!", 16);
+        display.printCentered("SUCCESS!", 18);
 
-        // Show result based on whether codes matched at y=28
+        // Show result based on whether codes matched
         if (firstCode == secondCode) {
-            display.printCentered("Single device saved", 28);
+            display.printCentered("Single device saved", 30);
         } else {
-            display.printCentered("Dual device saved", 28);
+            display.printCentered("Dual device saved", 30);
         }
 
-        // Show protocol info
+        // Show protocol info with better centering
         display.setTextSize(1);
         String firstProtocol = typeToString(firstCode.getProtocol(), false);
         String secondProtocol = typeToString(secondCode.getProtocol(), false);
 
         if (firstCode == secondCode) {
-            // Single device - show success icon and protocol
+            // Single device - show centered success icon and protocol
             display.drawCircle(64, 44, 8);
             display.drawLine(60, 44, 62, 46);
             display.drawLine(62, 46, 68, 40);
-            display.printCentered("Protocol: " + firstProtocol, 56);
+            display.printCentered("Protocol: " + firstProtocol, 58);
         } else {
             if (firstProtocol == secondProtocol) {
-                // Same protocol - show success icon and protocol
+                // Same protocol - show centered success icon and protocol
                 display.drawCircle(64, 44, 8);
                 display.drawLine(60, 44, 62, 46);
                 display.drawLine(62, 46, 68, 40);
-                display.printCentered("Protocol: " + firstProtocol, 56);
+                display.printCentered("Protocol: " + firstProtocol, 58);
             } else {
-                // Different protocols - skip icon, show protocols on separate lines
-                display.printCentered("ON:" + firstProtocol, 44);
-                display.printCentered("OFF:" + secondProtocol, 52);
+                // Different protocols - center the protocol info vertically
+                display.printCentered("ON: " + firstProtocol, 42);
+                display.printCentered("OFF: " + secondProtocol, 54);
             }
         }
     }
@@ -473,36 +471,35 @@ class AddDevice : public Screen {
         // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Better spaced content (display height is 64)
-        // Error status at y=18
+        // Better centered content layout
         display.setTextSize(1);
-        display.printCentered("ERROR!", 18);
+        display.printCentered("ERROR!", 20);
 
-        // Show X mark at y=36 (more space from text)
-        display.drawCircle(64, 36, 6);
-        display.drawLine(61, 33, 67, 39);
-        display.drawLine(61, 39, 67, 33);
+        // Centered error icon with better spacing
+        display.drawCircle(64, 38, 8);
+        display.drawLine(60, 34, 68, 42);
+        display.drawLine(60, 42, 68, 34);
 
-        // Show specific error cause
+        // Show specific error cause with better centering
         display.setTextSize(1);
         if (isTimeoutError) {
-            display.printCentered("Timeout", 46);
+            display.printCentered("Timeout", 52);
         } else if (currentState == State::ERROR) {
             if (!hasFirstCode) {
                 // Show protocol info for first code failure
                 String protocol = typeToString(firstCode.getProtocol(), false);
                 if (protocol == "Unknown") {
-                    display.printCentered("No signal detected", 46);
+                    display.printCentered("No signal detected", 52);
                 } else {
-                    display.printCentered("Protocol: " + protocol, 46);
+                    display.printCentered("Protocol: " + protocol, 52);
                 }
             } else {
                 // Show protocol info for second code failure
                 String protocol = typeToString(secondCode.getProtocol(), false);
                 if (protocol == "Unknown") {
-                    display.printCentered("No signal detected", 46);
+                    display.printCentered("No signal detected", 52);
                 } else {
-                    display.printCentered("Protocol: " + protocol, 46);
+                    display.printCentered("Protocol: " + protocol, 52);
                 }
             }
         }
