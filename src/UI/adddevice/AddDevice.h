@@ -227,7 +227,7 @@ class AddDevice : public Screen {
         display.printCentered("Click to record ON", 16);
 
         // Compact ON/OFF indicator
-        display.drawRect(25, 26, 78, 8);
+        display.drawRect(25, 26, 78, 12);
         display.fillRect(27, 28, 18, 4);  // Highlight ON
         display.setTextSize(1);
         display.setTextColor(0);  // Black text on white background
@@ -249,7 +249,7 @@ class AddDevice : public Screen {
         display.printCentered("RECORDING ON...", 16);
 
         // Compact ON/OFF indicator with animation
-        display.drawRect(25, 26, 78, 8);
+        display.drawRect(25, 26, 78, 12);
         display.fillRect(27, 28, 18, 4);  // Highlight ON (filled)
         display.setTextSize(1);
         display.setTextColor(0);
@@ -277,7 +277,7 @@ class AddDevice : public Screen {
         display.printCentered("Click to record OFF", 16);
 
         // Compact ON/OFF indicator
-        display.drawRect(25, 26, 78, 8);
+        display.drawRect(25, 26, 78, 12);
         display.fillRect(27, 28, 18, 4);  // ON completed
         display.setTextSize(1);
         display.setTextColor(0);
@@ -302,7 +302,7 @@ class AddDevice : public Screen {
         display.printCentered("RECORDING OFF...", 16);
 
         // Compact ON/OFF indicator with animation
-        display.drawRect(25, 26, 78, 8);
+        display.drawRect(25, 26, 78, 12);
         display.fillRect(27, 28, 18, 4);  // ON completed
         display.fillRect(85, 28, 16, 4);  // OFF recording
         display.setTextSize(1);
@@ -331,7 +331,7 @@ class AddDevice : public Screen {
         display.printCentered("COMPARING...", 16);
 
         // Compact ON/OFF indicator
-        display.drawRect(25, 26, 78, 8);
+        display.drawRect(25, 26, 78, 12);
         display.fillRect(27, 28, 18, 4);  // ON completed
         display.fillRect(85, 28, 16, 4);  // OFF completed
         display.setTextSize(1);
@@ -361,7 +361,7 @@ class AddDevice : public Screen {
         display.printCentered("SUCCESS!", 16);
 
         // Compact ON/OFF indicator
-        display.drawRect(25, 26, 78, 8);
+        display.drawRect(25, 26, 78, 12);
         display.fillRect(27, 28, 18, 4);  // ON completed
         display.fillRect(85, 28, 16, 4);  // OFF completed
         display.setTextSize(1);
