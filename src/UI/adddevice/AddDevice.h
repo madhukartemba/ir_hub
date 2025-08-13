@@ -407,9 +407,9 @@ class AddDevice : public Screen {
         } else {
             if (firstProtocol == secondProtocol) {
                 // Same protocol - show centered success icon and protocol
-                display.drawCircle(64, 44, 8);
-                display.drawLine(60, 45, 62, 47);
-                display.drawLine(62, 47, 68, 41);
+                display.drawCircle(64, 46, 8);
+                display.drawLine(60, 47, 62, 49);
+                display.drawLine(62, 49, 68, 43);
                 display.printCentered("Protocol: " + firstProtocol, 56);
             } else {
                 // Different protocols - center the protocol info vertically
