@@ -225,7 +225,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to start", 16);
+        display.printCentered("Click to begin", 15);
 
         // LED-style indicators with power symbols
         // Power ON indicator (active - filled circle)
@@ -247,7 +247,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING ON...", 16);
+        display.printCentered("RECORDING ON...", 15);
 
         // LED-style indicators with recording animation
         // Power ON indicator with pulsing animation
@@ -282,7 +282,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to start", 16);
+        display.printCentered("Click to begin", 15);
 
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
@@ -309,7 +309,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING OFF...", 16);
+        display.printCentered("RECORDING OFF...", 15);
 
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
@@ -388,9 +388,9 @@ class AddDevice : public Screen {
 
         // Show result based on whether codes matched
         if (firstCode == secondCode) {
-            display.printCentered("Single device saved", 30);
+            display.printCentered("Single device saved", 28);
         } else {
-            display.printCentered("Device saved", 30);
+            display.printCentered("Device saved", 28);
         }
 
         // Show protocol info with better centering
