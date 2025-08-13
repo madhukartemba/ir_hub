@@ -45,14 +45,7 @@ class ClearDataConfirmation : public Screen {
    private:
     void clearAllDataAndRestart() {
         // Clear all data from LittleFS
-        Dir dir = LittleFS.openDir("/");
-        while (dir.next()) {
-            String fileName = dir.fileName();
-            if (fileName != "/") {
-                LittleFS.remove(fileName);
-                LOG_DEBUG("Removed file: " + fileName);
-            }
-        }
+        LittleFS.format();
         LOG_INFO("All data cleared from LittleFS");
         // Restart the device
         ESP.restart();
