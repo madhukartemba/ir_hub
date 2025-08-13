@@ -235,8 +235,10 @@ class AddDevice : public Screen {
         display.drawRect(84, 28, 24, 8);  // Step 2 - inactive (outline)
 
         // Simple ON/OFF indicators (text centered in rectangles)
-        display.print("ON", 26, 32);
-        display.print("OFF", 90, 32);
+        display.setTextColor(0);  // Black text for ON (white background)
+        display.print("ON", 26, 30);
+        display.setTextColor(1);  // White text for OFF (black background)
+        display.print("OFF", 90, 30);
     }
 
     void drawRecordingFirst() {
@@ -258,18 +260,20 @@ class AddDevice : public Screen {
         // Blinking ON indicator (inverted text)
         unsigned long pulse = (millis() / 200) % 2;
         if (pulse) {
-            // Inverted ON text
+            // Inverted ON text (white on black)
             display.fillRect(24, 28, 16, 8);
-            display.setTextColor(0);  // Black text on white background
-            display.print("ON", 26, 32);
-            display.setTextColor(1);  // Reset to white text
+            display.setTextColor(1);  // White text on black background
+            display.print("ON", 26, 30);
+            display.setTextColor(0);  // Reset to black text
         } else {
-            // Normal ON text
-            display.print("ON", 26, 32);
+            // Normal ON text (black on white)
+            display.setTextColor(0);  // Black text
+            display.print("ON", 26, 30);
+            display.setTextColor(1);  // Reset to white text
         }
 
         // Simple OFF indicator (text)
-        display.print("OFF", 90, 32);
+        display.print("OFF", 90, 30);
 
         // Compact timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
@@ -292,16 +296,20 @@ class AddDevice : public Screen {
 
         // Step indicator with completed step 1
         display.fillRect(20, 28, 24, 8);  // Step 1 - completed (filled)
-        display.drawRect(84, 28, 24, 8);  // Step 2 - current (outline)
+        display.fillRect(84, 28, 24, 8);  // Step 2 - current (filled)
 
         // Completed ON indicator (with checkmark)
-        display.print("ON", 26, 32);
+        display.setTextColor(0);  // Black text for ON (white background)
+        display.print("ON", 26, 30);
+        display.setTextColor(1);  // Reset to white text
         // Small checkmark next to ON
-        display.drawLine(44, 30, 46, 32);
-        display.drawLine(46, 32, 48, 30);
+        display.drawLine(44, 28, 46, 30);
+        display.drawLine(46, 30, 48, 28);
 
         // Simple OFF indicator (text)
-        display.print("OFF", 90, 32);
+        display.setTextColor(0);  // Black text for OFF (white background)
+        display.print("OFF", 90, 30);
+        display.setTextColor(1);  // Reset to white text
     }
 
     void drawRecordingSecond() {
@@ -318,25 +326,29 @@ class AddDevice : public Screen {
 
         // Step indicator with recording animation
         display.fillRect(20, 28, 24, 8);  // Step 1 - completed (filled)
-        display.drawRect(84, 28, 24, 8);  // Step 2 - current (outline)
+        display.fillRect(84, 28, 24, 8);  // Step 2 - current (filled)
 
         // Completed ON indicator (with checkmark)
-        display.print("ON", 26, 32);
+        display.setTextColor(0);  // Black text for ON (white background)
+        display.print("ON", 26, 30);
+        display.setTextColor(1);  // Reset to white text
         // Small checkmark next to ON
-        display.drawLine(44, 30, 46, 32);
-        display.drawLine(46, 32, 48, 30);
+        display.drawLine(44, 28, 46, 30);
+        display.drawLine(46, 30, 48, 28);
 
         // Blinking OFF indicator (inverted text)
         unsigned long pulse = (millis() / 200) % 2;
         if (pulse) {
-            // Inverted OFF text
+            // Inverted OFF text (white on black)
             display.fillRect(88, 28, 16, 8);
-            display.setTextColor(0);  // Black text on white background
-            display.print("OFF", 90, 32);
-            display.setTextColor(1);  // Reset to white text
+            display.setTextColor(1);  // White text on black background
+            display.print("OFF", 90, 30);
+            display.setTextColor(0);  // Reset to black text
         } else {
-            // Normal OFF text
-            display.print("OFF", 90, 32);
+            // Normal OFF text (black on white)
+            display.setTextColor(0);  // Black text
+            display.print("OFF", 90, 30);
+            display.setTextColor(1);  // Reset to white text
         }
 
         // Compact timeout progress bar
@@ -363,16 +375,20 @@ class AddDevice : public Screen {
         display.fillRect(84, 28, 24, 8);  // Step 2 - completed (filled)
 
         // Completed ON indicator (with checkmark)
-        display.print("ON", 26, 32);
+        display.setTextColor(0);  // Black text for ON (white background)
+        display.print("ON", 26, 30);
+        display.setTextColor(1);  // Reset to white text
         // Small checkmark next to ON
-        display.drawLine(44, 30, 46, 32);
-        display.drawLine(46, 32, 48, 30);
+        display.drawLine(44, 28, 46, 30);
+        display.drawLine(46, 30, 48, 28);
 
         // Completed OFF indicator (with checkmark)
-        display.print("OFF", 90, 32);
+        display.setTextColor(0);  // Black text for OFF (white background)
+        display.print("OFF", 90, 30);
+        display.setTextColor(1);  // Reset to white text
         // Small checkmark next to OFF
-        display.drawLine(108, 30, 110, 32);
-        display.drawLine(110, 32, 112, 30);
+        display.drawLine(108, 28, 110, 30);
+        display.drawLine(110, 30, 112, 28);
 
         // Show comparison indicator
         display.printCentered("Checking match...", 48);
