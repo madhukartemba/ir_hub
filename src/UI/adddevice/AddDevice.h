@@ -226,14 +226,27 @@ class AddDevice : public Screen {
         display.setTextSize(1);
         display.printCentered("Click to record ON", 16);
 
-        // Compact ON/OFF indicator
-        display.drawRect(25, 26, 78, 13);
-        display.fillRect(27, 28, 18, 4);  // Highlight ON
+        // Step indicator with icons
+        display.drawCircle(32, 32, 8);  // Step 1 circle
+        display.drawCircle(96, 32, 8);  // Step 2 circle
+
+        // Power icon for ON (filled circle with line)
+        display.fillCircle(32, 32, 4);
+        display.drawLine(32, 28, 32, 36);
+        display.drawLine(28, 32, 36, 32);
+
+        // Power icon for OFF (outline circle with line)
+        display.drawCircle(96, 32, 4);
+        display.drawLine(96, 28, 96, 36);
+
+        // Step numbers
         display.setTextSize(1);
-        display.setTextColor(0);  // Black text on white background
-        display.print("ON", 30, 29);
-        display.setTextColor(1);  // Reset to white text
-        display.print("OFF", 85, 29);
+        display.print("1", 30, 36);
+        display.print("2", 94, 36);
+
+        // Progress indicator
+        display.drawLine(40, 32, 88, 32);
+        display.fillCircle(40, 32, 2);  // Current step
     }
 
     void drawRecordingFirst() {
@@ -248,14 +261,32 @@ class AddDevice : public Screen {
         display.setTextSize(1);
         display.printCentered("RECORDING ON...", 16);
 
-        // Compact ON/OFF indicator with animation
-        display.drawRect(25, 26, 78, 13);
-        display.fillRect(27, 28, 18, 4);  // Highlight ON (filled)
+        // Step indicator with recording animation
+        display.drawCircle(32, 32, 8);  // Step 1 circle
+        display.drawCircle(96, 32, 8);  // Step 2 circle
+
+        // Animated power icon for ON (pulsing effect)
+        unsigned long pulse = (millis() / 200) % 2;
+        if (pulse) {
+            display.fillCircle(32, 32, 4);
+        } else {
+            display.drawCircle(32, 32, 4);
+        }
+        display.drawLine(32, 28, 32, 36);
+        display.drawLine(28, 32, 36, 32);
+
+        // Power icon for OFF (outline)
+        display.drawCircle(96, 32, 4);
+        display.drawLine(96, 28, 96, 36);
+
+        // Step numbers
         display.setTextSize(1);
-        display.setTextColor(0);
-        display.print("ON", 30, 29);
-        display.setTextColor(1);
-        display.print("OFF", 85, 29);
+        display.print("1", 30, 36);
+        display.print("2", 94, 36);
+
+        // Progress indicator
+        display.drawLine(40, 32, 88, 32);
+        display.fillCircle(40, 32, 2);  // Current step
 
         // Compact timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
@@ -276,17 +307,31 @@ class AddDevice : public Screen {
         display.setTextSize(1);
         display.printCentered("Click to record OFF", 16);
 
-        // Compact ON/OFF indicator
-        display.drawRect(25, 26, 78, 13);
-        display.fillRect(27, 28, 18, 4);  // ON completed
-        display.setTextSize(1);
-        display.setTextColor(0);
-        display.print("ON", 30, 29);
-        display.setTextColor(1);
-        display.print("OFF", 85, 29);
+        // Step indicator with completed step 1
+        display.drawCircle(32, 32, 8);  // Step 1 circle
+        display.drawCircle(96, 32, 8);  // Step 2 circle
 
-        // Small checkmark for ON
-        display.fillCircle(32, 40, 2);
+        // Completed power icon for ON (filled with checkmark)
+        display.fillCircle(32, 32, 4);
+        display.drawLine(32, 28, 32, 36);
+        display.drawLine(28, 32, 36, 32);
+        // Checkmark
+        display.drawLine(30, 32, 32, 34);
+        display.drawLine(32, 34, 35, 31);
+
+        // Power icon for OFF (outline)
+        display.drawCircle(96, 32, 4);
+        display.drawLine(96, 28, 96, 36);
+
+        // Step numbers
+        display.setTextSize(1);
+        display.print("1", 30, 36);
+        display.print("2", 94, 36);
+
+        // Progress indicator
+        display.drawLine(40, 32, 88, 32);
+        display.fillCircle(40, 32, 2);  // Step 1 complete
+        display.fillCircle(88, 32, 2);  // Current step
     }
 
     void drawRecordingSecond() {
@@ -301,15 +346,36 @@ class AddDevice : public Screen {
         display.setTextSize(1);
         display.printCentered("RECORDING OFF...", 16);
 
-        // Compact ON/OFF indicator with animation
-        display.drawRect(25, 26, 78, 13);
-        display.fillRect(27, 28, 18, 4);  // ON completed
-        display.fillRect(85, 28, 16, 4);  // OFF recording
+        // Step indicator with recording animation
+        display.drawCircle(32, 32, 8);  // Step 1 circle
+        display.drawCircle(96, 32, 8);  // Step 2 circle
+
+        // Completed power icon for ON
+        display.fillCircle(32, 32, 4);
+        display.drawLine(32, 28, 32, 36);
+        display.drawLine(28, 32, 36, 32);
+        // Checkmark
+        display.drawLine(30, 32, 32, 34);
+        display.drawLine(32, 34, 35, 31);
+
+        // Animated power icon for OFF (pulsing effect)
+        unsigned long pulse = (millis() / 200) % 2;
+        if (pulse) {
+            display.fillCircle(96, 32, 4);
+        } else {
+            display.drawCircle(96, 32, 4);
+        }
+        display.drawLine(96, 28, 96, 36);
+
+        // Step numbers
         display.setTextSize(1);
-        display.setTextColor(0);
-        display.print("ON", 30, 29);
-        display.print("OFF", 87, 29);
-        display.setTextColor(1);
+        display.print("1", 30, 36);
+        display.print("2", 94, 36);
+
+        // Progress indicator
+        display.drawLine(40, 32, 88, 32);
+        display.fillCircle(40, 32, 2);  // Step 1 complete
+        display.fillCircle(88, 32, 2);  // Current step
 
         // Compact timeout progress bar
         unsigned long elapsed = millis() - recordingStartTime;
@@ -330,19 +396,34 @@ class AddDevice : public Screen {
         display.setTextSize(1);
         display.printCentered("COMPARING...", 16);
 
-        // Compact ON/OFF indicator
-        display.drawRect(25, 26, 78, 13);
-        display.fillRect(27, 28, 18, 4);  // ON completed
-        display.fillRect(85, 28, 16, 4);  // OFF completed
-        display.setTextSize(1);
-        display.setTextColor(0);
-        display.print("ON", 30, 29);
-        display.print("OFF", 87, 29);
-        display.setTextColor(1);
+        // Step indicator with both steps completed
+        display.drawCircle(32, 32, 8);  // Step 1 circle
+        display.drawCircle(96, 32, 8);  // Step 2 circle
 
-        // Small checkmarks
-        display.fillCircle(32, 40, 2);
-        display.fillCircle(95, 40, 2);
+        // Completed power icon for ON
+        display.fillCircle(32, 32, 4);
+        display.drawLine(32, 28, 32, 36);
+        display.drawLine(28, 32, 36, 32);
+        // Checkmark
+        display.drawLine(30, 32, 32, 34);
+        display.drawLine(32, 34, 35, 31);
+
+        // Completed power icon for OFF
+        display.fillCircle(96, 32, 4);
+        display.drawLine(96, 28, 96, 36);
+        // Checkmark
+        display.drawLine(94, 32, 96, 34);
+        display.drawLine(96, 34, 99, 31);
+
+        // Step numbers
+        display.setTextSize(1);
+        display.print("1", 30, 36);
+        display.print("2", 94, 36);
+
+        // Progress indicator
+        display.drawLine(40, 32, 88, 32);
+        display.fillCircle(40, 32, 2);  // Step 1 complete
+        display.fillCircle(88, 32, 2);  // Step 2 complete
 
         // Show comparison indicator
         display.printCentered("Checking match...", 48);
@@ -360,19 +441,10 @@ class AddDevice : public Screen {
         display.setTextSize(1);
         display.printCentered("SUCCESS!", 16);
 
-        // Compact ON/OFF indicator
-        display.drawRect(25, 26, 78, 13);
-        display.fillRect(27, 28, 18, 4);  // ON completed
-        display.fillRect(85, 28, 16, 4);  // OFF completed
-        display.setTextSize(1);
-        display.setTextColor(0);
-        display.print("ON", 30, 29);
-        display.print("OFF", 87, 29);
-        display.setTextColor(1);
-
-        // Small checkmarks
-        display.fillCircle(32, 40, 2);
-        display.fillCircle(95, 40, 2);
+        // Success icon (checkmark in circle)
+        display.drawCircle(64, 32, 8);
+        display.drawLine(60, 32, 62, 34);
+        display.drawLine(62, 34, 68, 28);
 
         // Show result based on whether codes matched (compact)
         if (firstCode == secondCode) {
