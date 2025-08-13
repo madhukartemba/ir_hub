@@ -225,7 +225,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Press to record ON", 16);
+        display.printCentered("Click to start", 16);
 
         // LED-style indicators with power symbols
         // Power ON indicator (active - filled circle)
@@ -282,7 +282,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Press to record OFF", 16);
+        display.printCentered("Click to start", 16);
 
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
@@ -401,8 +401,8 @@ class AddDevice : public Screen {
         if (firstCode == secondCode) {
             // Single device - show centered success icon and protocol
             display.drawCircle(64, 46, 8);
-            display.drawLine(60, 45, 62, 47);
-            display.drawLine(62, 47, 68, 41);
+            display.drawLine(60, 47, 62, 49);
+            display.drawLine(62, 49, 68, 43);
             display.printCentered("Protocol: " + firstProtocol, 56);
         } else {
             if (firstProtocol == secondProtocol) {
@@ -429,7 +429,7 @@ class AddDevice : public Screen {
 
         // Better centered content layout
         display.setTextSize(1);
-        display.printCentered("ERROR!", 20);
+        display.printCentered("ERROR!", 18);
 
         // Centered error icon with better spacing
         display.drawCircle(64, 38, 8);
