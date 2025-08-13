@@ -230,15 +230,9 @@ class AddDevice : public Screen {
         display.fillRect(20, 28, 24, 8);  // Step 1 - active (filled)
         display.drawRect(84, 28, 24, 8);  // Step 2 - inactive (outline)
 
-        // Modern ON indicator (power symbol in filled circle)
-        display.fillCircle(32, 32, 4);
-        // Power symbol (vertical line with horizontal line at top)
-        display.drawLine(32, 29, 32, 35);  // Vertical line
-        display.drawLine(30, 29, 34, 29);  // Horizontal line at top
-
-        // Modern OFF indicator (circle with horizontal line)
-        display.drawCircle(96, 32, 4);
-        display.drawLine(92, 32, 100, 32);  // Horizontal line through center
+        // Simple ON/OFF indicators (text)
+        display.printCentered("ON", 32);
+        display.printCentered("OFF", 96);
 
         // Progress indicator - modern dots
         display.fillCircle(48, 32, 2);  // Current step
@@ -261,20 +255,21 @@ class AddDevice : public Screen {
         display.fillRect(20, 28, 24, 8);  // Step 1 - active (filled)
         display.drawRect(84, 28, 24, 8);  // Step 2 - inactive (outline)
 
-        // Animated power icon for ON (pulsing effect)
+        // Blinking ON indicator (inverted text)
         unsigned long pulse = (millis() / 200) % 2;
         if (pulse) {
-            display.fillCircle(32, 32, 4);
+            // Inverted ON text
+            display.fillRect(28, 28, 8, 8);
+            display.setTextColor(0);  // Black text on white background
+            display.printCentered("ON", 32);
+            display.setTextColor(1);  // Reset to white text
         } else {
-            display.drawCircle(32, 32, 4);
+            // Normal ON text
+            display.printCentered("ON", 32);
         }
-        // Power symbol (vertical line with horizontal line at top)
-        display.drawLine(32, 29, 32, 35);  // Vertical line
-        display.drawLine(30, 29, 34, 29);  // Horizontal line at top
 
-        // Power icon for OFF (outline)
-        display.drawCircle(96, 32, 4);
-        display.drawLine(92, 32, 100, 32);  // Horizontal line through center
+        // Simple OFF indicator (text)
+        display.printCentered("OFF", 96);
 
         // Progress indicator - soft dots
         display.fillCircle(48, 32, 2);  // Current step
@@ -303,18 +298,14 @@ class AddDevice : public Screen {
         display.fillRect(20, 28, 24, 8);  // Step 1 - completed (filled)
         display.drawRect(84, 28, 24, 8);  // Step 2 - current (outline)
 
-        // Completed power icon for ON (filled with checkmark)
-        display.fillCircle(32, 32, 4);
-        // Power symbol (vertical line with horizontal line at top)
-        display.drawLine(32, 29, 32, 35);  // Vertical line
-        display.drawLine(30, 29, 34, 29);  // Horizontal line at top
-        // Checkmark overlay
-        display.drawLine(31, 32, 32, 33);
-        display.drawLine(32, 33, 34, 31);
+        // Completed ON indicator (with checkmark)
+        display.printCentered("ON", 32);
+        // Small checkmark next to ON
+        display.drawLine(36, 30, 38, 32);
+        display.drawLine(38, 32, 40, 30);
 
-        // Power icon for OFF (outline)
-        display.drawCircle(96, 32, 4);
-        display.drawLine(92, 32, 100, 32);  // Horizontal line through center
+        // Simple OFF indicator (text)
+        display.printCentered("OFF", 96);
 
         // Progress indicator - soft dots
         display.fillCircle(48, 32, 2);  // Step 1 complete
@@ -337,23 +328,24 @@ class AddDevice : public Screen {
         display.fillRect(20, 28, 24, 8);  // Step 1 - completed (filled)
         display.drawRect(84, 28, 24, 8);  // Step 2 - current (outline)
 
-        // Completed power icon for ON
-        display.fillCircle(32, 32, 4);
-        // Power symbol (vertical line with horizontal line at top)
-        display.drawLine(32, 29, 32, 35);  // Vertical line
-        display.drawLine(30, 29, 34, 29);  // Horizontal line at top
-        // Checkmark overlay
-        display.drawLine(31, 32, 32, 33);
-        display.drawLine(32, 33, 34, 31);
+        // Completed ON indicator (with checkmark)
+        display.printCentered("ON", 32);
+        // Small checkmark next to ON
+        display.drawLine(36, 30, 38, 32);
+        display.drawLine(38, 32, 40, 30);
 
-        // Animated power icon for OFF (pulsing effect)
+        // Blinking OFF indicator (inverted text)
         unsigned long pulse = (millis() / 200) % 2;
         if (pulse) {
-            display.fillCircle(96, 32, 4);
+            // Inverted OFF text
+            display.fillRect(92, 28, 12, 8);
+            display.setTextColor(0);  // Black text on white background
+            display.printCentered("OFF", 96);
+            display.setTextColor(1);  // Reset to white text
         } else {
-            display.drawCircle(96, 32, 4);
+            // Normal OFF text
+            display.printCentered("OFF", 96);
         }
-        display.drawLine(92, 32, 100, 32);  // Horizontal line through center
 
         // Progress indicator - soft dots
         display.fillCircle(48, 32, 2);  // Step 1 complete
@@ -382,21 +374,17 @@ class AddDevice : public Screen {
         display.fillRect(20, 28, 24, 8);  // Step 1 - completed (filled)
         display.fillRect(84, 28, 24, 8);  // Step 2 - completed (filled)
 
-        // Completed power icon for ON
-        display.fillCircle(32, 32, 4);
-        // Power symbol (vertical line with horizontal line at top)
-        display.drawLine(32, 29, 32, 35);  // Vertical line
-        display.drawLine(30, 29, 34, 29);  // Horizontal line at top
-        // Checkmark overlay
-        display.drawLine(31, 32, 32, 33);
-        display.drawLine(32, 33, 34, 31);
+        // Completed ON indicator (with checkmark)
+        display.printCentered("ON", 32);
+        // Small checkmark next to ON
+        display.drawLine(36, 30, 38, 32);
+        display.drawLine(38, 32, 40, 30);
 
-        // Completed power icon for OFF
-        display.fillCircle(96, 32, 4);
-        display.drawLine(92, 32, 100, 32);  // Horizontal line through center
-        // Checkmark overlay
-        display.drawLine(95, 32, 96, 33);
-        display.drawLine(96, 33, 97, 31);
+        // Completed OFF indicator (with checkmark)
+        display.printCentered("OFF", 96);
+        // Small checkmark next to OFF
+        display.drawLine(100, 30, 102, 32);
+        display.drawLine(102, 32, 104, 30);
 
         // Progress indicator - soft dots
         display.fillCircle(48, 32, 2);  // Step 1 complete
