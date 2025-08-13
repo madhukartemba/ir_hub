@@ -402,21 +402,21 @@ class AddDevice : public Screen {
 
         if (firstCode == secondCode) {
             // Single device - show success icon and protocol
-            display.drawCircle(64, 40, 8);
-            display.drawLine(60, 40, 62, 42);
-            display.drawLine(62, 42, 68, 36);
-            display.printCentered("Protocol: " + firstProtocol, 52);
+            display.drawCircle(64, 44, 8);
+            display.drawLine(60, 44, 62, 46);
+            display.drawLine(62, 46, 68, 40);
+            display.printCentered("Protocol: " + firstProtocol, 56);
         } else {
             if (firstProtocol == secondProtocol) {
                 // Same protocol - show success icon and protocol
-                display.drawCircle(64, 40, 8);
-                display.drawLine(60, 40, 62, 42);
-                display.drawLine(62, 42, 68, 36);
-                display.printCentered("Protocol: " + firstProtocol, 52);
+                display.drawCircle(64, 44, 8);
+                display.drawLine(60, 44, 62, 46);
+                display.drawLine(62, 46, 68, 40);
+                display.printCentered("Protocol: " + firstProtocol, 56);
             } else {
                 // Different protocols - skip icon, show protocols on separate lines
-                display.printCentered("ON:" + firstProtocol, 40);
-                display.printCentered("OFF:" + secondProtocol, 48);
+                display.printCentered("ON:" + firstProtocol, 44);
+                display.printCentered("OFF:" + secondProtocol, 52);
             }
         }
     }
@@ -439,19 +439,28 @@ class AddDevice : public Screen {
         display.drawLine(61, 33, 67, 39);
         display.drawLine(61, 39, 67, 33);
 
-        // Show error message based on state (split into two lines)
+        // Show specific error cause
         display.setTextSize(1);
         if (currentState == State::ERROR) {
             if (!hasFirstCode) {
-                display.printCentered("Failed to record", 46);
-                display.printCentered("first code", 54);
+                // Show protocol info for first code failure
+                String protocol = typeToString(firstCode.getProtocol(), false);
+                if (protocol == "Unknown") {
+                    display.printCentered("Timeout or no signal", 46);
+                } else {
+                    display.printCentered("Protocol: " + protocol, 46);
+                }
             } else {
-                display.printCentered("Failed to record", 46);
-                display.printCentered("second code", 54);
+                // Show protocol info for second code failure
+                String protocol = typeToString(secondCode.getProtocol(), false);
+                if (protocol == "Unknown") {
+                    display.printCentered("Timeout or no signal", 46);
+                } else {
+                    display.printCentered("Protocol: " + protocol, 46);
+                }
             }
         } else {
             display.printCentered("Recording timeout", 46);
-            display.printCentered("or invalid code", 54);
         }
     }
 };
