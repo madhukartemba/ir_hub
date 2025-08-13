@@ -414,36 +414,37 @@ class AddDevice : public Screen {
         // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Center the content vertically (display height is 64, so center is around 32)
-        // Success status at y=20
+        // Better spaced content (display height is 64)
+        // Success status at y=18
         display.setTextSize(1);
-        display.printCentered("SUCCESS!", 20);
+        display.printCentered("SUCCESS!", 18);
 
-        // Success icon (checkmark in circle) at y=32 (center)
-        display.drawCircle(64, 32, 8);
-        display.drawLine(60, 32, 62, 34);
-        display.drawLine(62, 34, 68, 28);
+        // Success icon (checkmark in circle) at y=36 (more space from text)
+        display.drawCircle(64, 36, 8);
+        display.drawLine(60, 36, 62, 38);
+        display.drawLine(62, 38, 68, 32);
 
-        // Show result based on whether codes matched at y=44
+        // Show result based on whether codes matched at y=50
         if (firstCode == secondCode) {
-            display.printCentered("Single device saved", 44);
+            display.printCentered("Single device saved", 50);
         } else {
-            display.printCentered("Dual device saved", 44);
+            display.printCentered("Dual device saved", 50);
         }
 
-        // Show protocol info at y=52
+        // Show protocol info at y=58 (prevent wrapping)
         display.setTextSize(1);
         String firstProtocol = typeToString(firstCode.getProtocol(), false);
         String secondProtocol = typeToString(secondCode.getProtocol(), false);
 
         if (firstCode == secondCode) {
-            display.printCentered("Protocol: " + firstProtocol, 52);
+            display.printCentered("Protocol: " + firstProtocol, 58);
         } else {
             if (firstProtocol == secondProtocol) {
-                display.printCentered("Protocol: " + firstProtocol, 52);
+                display.printCentered("Protocol: " + firstProtocol, 58);
             } else {
-                // Show both protocols in one line
-                display.printCentered("ON:" + firstProtocol + " OFF:" + secondProtocol, 52);
+                // Show protocols on separate lines to prevent wrapping
+                display.printCentered("ON:" + firstProtocol, 58);
+                display.printCentered("OFF:" + secondProtocol, 66);
             }
         }
     }
@@ -456,26 +457,26 @@ class AddDevice : public Screen {
         // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Center the content vertically (display height is 64, so center is around 32)
-        // Error status at y=20
+        // Better spaced content (display height is 64)
+        // Error status at y=18
         display.setTextSize(1);
-        display.printCentered("ERROR!", 20);
+        display.printCentered("ERROR!", 18);
 
-        // Show X mark (smaller) at y=32 (center)
-        display.drawCircle(64, 32, 6);
-        display.drawLine(61, 29, 67, 35);
-        display.drawLine(61, 35, 67, 29);
+        // Show X mark at y=36 (more space from text)
+        display.drawCircle(64, 36, 6);
+        display.drawLine(61, 33, 67, 39);
+        display.drawLine(61, 39, 67, 33);
 
-        // Show error message based on state at y=44
+        // Show error message based on state at y=50
         display.setTextSize(1);
         if (currentState == State::ERROR) {
             if (!hasFirstCode) {
-                display.printCentered("Failed to record first code", 44);
+                display.printCentered("Failed to record first code", 50);
             } else {
-                display.printCentered("Failed to record second code", 44);
+                display.printCentered("Failed to record second code", 50);
             }
         } else {
-            display.printCentered("Recording timeout or invalid code", 44);
+            display.printCentered("Recording timeout or invalid code", 50);
         }
     }
 };
