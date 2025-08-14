@@ -103,11 +103,6 @@ class DeviceActions : public Screen {
                 if (device.onCommand.isValid()) {
                     LOG_INFO("Sending ON command for device %d", device.id);
                     irManager.sendProtocol(device.onCommand);
-                    // Show feedback
-                    display.clear();
-                    display.printCentered("Sending ON...", 30);
-                    display.update();
-                    delay(1000);
                 } else {
                     LOG_ERROR("Invalid ON command for device %d", device.id);
                     display.clear();
@@ -121,11 +116,6 @@ class DeviceActions : public Screen {
                 if (device.offCommand.isValid()) {
                     LOG_INFO("Sending OFF command for device %d", device.id);
                     irManager.sendProtocol(device.offCommand);
-                    // Show feedback
-                    display.clear();
-                    display.printCentered("Sending OFF...", 30);
-                    display.update();
-                    delay(1000);
                 } else {
                     LOG_ERROR("Invalid OFF command for device %d", device.id);
                     display.clear();
