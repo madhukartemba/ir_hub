@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <LittleFS.h>
+#include <WiFiManager.h>  // <-- Add this line
 #include "config.h"
 #include "global/Global.h"
 #include "ui/MainMenu.h"
@@ -117,6 +118,32 @@ void setup() {
         }
     }
     LOG_DEBUG("LED ring initialized on pin");
+
+    // WiFiManager setup
+    WiFiManager wifiManager;
+    display.clear();
+    display.printCentered("IR Hub", 20);
+    display.printCentered("WiFi Setup...", 40);
+    display.update();
+
+    // AutoConnect will start AP if no credentials are saved
+    if (!wifiManager.autoConnect("IRHub-Setup")) {
+        LOG_ERROR("WiFi failed to connect");
+        display.clear();
+        display.printCentered("ERROR", 10);
+        display.printCentered("WiFi failed", 25);
+        display.printCentered("Restart device", 40);
+        display.update();
+        delay(3000);
+        ESP.restart();
+        while (1) delay(100);
+    }
+
+    display.clear();
+    display.printCentered("IR Hub", 20);
+    display.printCentered("WiFi Connected!", 40);
+    display.update();
+    delay(1000);
 
     // Initialize the global router
     router.setDefaultScreen(new MainMenu());  // Replace with your actual default screen object
