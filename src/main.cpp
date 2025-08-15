@@ -172,7 +172,6 @@ void setup() {
     });
 
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        int percent = (progress / (total / 100));
         display.clear();
         display.printCentered("OTA Update", 10);
 
