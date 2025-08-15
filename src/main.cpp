@@ -129,7 +129,7 @@ void setup() {
     display.update();
     delay(500);
 
-    Serial.println("IR Hub: System Ready");
+    LOG_INFO("IR Hub: System Ready");
 }
 
 void loop() {
