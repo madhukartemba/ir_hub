@@ -4,7 +4,7 @@
 
 class LedRing {
    public:
-    enum State { OFF, WAVE, BREATHE, PROGRESS, RAINBOW, WIFI_SETUP };
+    enum State { OFF, WAVE, BREATHE, PROGRESS, RAINBOW };
 
     LedRing() {}
     ~LedRing() {}
@@ -49,7 +49,7 @@ class LedRing {
     }
 
     void nextState() {
-        State ns = static_cast<State>((targetState + 1) % 6);
+        State ns = static_cast<State>((targetState + 1) % 5);
         setState(ns);
     }
 
@@ -108,17 +108,6 @@ class LedRing {
     void off() {
         resetTransition();
         setState(OFF);
-    }
-
-    void setWiFiSetupMode(bool enabled) {
-        if (enabled) {
-            setSpeed(3);           // Slower speed for WiFi setup
-            setColor(CRGB::Blue);  // Blue color for WiFi
-            resetTransition();
-            setState(WIFI_SETUP);
-        } else {
-            off();  // Turn off when WiFi is connected
-        }
     }
 
     void update() {
@@ -217,29 +206,6 @@ class LedRing {
 
             case RAINBOW: {
                 fill_rainbow(buffer, numLeds, (t / ((11 - speed) * 10)) % 255, 255 / numLeds);
-                break;
-            }
-
-            case WIFI_SETUP: {
-                // WiFi setup animation: pulsing blue with a rotating indicator
-                uint8_t pulse = beatsin8(1000 / ((11 - speed) * 10), 50, 255);
-                uint8_t rotation = (t / ((11 - speed) * 20)) % numLeds;
-
-                for (uint16_t i = 0; i < numLeds; i++) {
-                    // Calculate distance from rotation point
-                    uint16_t distance = abs(i - rotation);
-                    if (distance > numLeds / 2) {
-                        distance = numLeds - distance;  // Wrap around
-                    }
-
-                    if (distance < 3) {  // Bright indicator
-                        buffer[i] = CRGB::Blue;
-                        buffer[i].fadeLightBy(255 - pulse);
-                    } else {  // Subtle background pulse
-                        buffer[i] = CRGB::Blue;
-                        buffer[i].fadeLightBy(255 - (pulse / 4));
-                    }
-                }
                 break;
             }
         }

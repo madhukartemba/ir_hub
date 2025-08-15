@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <LittleFS.h>
-#include <WiFiManager.h>
 #include "config.h"
 #include "global/Global.h"
 #include "ui/MainMenu.h"
@@ -122,44 +121,6 @@ void setup() {
     // Initialize the global router
     router.setDefaultScreen(new MainMenu());  // Replace with your actual default screen object
 
-    // Initialize WiFiManager
-    LOG_DEBUG("Starting WiFiManager setup");
-    display.clear();
-    display.printCentered("IR Hub", 10);
-    display.printCentered("WiFi Setup", 25);
-    display.printCentered("Connect to IR_Hub_AP", 40);
-    display.update();
-
-    // Start WiFi setup animation on LED ring
-    ring.setWiFiSetupMode(true);
-
-    WiFiManager wifiManager;
-    wifiManager.setConfigPortalTimeout(180);     // 3 minutes timeout
-    wifiManager.setConnectTimeout(30);           // 30 seconds to connect
-    wifiManager.setConfigPortalBlocking(false);  // Enable non-blocking mode
-
-    // Customize the portal name
-    wifiManager.setAPCallback([](WiFiManager *myWiFiManager) {
-        LOG_INFO("Entered config mode");
-        LOG_INFO("IP: " + WiFi.softAPIP().toString());
-        LOG_INFO("SSID: " + myWiFiManager->getConfigPortalSSID());
-    });
-
-    // Set callback for when WiFi connects
-    wifiManager.setSaveConfigCallback([]() { LOG_INFO("WiFi credentials saved"); });
-
-    // Set callback for when WiFi connects successfully
-    wifiManager.setSaveParamsCallback([]() {
-        LOG_INFO("WiFi connected successfully");
-        LOG_INFO("IP address: " + WiFi.localIP().toString());
-        // Turn off WiFi setup animation
-        ring.setWiFiSetupMode(false);
-    });
-
-    // Start the configuration portal in non-blocking mode
-    wifiManager.startConfigPortal("IR_Hub_AP");
-    LOG_INFO("WiFi config portal started");
-
     // Show ready message on display
     delay(1000);
     display.clear();
@@ -172,24 +133,7 @@ void setup() {
 }
 
 void loop() {
-    // Handle WiFiManager in non-blocking mode
-    static WiFiManager wifiManager;
-    static bool wifiConfigured = false;
-
-    if (!wifiConfigured) {
-        wifiManager.process();
-        // Only check WiFi status occasionally, not every loop
-        static unsigned long lastWiFiCheck = 0;
-        if (millis() - lastWiFiCheck > 1000) {  // Check every 1 second
-            if (WiFi.status() == WL_CONNECTED) {
-                wifiConfigured = true;
-                wifiManager.stopConfigPortal();
-            }
-            lastWiFiCheck = millis();
-        }
-    }
-
     router.update();  // Main app logic now handled by router
     button.update();
-    ring.update();  // Now you can call ring.update() during WiFi setup!
+    ring.update();
 }
