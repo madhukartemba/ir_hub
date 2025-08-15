@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <LittleFS.h>
 #include <WiFiManager.h>  // <-- Add this line
 #include "config.h"
@@ -145,6 +146,61 @@ void setup() {
     display.update();
     delay(1000);
 
+    // Setup OTA
+    display.clear();
+    display.printCentered("IR Hub", 20);
+    display.printCentered("Setting up OTA...", 40);
+    display.update();
+
+    ArduinoOTA.setHostname("ir-hub");
+
+    ArduinoOTA.onStart([]() {
+        String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
+        LOG_INFO("Start updating " + type);
+        display.clear();
+        display.printCentered("OTA Update", 10);
+        display.printCentered("Starting...", 30);
+        display.update();
+    });
+
+    ArduinoOTA.onEnd([]() {
+        LOG_INFO("OTA Update Complete");
+        display.clear();
+        display.printCentered("OTA Complete", 20);
+        display.printCentered("Restarting...", 40);
+        display.update();
+    });
+
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        int percent = (progress / (total / 100));
+        display.clear();
+        display.printCentered("OTA Update", 10);
+
+        // Draw progress bar
+        display.drawProgressBar(10, 25, 108, 12, progress, total, true);
+
+        display.update();
+    });
+
+    ArduinoOTA.onError([](ota_error_t error) {
+        LOG_ERROR("OTA Error: " + String(error));
+        display.clear();
+        display.printCentered("OTA Error", 10);
+        display.printCentered("Error: " + String(error), 30);
+        display.update();
+    });
+
+    ArduinoOTA.begin();
+    LOG_INFO("OTA Ready");
+
+    // Display OTA info
+    display.clear();
+    display.printCentered("IR Hub", 10);
+    display.printCentered("IP: " + WiFi.localIP().toString(), 25);
+    display.printCentered("OTA: Ready", 40);
+    display.update();
+    delay(2000);
+
     // Initialize the global router
     router.setDefaultScreen(new MainMenu());  // Replace with your actual default screen object
 
@@ -160,7 +216,8 @@ void setup() {
 }
 
 void loop() {
-    router.update();  // Main app logic now handled by router
+    ArduinoOTA.handle();  // Handle OTA updates
+    router.update();      // Main app logic now handled by router
     button.update();
     ring.update();
 }
