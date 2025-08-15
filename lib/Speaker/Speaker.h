@@ -4,6 +4,10 @@
 #include <Arduino.h>
 #include "../Log/Log.h"
 
+// // Disable tone functions
+// #define tone(...) ((void)0)
+// #define noTone(...) ((void)0)
+
 class Speaker {
    private:
     uint8_t pin;
