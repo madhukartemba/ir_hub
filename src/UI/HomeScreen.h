@@ -3,7 +3,7 @@
 #include "../global/Global.h"
 #include "../ui/MainMenu.h"
 
-class StatusScreen : public Screen {
+class HomeScreen : public Screen {
    private:
     unsigned long lastActivityTime;
     const unsigned long INACTIVITY_TIMEOUT = 30000;    // 30 seconds to show status
@@ -12,7 +12,7 @@ class StatusScreen : public Screen {
 
    public:
     void onEnter() override {
-        LOG_DEBUG("StatusScreen onEnter");
+        LOG_DEBUG("HomeScreen onEnter");
         lastActivityTime = millis();
         isBlanked = false;
 
@@ -30,7 +30,7 @@ class StatusScreen : public Screen {
             }
 
             // Navigate to main menu
-            LOG_DEBUG("StatusScreen onButtonClick - navigating to MainMenu");
+            LOG_DEBUG("HomeScreen onButtonClick - navigating to MainMenu");
             router.push(new MainMenu());
         });
 
@@ -48,7 +48,7 @@ class StatusScreen : public Screen {
             }
 
             // Long press could be used for system functions in the future
-            LOG_DEBUG("StatusScreen onButtonLongPress");
+            LOG_DEBUG("HomeScreen onButtonLongPress");
         });
     }
 
@@ -73,7 +73,7 @@ class StatusScreen : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("StatusScreen onExit");
+        LOG_DEBUG("HomeScreen onExit");
         // Make sure display is turned on when exiting
         display.turnOn();
     }
