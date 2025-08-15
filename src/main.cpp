@@ -182,7 +182,6 @@ void setup() {
         display.clear();
         display.printCentered("OTA Update", 10);
 
-        // Draw progress bar
         display.drawProgressBar(10, 32, 108, 12, progress, total, true);
 
         display.update();
