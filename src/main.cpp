@@ -5,7 +5,7 @@
 #include <WiFiManager.h>  // <-- Add this line
 #include "config.h"
 #include "global/Global.h"
-#include "ui/MainMenu.h"
+#include "ui/StatusScreen.h"
 
 void setup() {
     Serial.begin(9600);
@@ -202,7 +202,7 @@ void setup() {
     delay(2000);
 
     // Initialize the global router
-    router.setDefaultScreen(new MainMenu());  // Replace with your actual default screen object
+    router.setDefaultScreen(new StatusScreen());  // Status screen is now the default
 
     // Show ready message on display
     delay(1000);

@@ -7,12 +7,11 @@
 
 class MainMenu : public Screen {
    private:
-    enum class State { DEVICES, ADD_DEVICE, SETTINGS, STATUS, BLANKED };
+    enum class State { DEVICES, ADD_DEVICE, SETTINGS };
 
     State currentState;
     unsigned long lastActivityTime;
-    const unsigned long INACTIVITY_TIMEOUT = 30000;    // 30 seconds in milliseconds
-    const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
+    const unsigned long INACTIVITY_TIMEOUT = 30000;  // 30 seconds in milliseconds
 
    public:
     void onEnter() override {
@@ -25,31 +24,15 @@ class MainMenu : public Screen {
             // Reset activity timer
             lastActivityTime = millis();
 
-            // If screen is blanked, turn it back on and show status
-            if (currentState == State::BLANKED) {
-                display.turnOn();
-                currentState = State::STATUS;
-                LOG_DEBUG("Screen turned back on from blanked state");
-                return;
-            }
-
-            // Switch to next state using mod operator
+            // Switch to next state using mod operator (now only 3 states)
             LOG_DEBUG("MainMenu onButtonClick");
-            currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 4);
+            currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 3);
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
             // Reset activity timer
             lastActivityTime = millis();
-
-            // If screen is blanked, turn it back on and show status
-            if (currentState == State::BLANKED) {
-                display.turnOn();
-                currentState = State::STATUS;
-                LOG_DEBUG("Screen turned back on from blanked state");
-                return;
-            }
 
             LOG_DEBUG("MainMenu onButtonLongPress");
             if (currentState == State::DEVICES) {
@@ -59,38 +42,20 @@ class MainMenu : public Screen {
             } else if (currentState == State::SETTINGS) {
                 router.push(new Settings());
             }
-            // STATUS state doesn't have a long press action
         });
     }
 
     void onUpdate() override {
-        // Check for inactivity timeout
-        if (currentState != State::STATUS && currentState != State::BLANKED &&
-            (millis() - lastActivityTime) > INACTIVITY_TIMEOUT) {
-            currentState = State::STATUS;
-            LOG_DEBUG("Switching to STATUS due to inactivity");
-        }
-
-        // Check for status screen blanking timeout
-        if (currentState == State::STATUS && (millis() - lastActivityTime) > STATUS_BLANK_TIMEOUT) {
-            currentState = State::BLANKED;
-            display.turnOff();
-            LOG_DEBUG("Screen blanked due to inactivity on status screen");
-            return;  // Don't update display when blanked
+        // Check for inactivity timeout - return to status screen (default screen)
+        if ((millis() - lastActivityTime) > INACTIVITY_TIMEOUT) {
+            LOG_DEBUG("Returning to status screen due to inactivity");
+            router.pop();  // This will return to the default screen (StatusScreen)
+            return;
         }
 
         // Update display based on current state
         display.clear();
-
-        if (currentState == State::STATUS) {
-            showStatusScreen();
-        } else if (currentState == State::BLANKED) {
-            // Screen is off, don't update display
-            return;
-        } else {
-            showMenuScreen();
-        }
-
+        showMenuScreen();
         display.update();
     }
 
@@ -117,52 +82,5 @@ class MainMenu : public Screen {
             bool isSelected = (i == static_cast<int>(currentState));
             display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
         }
-    }
-
-    void showStatusScreen() {
-        // Show title
-        display.setTextSize(1);
-        display.printCentered("IR Hub - Status", 0);
-
-        // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Show WiFi status
-        display.print("WiFi: ", 2, 20);
-        if (WiFi.status() == WL_CONNECTED) {
-            display.print("Connected", 30, 20);
-        } else {
-            display.print("Disconnected", 30, 20);
-        }
-
-        // Show IP address
-        display.print("IP: ", 2, 32);
-        if (WiFi.status() == WL_CONNECTED) {
-            String ip = WiFi.localIP().toString();
-            display.print(ip, 20, 32);
-        } else {
-            display.print("N/A", 20, 32);
-        }
-
-        // Show RSSI (signal strength)
-        display.print("Signal: ", 2, 44);
-        if (WiFi.status() == WL_CONNECTED) {
-            int rssi = WiFi.RSSI();
-            String signalStr = String(rssi) + " dBm";
-            display.print(signalStr, 45, 44);
-        } else {
-            display.print("N/A", 45, 44);
-        }
-
-        // Show uptime
-        unsigned long uptime = millis() / 1000;  // Convert to seconds
-        unsigned long hours = uptime / 3600;
-        unsigned long minutes = (uptime % 3600) / 60;
-        unsigned long seconds = uptime % 60;
-
-        display.print("Uptime: ", 2, 56);
-        String uptimeStr = String(hours) + ":" + (minutes < 10 ? "0" : "") + String(minutes) + ":" +
-                           (seconds < 10 ? "0" : "") + String(seconds);
-        display.print(uptimeStr, 45, 56);
     }
 };
