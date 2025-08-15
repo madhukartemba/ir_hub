@@ -7,11 +7,12 @@
 
 class MainMenu : public Screen {
    private:
-    enum class State { DEVICES, ADD_DEVICE, SETTINGS, STATUS };
+    enum class State { DEVICES, ADD_DEVICE, SETTINGS, STATUS, BLANKED };
 
     State currentState;
     unsigned long lastActivityTime;
-    const unsigned long INACTIVITY_TIMEOUT = 30000;  // 30 seconds in milliseconds
+    const unsigned long INACTIVITY_TIMEOUT = 30000;    // 30 seconds in milliseconds
+    const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
 
    public:
     void onEnter() override {
@@ -24,6 +25,14 @@ class MainMenu : public Screen {
             // Reset activity timer
             lastActivityTime = millis();
 
+            // If screen is blanked, turn it back on and show status
+            if (currentState == State::BLANKED) {
+                display.turnOn();
+                currentState = State::STATUS;
+                LOG_DEBUG("Screen turned back on from blanked state");
+                return;
+            }
+
             // Switch to next state using mod operator
             LOG_DEBUG("MainMenu onButtonClick");
             currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 4);
@@ -33,6 +42,14 @@ class MainMenu : public Screen {
         button.setLongPressCallback([this]() {
             // Reset activity timer
             lastActivityTime = millis();
+
+            // If screen is blanked, turn it back on and show status
+            if (currentState == State::BLANKED) {
+                display.turnOn();
+                currentState = State::STATUS;
+                LOG_DEBUG("Screen turned back on from blanked state");
+                return;
+            }
 
             LOG_DEBUG("MainMenu onButtonLongPress");
             if (currentState == State::DEVICES) {
@@ -48,9 +65,18 @@ class MainMenu : public Screen {
 
     void onUpdate() override {
         // Check for inactivity timeout
-        if (currentState != State::STATUS && (millis() - lastActivityTime) > INACTIVITY_TIMEOUT) {
+        if (currentState != State::STATUS && currentState != State::BLANKED &&
+            (millis() - lastActivityTime) > INACTIVITY_TIMEOUT) {
             currentState = State::STATUS;
             LOG_DEBUG("Switching to STATUS due to inactivity");
+        }
+
+        // Check for status screen blanking timeout
+        if (currentState == State::STATUS && (millis() - lastActivityTime) > STATUS_BLANK_TIMEOUT) {
+            currentState = State::BLANKED;
+            display.turnOff();
+            LOG_DEBUG("Screen blanked due to inactivity on status screen");
+            return;  // Don't update display when blanked
         }
 
         // Update display based on current state
@@ -58,6 +84,9 @@ class MainMenu : public Screen {
 
         if (currentState == State::STATUS) {
             showStatusScreen();
+        } else if (currentState == State::BLANKED) {
+            // Screen is off, don't update display
+            return;
         } else {
             showMenuScreen();
         }
@@ -65,7 +94,11 @@ class MainMenu : public Screen {
         display.update();
     }
 
-    void onExit() override { LOG_DEBUG("MainMenu onExit"); }
+    void onExit() override {
+        LOG_DEBUG("MainMenu onExit");
+        // Make sure display is turned on when exiting
+        display.turnOn();
+    }
 
    private:
     void showMenuScreen() {
