@@ -21,7 +21,7 @@ enum VerticalAlign { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM };
 class Display {
    public:
     // Constructor
-    Display() : textSize(1), textColor(1), displayFlipped(true) {}
+    Display() : textSize(1), textColor(1), displayFlipped(true), displayOn(false) {}
 
     // Destructor
     ~Display() = default;
@@ -51,6 +51,7 @@ class Display {
         display->setRotation(displayFlipped ? 2 : 0);
 
         clear();
+        displayOn = true;  // Display is on after successful initialization
         return true;
     }
 
@@ -68,13 +69,16 @@ class Display {
     void turnOn() {
         if (display) {
             display->ssd1306_command(SSD1306_DISPLAYON);
+            displayOn = true;
         }
     }
     void turnOff() {
         if (display) {
             display->ssd1306_command(SSD1306_DISPLAYOFF);
+            displayOn = false;
         }
     }
+    bool isDisplayOn() const { return displayOn; }
     void setBrightness(uint8_t brightness) {
         if (display) {
             display->ssd1306_command(SSD1306_SETCONTRAST);
@@ -337,6 +341,7 @@ class Display {
     uint8_t textSize;
     uint16_t textColor;
     bool displayFlipped;
+    bool displayOn;
 
     // Helper methods
     void wrapText(const String& text, int x, int y, int maxWidth, TextAlign align = ALIGN_LEFT) {

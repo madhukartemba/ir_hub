@@ -158,6 +158,9 @@ void setup() {
     ArduinoOTA.onStart([]() {
         String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
         LOG_INFO("Start updating " + type);
+        if (!display.isDisplayOn()) {
+            display.turnOn();
+        }
         display.clear();
         display.printCentered("OTA Update", 10);
         display.printCentered("Starting...", 30);
@@ -173,16 +176,22 @@ void setup() {
     });
 
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        if (!display.isDisplayOn()) {
+            display.turnOn();
+        }
         display.clear();
         display.printCentered("OTA Update", 10);
 
         // Draw progress bar
-        display.drawProgressBar(10, 25, 108, 12, progress, total, true);
+        display.drawProgressBar(10, 32, 108, 12, progress, total, true);
 
         display.update();
     });
 
     ArduinoOTA.onError([](ota_error_t error) {
+        if (!display.isDisplayOn()) {
+            display.turnOn();
+        }
         LOG_ERROR("OTA Error: " + String(error));
         display.clear();
         display.printCentered("OTA Error", 10);
