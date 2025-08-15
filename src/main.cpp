@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <ESP8266WiFi.h>
 #include <LittleFS.h>
 #include <WiFiManager.h>  // <-- Add this line
 #include "config.h"
