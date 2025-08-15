@@ -11,7 +11,7 @@ class MainMenu : public Screen {
 
     State currentState;
     unsigned long lastActivityTime;
-    const unsigned long INACTIVITY_TIMEOUT = 30000;    // 30 seconds in milliseconds
+    const unsigned long INACTIVITY_TIMEOUT = 15000;    // 30 seconds in milliseconds
     const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
 
    public:
@@ -25,11 +25,11 @@ class MainMenu : public Screen {
             // Reset activity timer
             lastActivityTime = millis();
 
-            // If screen is blanked, turn it back on and show status
+            // If screen is blanked, clear it and show status
             if (currentState == State::BLANKED) {
-                display.turnOn();
+                display.clear();  // Instead of display.turnOn();
                 currentState = State::STATUS;
-                LOG_DEBUG("Screen turned back on from blanked state");
+                LOG_DEBUG("Screen cleared from blanked state");
                 return;
             }
 
@@ -43,11 +43,11 @@ class MainMenu : public Screen {
             // Reset activity timer
             lastActivityTime = millis();
 
-            // If screen is blanked, turn it back on and show status
+            // If screen is blanked, clear it and show status
             if (currentState == State::BLANKED) {
-                display.turnOn();
+                display.clear();  // Instead of display.turnOn();
                 currentState = State::STATUS;
-                LOG_DEBUG("Screen turned back on from blanked state");
+                LOG_DEBUG("Screen cleared from blanked state");
                 return;
             }
 
@@ -74,7 +74,7 @@ class MainMenu : public Screen {
         // Check for status screen blanking timeout
         if (currentState == State::STATUS && (millis() - lastActivityTime) > STATUS_BLANK_TIMEOUT) {
             currentState = State::BLANKED;
-            display.turnOff();
+            display.clear();  // Instead of display.turnOff();
             LOG_DEBUG("Screen blanked due to inactivity on status screen");
             return;  // Don't update display when blanked
         }
@@ -96,8 +96,8 @@ class MainMenu : public Screen {
 
     void onExit() override {
         LOG_DEBUG("MainMenu onExit");
-        // Make sure display is turned on when exiting
-        display.turnOn();
+        // Make sure display is cleared when exiting
+        display.clear();  // Instead of display.turnOn();
     }
 
    private:
