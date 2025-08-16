@@ -209,6 +209,9 @@ void setup() {
     display.update();
     delay(2000);
 
+    // Initialize AlexaConnector
+    alexaConnector.begin();
+
     // Initialize the global router
     router.setDefaultScreen(new HomeScreen());  // Status screen is now the default
 
@@ -232,4 +235,5 @@ void loop() {
     router.update();      // Main app logic now handled by router
     button.update();
     ring.update();
+    alexaConnector.update();
 }
