@@ -55,11 +55,11 @@ class DeviceManager {
 
         Device device;
         device.id = idGen.generateId();
-        device.name = String(device.id);
+        device.protocolName = String(typeToString(command.getProtocol(), false));
+        device.name = device.protocolName + " " + String(device.id);
         device.type = SINGLE_COMMAND;
         device.onCommand = command;
         device.offCommand = command;
-        device.protocolName = String(typeToString(command.getProtocol(), false));
         saveDevice(device);
 
         return device.id;
@@ -78,16 +78,16 @@ class DeviceManager {
 
         Device device;
         device.id = idGen.generateId();
-        device.name = String(device.id);
-        device.type = DUAL_COMMAND;
-        device.onCommand = onCommand;
-        device.offCommand = offCommand;
         if (onCommand.getProtocol() == offCommand.getProtocol()) {
             device.protocolName = String(typeToString(onCommand.getProtocol(), false));
         } else {
             device.protocolName = String(typeToString(onCommand.getProtocol(), false)) + " & " +
                                   String(typeToString(offCommand.getProtocol(), false));
         }
+        device.name = device.protocolName + " " + String(device.id);
+        device.type = DUAL_COMMAND;
+        device.onCommand = onCommand;
+        device.offCommand = offCommand;
         saveDevice(device);
         return device.id;
     }
