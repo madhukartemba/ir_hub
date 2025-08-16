@@ -24,15 +24,30 @@ struct Device {
 };
 
 class DeviceManager {
+   public:
+    using DeviceCallback = std::function<void(const Device&)>;
+
    private:
     const char* storageDir = "/devices";
     std::map<String, Device> deviceCacheByName;
     std::map<int, Device> deviceCacheById;
     IdGen& idGen;
+    DeviceCallback onDeviceAdded;
+    DeviceCallback onDeviceRemoved;
 
    public:
     DeviceManager(IdGen& idGen) : idGen(idGen) {}
     ~DeviceManager() {}
+
+    void setOnDeviceAdded(DeviceCallback cb) {
+        LOG_DEBUG("[DeviceManager] Setting onDeviceAdded callback");
+        onDeviceAdded = cb;
+    }
+
+    void setOnDeviceRemoved(DeviceCallback cb) {
+        LOG_DEBUG("[DeviceManager] Setting onDeviceRemoved callback");
+        onDeviceRemoved = cb;
+    }
 
     bool begin() {
         if (!LittleFS.begin()) {
@@ -115,6 +130,11 @@ class DeviceManager {
         deviceCacheByName.emplace(device.name, device);
         deviceCacheById.emplace(device.id, device);
 
+        if (onDeviceAdded) {
+            LOG_DEBUG("[DeviceManager] Triggering onDeviceAdded callback for device %d", device.id);
+            onDeviceAdded(device);
+        }
+
         LOG_INFO("Device saved to %s", filename.c_str());
     }
 
@@ -130,6 +150,12 @@ class DeviceManager {
             LOG_INFO("Device removed from %s", filename.c_str());
             deviceCacheByName.erase(device.name);
             deviceCacheById.erase(device.id);
+
+            if (onDeviceRemoved) {
+                LOG_DEBUG("[DeviceManager] Triggering onDeviceRemoved callback for device %d",
+                          device.id);
+                onDeviceRemoved(device);
+            }
         } else {
             LOG_ERROR("Failed to remove device from %s", filename.c_str());
         }

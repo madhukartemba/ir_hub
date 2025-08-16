@@ -57,9 +57,20 @@ class AlexaConnector {
                           e.what());
             }
         });
+
+        deviceManager.setOnDeviceAdded([this](const Device& device) {
+            LOG_DEBUG("[Alexa] Device added: %s (ID: %d)", device.name.c_str(), device.id);
+            registerDevice(device);
+        });
+
+        deviceManager.setOnDeviceRemoved([this](const Device& device) {
+            LOG_DEBUG("[Alexa] Device removed: %s (ID: %d)", device.name.c_str(), device.id);
+            unregisterDevice(device);
+        });
     }
 
-    void registerDevice(Device& device) { fauxmo.addDevice(device.name.c_str()); }
+    void registerDevice(const Device& device) { fauxmo.addDevice(device.name.c_str()); }
+    void unregisterDevice(const Device& device) { fauxmo.removeDevice(device.name.c_str()); }
 
     void update() { fauxmo.handle(); }
 };
