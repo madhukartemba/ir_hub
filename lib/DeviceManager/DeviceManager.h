@@ -115,7 +115,7 @@ class DeviceManager {
         File file = LittleFS.open(String(storageDir) + "/" + filename, "w");
         if (!file) {
             LOG_ERROR("Failed to open file");
-            throw std::runtime_error("Failed to open file");
+            return;
         }
         JsonDocument doc;
         doc["id"] = device.id;
@@ -139,8 +139,11 @@ class DeviceManager {
     }
 
     bool removeDeviceById(int id) {
-        Device device = getDeviceById(id);
-        return removeDevice(device);
+        Device* device = getDeviceById(id);
+        if (device) {
+            return removeDevice(*device);
+        }
+        return false;
     }
 
     bool removeDevice(const Device& device) {
@@ -162,11 +165,11 @@ class DeviceManager {
         return success;
     }
 
-    Device& getDeviceById(int id) {
+    Device* getDeviceById(int id) {
         auto it = deviceCacheById.find(id);
         if (it != deviceCacheById.end()) {
             LOG_DEBUG("[DeviceManager] Found device %d in cache", id);
-            return it->second;
+            return &(it->second);
         }
 
         LOG_DEBUG("[DeviceManager] Device %d not found in cache, loading from storage", id);
@@ -174,8 +177,8 @@ class DeviceManager {
         String filename = String(id) + ".json";
         File file = LittleFS.open(String(storageDir) + "/" + filename, "r");
         if (!file) {
-            LOG_ERROR("Failed to open file");
-            throw std::runtime_error("Device not found");
+            LOG_ERROR("Failed to open file for device %d", id);
+            return nullptr;
         }
         String json = file.readString();
         file.close();
@@ -184,7 +187,7 @@ class DeviceManager {
         DeserializationError err = deserializeJson(doc, json);
         if (err) {
             LOG_ERROR("Failed to parse JSON for device %d: %s", id, err.c_str());
-            throw std::runtime_error("Invalid JSON");
+            return nullptr;
         }
 
         Device device;
@@ -200,14 +203,14 @@ class DeviceManager {
         auto [itById, inserted] = deviceCacheById.emplace(device.id, std::move(device));
         deviceCacheByName.emplace(itById->second.name, itById->second);
 
-        return itById->second;  // ✅ return reference to cached object
+        return &(itById->second);
     }
 
-    Device& getDeviceByName(const String& name) {
+    Device* getDeviceByName(const String& name) {
         auto it = deviceCacheByName.find(name);
         if (it != deviceCacheByName.end()) {
             LOG_DEBUG("[DeviceManager] Found device %s in cache", name.c_str());
-            return it->second;
+            return &(it->second);
         }
 
         LOG_DEBUG("[DeviceManager] Device %s not found in cache, loading from storage",
@@ -216,11 +219,11 @@ class DeviceManager {
         for (Device& device : getDevices()) {
             if (device.name == name) {
                 LOG_DEBUG("[DeviceManager] Loaded device %s from storage", name.c_str());
-                return device;
+                return &device;
             }
         }
         LOG_ERROR("[DeviceManager] Device %s not found", name.c_str());
-        throw std::runtime_error("Device not found");
+        return nullptr;
     }
 
     std::vector<Device> getDevices() {
@@ -229,16 +232,16 @@ class DeviceManager {
         Dir dir = LittleFS.openDir(storageDir);
         while (dir.next()) {
             if (dir.isFile() && String(dir.fileName()).endsWith(".json")) {
-                try {
-                    // Extract device ID from filename (remove .json extension)
-                    String filename = String(dir.fileName());
-                    String idStr = filename.substring(0, filename.lastIndexOf('.'));
-                    int id = idStr.toInt();
+                // Extract device ID from filename (remove .json extension)
+                String filename = String(dir.fileName());
+                String idStr = filename.substring(0, filename.lastIndexOf('.'));
+                int id = idStr.toInt();
 
-                    Device device = getDeviceById(id);
-                    devices.push_back(device);
-                } catch (const std::runtime_error& e) {
-                    LOG_ERROR("Failed to load device from %s: %s", dir.fileName(), e.what());
+                Device* device = getDeviceById(id);
+                if (device) {
+                    devices.push_back(*device);
+                } else {
+                    LOG_ERROR("Failed to load device from %s", dir.fileName());
                 }
             }
         }

@@ -37,13 +37,8 @@ class Devices : public Screen {
     }
 
     void loadDevices() {
-        try {
-            devices = deviceManager.getDevices();
-            LOG_INFO("Loaded %d devices", devices.size());
-        } catch (const std::exception& e) {
-            LOG_ERROR("Failed to load devices: %s", e.what());
-            devices.clear();
-        }
+        devices = deviceManager.getDevices();
+        LOG_INFO("Loaded %d devices", devices.size());
     }
 
     void onUpdate() override {

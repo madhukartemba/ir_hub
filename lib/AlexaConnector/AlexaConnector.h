@@ -42,19 +42,17 @@ class AlexaConnector {
             LOG_DEBUG("[Alexa] Set state for device %s (ID: %d) to %s with value %d", device_name,
                       device_id, state ? "ON" : "OFF", value);
 
-            try {
-                Device device = deviceManager.getDeviceByName(device_name);
-
+            Device* device = deviceManager.getDeviceByName(device_name);
+            if (device) {
                 if (state) {
-                    irManager.sendProtocol(device.onCommand);
+                    irManager.sendProtocol(device->onCommand);
                     LOG_INFO("[Alexa] Turning ON device %s (ID: %d)", device_name, device_id);
                 } else {
-                    irManager.sendProtocol(device.offCommand);
+                    irManager.sendProtocol(device->offCommand);
                     LOG_INFO("[Alexa] Turning OFF device %s (ID: %d)", device_name, device_id);
                 }
-            } catch (const std::runtime_error& e) {
-                LOG_ERROR("[Alexa] Error handling device %s (ID: %d): %s", device_name, device_id,
-                          e.what());
+            } else {
+                LOG_ERROR("[Alexa] Device %s (ID: %d) not found", device_name, device_id);
             }
         });
 

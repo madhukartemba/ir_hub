@@ -173,33 +173,23 @@ class AddDevice : public Screen {
 
                 if (firstCode == secondCode) {
                     // Codes match, save as single command device
-                    try {
-                        int deviceId = deviceManager.addSingleCommandDevice(firstCode);
-                        if (deviceId != -1) {
-                            LOG_INFO("Auto mode device saved with ID: %d", deviceId);
-                            currentState = State::SUCCESS;
-                        } else {
-                            LOG_ERROR("Failed to save auto mode device");
-                            currentState = State::ERROR;
-                        }
-                    } catch (const std::exception& e) {
-                        LOG_ERROR("Exception while saving device: %s", e.what());
+                    int deviceId = deviceManager.addSingleCommandDevice(firstCode);
+                    if (deviceId != -1) {
+                        LOG_INFO("Auto mode device saved with ID: %d", deviceId);
+                        currentState = State::SUCCESS;
+                    } else {
+                        LOG_ERROR("Failed to save auto mode device");
                         currentState = State::ERROR;
                     }
                 } else {
                     LOG_INFO("Codes don't match - saving as dual device");
                     // Codes don't match, save as dual command device
-                    try {
-                        int deviceId = deviceManager.addDualCommandDevice(firstCode, secondCode);
-                        if (deviceId != -1) {
-                            LOG_INFO("Auto mode device saved as dual device with ID: %d", deviceId);
-                            currentState = State::SUCCESS;
-                        } else {
-                            LOG_ERROR("Failed to save auto mode device as dual device");
-                            currentState = State::ERROR;
-                        }
-                    } catch (const std::exception& e) {
-                        LOG_ERROR("Exception while saving dual device: %s", e.what());
+                    int deviceId = deviceManager.addDualCommandDevice(firstCode, secondCode);
+                    if (deviceId != -1) {
+                        LOG_INFO("Auto mode device saved as dual device with ID: %d", deviceId);
+                        currentState = State::SUCCESS;
+                    } else {
+                        LOG_ERROR("Failed to save auto mode device as dual device");
                         currentState = State::ERROR;
                     }
                 }
