@@ -87,6 +87,19 @@ class Speaker {
         }
         tone(pin, frequency);
     }
+    // Play a startup melody
+    void playStartupSound() {
+        if (!isInitialized) {
+            begin();
+        }
+        int melody[] = {262, 294, 330, 349, 392, 440, 494, 523};         // C4 to C5 notes
+        int noteDurations[] = {200, 200, 200, 200, 200, 200, 200, 200};  // Duration for each note
+
+        for (size_t i = 0; i < sizeof(melody) / sizeof(melody[0]); i++) {
+            beep(melody[i], noteDurations[i]);
+            delay(100);  // Short pause between notes
+        }
+    }
 
     // Check if speaker is initialized
     bool initialized() const { return isInitialized; }

@@ -220,6 +220,10 @@ void setup() {
     display.update();
     delay(500);
 
+    // Play startup sound
+    speaker.playStartupSound();
+    LOG_DEBUG("Startup sound played");
+
     LOG_INFO("IR Hub: System Ready");
 }
 
