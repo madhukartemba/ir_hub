@@ -24,7 +24,8 @@ struct Device {
 class DeviceManager {
    private:
     const char* storageDir = "/devices";
-    std::map<String, Device> deviceCache;
+    std::map<String, Device> deviceCacheByName;
+    std::map<int, Device> deviceCacheById;
     IdGen& idGen;
 
    public:
@@ -109,7 +110,8 @@ class DeviceManager {
         serializeJson(doc, file);
         file.close();
 
-        deviceCache.emplace(device.name, device);
+        deviceCacheByName.emplace(device.name, device);
+        deviceCacheById.emplace(device.id, device);
 
         LOG_INFO("Device saved to %s", filename.c_str());
     }
@@ -124,7 +126,8 @@ class DeviceManager {
         bool success = LittleFS.remove(String(storageDir) + "/" + filename);
         if (success) {
             LOG_INFO("Device removed from %s", filename.c_str());
-            deviceCache.erase(device.name);
+            deviceCacheByName.erase(device.name);
+            deviceCacheById.erase(device.id);
         } else {
             LOG_ERROR("Failed to remove device from %s", filename.c_str());
         }
@@ -132,6 +135,14 @@ class DeviceManager {
     }
 
     Device getDeviceById(int id) {
+        auto it = deviceCacheById.find(id);
+        if (it != deviceCacheById.end()) {
+            LOG_DEBUG("[DeviceManager] Found device %d in cache", id);
+            return it->second;
+        }
+
+        LOG_DEBUG("[DeviceManager] Device %d not found in cache, loading from storage", id);
+
         String filename = String(id) + ".json";
         File file = LittleFS.open(String(storageDir) + "/" + filename, "r");
         if (!file) {
@@ -156,14 +167,15 @@ class DeviceManager {
         device.onCommand = IRCode::fromJson(doc["onCommand"]);
         device.offCommand = IRCode::fromJson(doc["offCommand"]);
 
-        deviceCache.emplace(device.name, device);
+        deviceCacheByName.emplace(device.name, device);
+        deviceCacheById.emplace(device.id, device);
 
         return device;
     }
 
     Device getDeviceByName(String name) {
-        auto it = deviceCache.find(name);
-        if (it != deviceCache.end()) {
+        auto it = deviceCacheByName.find(name);
+        if (it != deviceCacheByName.end()) {
             LOG_DEBUG("[DeviceManager] Found device %s in cache", name.c_str());
             return it->second;
         }
