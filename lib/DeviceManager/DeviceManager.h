@@ -134,7 +134,7 @@ class DeviceManager {
         return success;
     }
 
-    Device getDeviceById(int id) {
+    Device& getDeviceById(int id) {
         auto it = deviceCacheById.find(id);
         if (it != deviceCacheById.end()) {
             LOG_DEBUG("[DeviceManager] Found device %d in cache", id);
@@ -173,7 +173,7 @@ class DeviceManager {
         return device;
     }
 
-    Device getDeviceByName(String name) {
+    Device& getDeviceByName(const String& name) {
         auto it = deviceCacheByName.find(name);
         if (it != deviceCacheByName.end()) {
             LOG_DEBUG("[DeviceManager] Found device %s in cache", name.c_str());
