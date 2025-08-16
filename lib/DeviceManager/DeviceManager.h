@@ -47,8 +47,6 @@ class DeviceManager {
         return true;
     }
 
-    void setStorageDir(char* dir) { storageDir = dir; }
-
     int addSingleCommandDevice(IRCode command) {
         if (!command.isValid()) {
             LOG_ERROR("Invalid command");
@@ -94,7 +92,7 @@ class DeviceManager {
         return device.id;
     }
 
-    void saveDevice(Device device) {
+    void saveDevice(const Device& device) {
         String filename = String(device.id) + ".json";
         File file = LittleFS.open(String(storageDir) + "/" + filename, "w");
         if (!file) {
@@ -108,7 +106,7 @@ class DeviceManager {
         doc["protocolName"] = device.protocolName;
         doc["onCommand"] = device.onCommand.toJson();
         doc["offCommand"] = device.offCommand.toJson();
-        file.print(doc.as<String>());
+        serializeJson(doc, file);
         file.close();
 
         deviceCache.emplace(device.name, device);
@@ -121,7 +119,7 @@ class DeviceManager {
         return removeDevice(device);
     }
 
-    bool removeDevice(Device device) {
+    bool removeDevice(const Device& device) {
         String filename = String(device.id) + ".json";
         bool success = LittleFS.remove(String(storageDir) + "/" + filename);
         if (success) {
@@ -143,7 +141,11 @@ class DeviceManager {
         String json = file.readString();
         file.close();
         JsonDocument doc;
-        deserializeJson(doc, json);
+        DeserializationError err = deserializeJson(doc, json);
+        if (err) {
+            LOG_ERROR("Failed to parse JSON for device %d: %s", id, err.c_str());
+            throw std::runtime_error("Invalid JSON");
+        }
 
         Device device;
         device.id = id;
