@@ -11,8 +11,8 @@
 
 class AlexaConnector {
    private:
-    IRManager& irManager;
     DeviceManager& deviceManager;
+    IRManager& irManager;
     fauxmoESP fauxmo;
 
    public:
@@ -33,8 +33,33 @@ class AlexaConnector {
         fauxmo.setPort(80);
         fauxmo.enable(true);
 
-        // Now we register devices
+        for (Device& device : deviceManager.getDevices()) {
+            registerDevice(device);
+        }
+
+        fauxmo.onSetState([this](unsigned char device_id, const char* device_name, bool state,
+                                 unsigned char value) {
+            LOG_DEBUG("[Alexa] Set state for device %s (ID: %d) to %s with value %d", device_name,
+                      device_id, state ? "ON" : "OFF", value);
+
+            try {
+                Device device = deviceManager.getDeviceByName(device_name);
+
+                if (state) {
+                    irManager.sendProtocol(device.onCommand);
+                    LOG_INFO("[Alexa] Turning ON device %s (ID: %d)", device_name, device_id);
+                } else {
+                    irManager.sendProtocol(device.offCommand);
+                    LOG_INFO("[Alexa] Turning OFF device %s (ID: %d)", device_name, device_id);
+                }
+            } catch (const std::runtime_error& e) {
+                LOG_ERROR("[Alexa] Error handling device %s (ID: %d): %s", device_name, device_id,
+                          e.what());
+            }
+        });
     }
 
-    void registerDevice(Device device) {}
+    void registerDevice(Device& device) { fauxmo.addDevice(device.name.c_str()); }
+
+    void update() { fauxmo.handle(); }
 };

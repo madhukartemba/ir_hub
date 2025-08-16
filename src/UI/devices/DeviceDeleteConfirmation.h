@@ -24,7 +24,7 @@ class DeviceDeleteConfirmation : public Screen {
             if (confirmed) {
                 // Delete the device
                 LOG_INFO("Deleting device %d", device.id);
-                deviceManager.removeDevice(device.id);
+                deviceManager.removeDeviceById(device.id);
 
                 // Show feedback
                 display.clear();

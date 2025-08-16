@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <map>
 #include <vector>
 #include "IRCode.h"
 #include "IdGen.h"
@@ -23,6 +24,7 @@ struct Device {
 class DeviceManager {
    private:
     const char* storageDir = "/devices";
+    std::map<String, Device> deviceCache;
     IdGen& idGen;
 
    public:
@@ -108,11 +110,14 @@ class DeviceManager {
         doc["offCommand"] = device.offCommand.toJson();
         file.print(doc.as<String>());
         file.close();
+
+        deviceCache.emplace(device.name, device);
+
         LOG_INFO("Device saved to %s", filename.c_str());
     }
 
-    bool removeDevice(int id) {
-        Device device = getDevice(id);
+    bool removeDeviceById(int id) {
+        Device device = getDeviceById(id);
         return removeDevice(device);
     }
 
@@ -121,13 +126,14 @@ class DeviceManager {
         bool success = LittleFS.remove(String(storageDir) + "/" + filename);
         if (success) {
             LOG_INFO("Device removed from %s", filename.c_str());
+            deviceCache.erase(device.name);
         } else {
             LOG_ERROR("Failed to remove device from %s", filename.c_str());
         }
         return success;
     }
 
-    Device getDevice(int id) {
+    Device getDeviceById(int id) {
         String filename = String(id) + ".json";
         File file = LittleFS.open(String(storageDir) + "/" + filename, "r");
         if (!file) {
@@ -147,7 +153,30 @@ class DeviceManager {
 
         device.onCommand = IRCode::fromJson(doc["onCommand"]);
         device.offCommand = IRCode::fromJson(doc["offCommand"]);
+
+        deviceCache.emplace(device.name, device);
+
         return device;
+    }
+
+    Device getDeviceByName(String name) {
+        auto it = deviceCache.find(name);
+        if (it != deviceCache.end()) {
+            LOG_DEBUG("[DeviceManager] Found device %s in cache", name.c_str());
+            return it->second;
+        }
+
+        LOG_DEBUG("[DeviceManager] Device %s not found in cache, loading from storage",
+                  name.c_str());
+
+        for (Device& device : getDevices()) {
+            if (device.name == name) {
+                LOG_DEBUG("[DeviceManager] Loaded device %s from storage", name.c_str());
+                return device;
+            }
+        }
+        LOG_ERROR("[DeviceManager] Device %s not found", name.c_str());
+        throw std::runtime_error("Device not found");
     }
 
     std::vector<Device> getDevices() {
@@ -162,7 +191,7 @@ class DeviceManager {
                     String idStr = filename.substring(0, filename.lastIndexOf('.'));
                     int id = idStr.toInt();
 
-                    Device device = getDevice(id);
+                    Device device = getDeviceById(id);
                     devices.push_back(device);
                 } catch (const std::runtime_error& e) {
                     LOG_ERROR("Failed to load device from %s: %s", dir.fileName(), e.what());
