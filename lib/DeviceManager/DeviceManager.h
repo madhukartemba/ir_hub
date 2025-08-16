@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
@@ -151,6 +153,7 @@ class DeviceManager {
         }
         String json = file.readString();
         file.close();
+
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, json);
         if (err) {
@@ -167,10 +170,11 @@ class DeviceManager {
         device.onCommand = IRCode::fromJson(doc["onCommand"]);
         device.offCommand = IRCode::fromJson(doc["offCommand"]);
 
-        deviceCacheByName.emplace(device.name, device);
-        deviceCacheById.emplace(device.id, device);
+        // Insert into cache
+        auto [itById, inserted] = deviceCacheById.emplace(device.id, std::move(device));
+        deviceCacheByName.emplace(itById->second.name, itById->second);
 
-        return device;
+        return itById->second;  // ✅ return reference to cached object
     }
 
     Device& getDeviceByName(const String& name) {

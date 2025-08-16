@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AlexaConnector.h"
 #include "Button.h"
 #include "DeviceManager.h"
 #include "Display.h"
@@ -19,3 +20,4 @@ extern Display display;
 extern IdGen idGen;
 extern IRManager irManager;
 extern DeviceManager deviceManager;
+extern AlexaConnector alexaConnector;
