@@ -9,4 +9,3 @@ Display display;
 IdGen idGen;
 IRManager irManager;
 DeviceManager deviceManager(idGen);
-AlexaConnector alexaConnector(deviceManager);

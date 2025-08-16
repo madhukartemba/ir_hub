@@ -75,12 +75,6 @@ void setup() {
         }
     }
 
-    // Set up DeviceManager callbacks for AlexaConnector
-    deviceManager.setDeviceAddedCallback(
-        [&](const Device& device) { alexaConnector.onDeviceAdded(device); });
-    deviceManager.setDeviceRemovedCallback(
-        [&](int deviceId) { alexaConnector.onDeviceRemoved(deviceId); });
-
     // Initialize speaker
     LOG_DEBUG("Starting speaker setup");
     if (!speaker.begin(SPEAKER_PIN)) {
@@ -152,15 +146,6 @@ void setup() {
     display.printCentered("WiFi Connected!", 40);
     display.update();
     delay(1000);
-
-    // Initialize AlexaConnector
-    display.clear();
-    display.printCentered("IR Hub", 20);
-    display.printCentered("Setting up Alexa...", 40);
-    display.update();
-
-    alexaConnector.setup();
-    LOG_INFO("AlexaConnector initialized");
 
     // Setup OTA
     display.clear();
@@ -243,5 +228,4 @@ void loop() {
     router.update();      // Main app logic now handled by router
     button.update();
     ring.update();
-    alexaConnector.loop();  // Handle Alexa commands
 }

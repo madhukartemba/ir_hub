@@ -1,7 +1,7 @@
 #pragma once
 
-#include "AlexaConnector.h"
 #include "Button.h"
+#include "DeviceManager.h"
 #include "Display.h"
 #include "IRCode.h"
 #include "IRManager.h"
@@ -11,7 +11,6 @@
 #include "Router.h"
 #include "Speaker.h"
 
-extern AlexaConnector alexaConnector;
 extern Button button;
 extern Router router;
 extern Speaker speaker;

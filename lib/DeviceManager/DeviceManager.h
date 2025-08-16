@@ -1,9 +1,6 @@
-#pragma once
-
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include <functional>
 #include <vector>
 #include "IRCode.h"
 #include "IdGen.h"
@@ -27,35 +24,10 @@ class DeviceManager {
    private:
     const char* storageDir = "/devices";
     IdGen& idGen;
-    std::function<void(const Device&)> deviceAddedCallback;
-    std::function<void(int)> deviceRemovedCallback;
 
    public:
     DeviceManager(IdGen& idGen) : idGen(idGen) {}
     ~DeviceManager() {}
-
-    // Callback registration methods
-    void setDeviceAddedCallback(std::function<void(const Device&)> callback) {
-        deviceAddedCallback = callback;
-        LOG_INFO("Device added callback set");
-    }
-
-    void setDeviceRemovedCallback(std::function<void(int)> callback) {
-        deviceRemovedCallback = callback;
-        LOG_INFO("Device removed callback set");
-    }
-
-    void notifyDeviceAdded(const Device& device) {
-        if (deviceAddedCallback) {
-            deviceAddedCallback(device);
-        }
-    }
-
-    void notifyDeviceRemoved(int deviceId) {
-        if (deviceRemovedCallback) {
-            deviceRemovedCallback(deviceId);
-        }
-    }
 
     bool begin() {
         if (!LittleFS.begin()) {
@@ -83,15 +55,12 @@ class DeviceManager {
 
         Device device;
         device.id = idGen.generateId();
-        device.protocolName = String(typeToString(command.getProtocol(), false));
-        device.name = String(device.id) + "-" + device.protocolName;
+        device.name = String(device.id);
         device.type = SINGLE_COMMAND;
         device.onCommand = command;
         device.offCommand = command;
+        device.protocolName = String(typeToString(command.getProtocol(), false));
         saveDevice(device);
-
-        // Notify AlexaConnector about the new device
-        notifyDeviceAdded(device);
 
         return device.id;
     }
@@ -109,21 +78,17 @@ class DeviceManager {
 
         Device device;
         device.id = idGen.generateId();
+        device.name = String(device.id);
+        device.type = DUAL_COMMAND;
+        device.onCommand = onCommand;
+        device.offCommand = offCommand;
         if (onCommand.getProtocol() == offCommand.getProtocol()) {
             device.protocolName = String(typeToString(onCommand.getProtocol(), false));
         } else {
             device.protocolName = String(typeToString(onCommand.getProtocol(), false)) + " & " +
                                   String(typeToString(offCommand.getProtocol(), false));
         }
-        device.name = String(device.id) + "-" + device.protocolName;
-        device.type = DUAL_COMMAND;
-        device.onCommand = onCommand;
-        device.offCommand = offCommand;
         saveDevice(device);
-
-        // Notify AlexaConnector about the new device
-        notifyDeviceAdded(device);
-
         return device.id;
     }
 
@@ -156,8 +121,6 @@ class DeviceManager {
         bool success = LittleFS.remove(String(storageDir) + "/" + filename);
         if (success) {
             LOG_INFO("Device removed from %s", filename.c_str());
-            // Notify AlexaConnector about the removed device
-            notifyDeviceRemoved(device.id);
         } else {
             LOG_ERROR("Failed to remove device from %s", filename.c_str());
         }
@@ -206,9 +169,6 @@ class DeviceManager {
                 }
             }
         }
-
-        std::sort(devices.begin(), devices.end(),
-                  [](const Device& a, const Device& b) { return a.id < b.id; });
 
         LOG_INFO("Loaded %d devices", devices.size());
         return devices;
