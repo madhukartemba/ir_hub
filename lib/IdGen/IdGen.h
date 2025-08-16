@@ -30,16 +30,24 @@ class IdGen {
             return;
         }
 
-        try {
-            int previousId = file.parseInt();
-            nextId = previousId + 1;
-            LOG_INFO("Loaded previousId: %d, setting nextId: %d", previousId, nextId);
-        } catch (const std::exception& e) {
-            LOG_ERROR("Failed to parse nextId from file: %s", storageFile);
-            nextId = 0;
-            storeNextId();
-        }
+        // Read the file content as string first to check if it's valid
+        String content = file.readString();
         file.close();
+
+        // Try to parse the content
+        if (content.length() > 0) {
+            int previousId = content.toInt();
+            if (previousId >= 0) {
+                nextId = previousId + 1;
+                LOG_INFO("Loaded previousId: %d, setting nextId: %d", previousId, nextId);
+                return;
+            }
+        }
+
+        // If parsing failed or content was invalid, reset to 0
+        LOG_ERROR("Failed to parse nextId from file: %s", storageFile);
+        nextId = 0;
+        storeNextId();
     }
 
    public:
