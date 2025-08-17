@@ -196,7 +196,7 @@ class HomeScreen : public Screen {
 
         // Position at the very bottom (64 - 16 = 48 for text baseline, 50 for icon center)
         int iconY = 58;  // Bottom area for icon
-        int textY = 56;  // Bottom area for text baseline
+        int textY = 55;  // Bottom area for text baseline
 
         // Draw clock icon
         display.drawCircle(startX + 4, iconY, 4);
