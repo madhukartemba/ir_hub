@@ -153,7 +153,7 @@ class HomeScreen : public Screen {
         // Draw "IP" text in the tab
         display.setTextSize(1);
         display.setTextColor(0);  // Black text on filled tab
-        display.print("IP", cardX + 6, cardY - tabHeight + 1);
+        display.print("IP", cardX + 10, cardY - tabHeight + 1);
 
         if (WiFi.status() == WL_CONNECTED) {
             String ip = WiFi.localIP().toString();
