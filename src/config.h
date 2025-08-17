@@ -16,7 +16,7 @@
 
 // WiFi configuration
 #define WIFI_AP_NAME "IRHub Setup"
-#define WIFI_AP_TIMEOUT 60       // 1 minute timeout
-#define WIFI_CONNECT_TIMEOUT 30  // 30 seconds timeout
+#define WIFI_AP_TIMEOUT 180      // 3 minutes timeout
+#define WIFI_CONNECT_TIMEOUT 60  // 1 minute timeout
 
 #endif  // CONFIG_H

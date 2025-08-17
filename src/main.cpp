@@ -128,6 +128,53 @@ void setup() {
     wifiManager.setConfigPortalTimeout(WIFI_AP_TIMEOUT);
     wifiManager.setConnectTimeout(WIFI_CONNECT_TIMEOUT);
 
+    // Disable OTA update options and other advanced features
+    wifiManager.setBreakAfterConfig(true);    // Exit after configuration
+    wifiManager.setRemoveDuplicateAPs(true);  // Remove duplicate APs
+    wifiManager.setMinimumSignalQuality(30);  // Minimum signal quality
+
+    // Customize the portal appearance
+    wifiManager.setTitle("IR Hub Wi-Fi Setup");
+
+    // Set custom callbacks for better user experience
+    wifiManager.setAPCallback([](WiFiManager *myWiFiManager) {
+        display.clear();
+        display.printCentered("WiFi Setup Mode", 6);
+        display.printCentered("Connect to AP", 20);
+        display.printCentered(WIFI_AP_NAME, 35);
+        display.printCentered("IP: 192.168.4.1", 50);
+        display.update();
+    });
+
+    wifiManager.setSaveConfigCallback([]() {
+        display.clear();
+        display.printCentered("WiFi Saved!", 20);
+        display.printCentered("Connecting...", 40);
+        display.update();
+    });
+
+    wifiManager.setCustomHeadElement(
+        "<style>"
+        "body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 "
+        "100%);"
+        "margin:0;padding:20px;color:white;}"
+        ".form-group{background:rgba(255,255,255,0.95);padding:20px;border-radius:10px;"
+        "box-shadow:0 8px 32px rgba(0,0,0,0.1);margin-bottom:20px;}"
+        "input[type='text'],input[type='password']{width:100%;padding:12px;border:2px solid #ddd;"
+        "border-radius:6px;font-size:16px;box-sizing:border-box;transition:border-color 0.3s;"
+        "color:#333;}"
+        "input[type='text']:focus,input[type='password']:focus{border-color:#667eea;outline:none;}"
+        "button{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;"
+        "padding:12px 24px;border-radius:6px;font-size:16px;cursor:pointer;transition:transform "
+        "0.2s;}"
+        "button:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2);}"
+        "h1{text-align:center;color:white;margin-bottom:30px;font-size:28px;text-shadow:0 2px 4px "
+        "rgba(0,0,0,0.3);}"
+        "label{display:block;margin-bottom:8px;font-weight:bold;color:white;}"
+        ".btn-container{text-align:center;margin-top:20px;}"
+        ".btn-container button{margin:0 10px;}"
+        "</style>");
+
     // Check if WiFi credentials exist using WiFiManager
     bool hasCredentials = wifiManager.getWiFiIsSaved();
 
@@ -154,6 +201,16 @@ void setup() {
     LOG_DEBUG("WiFi timeout set to 60 seconds");
 
     // Try to connect to WiFi, but don't restart if it fails
+    // Set custom menu items to hide OTA and other advanced options
+    std::vector<const char *> menu = {"wifi", "info", "param"};
+    wifiManager.setMenu(menu);
+
+    // Add custom parameters for better user experience
+    WiFiManagerParameter custom_text(
+        "<p style='text-align:center;color:white;font-size:16px;margin:20px 0;'>"
+        "Welcome to IR Hub WiFi Setup</p>");
+    wifiManager.addParameter(&custom_text);
+
     bool wifiConnected = wifiManager.autoConnect(WIFI_AP_NAME);
 
     if (wifiConnected) {
