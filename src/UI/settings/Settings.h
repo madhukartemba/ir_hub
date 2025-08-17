@@ -1,4 +1,5 @@
 #include <ESP.h>
+#include <WiFiManager.h>
 #include "../../global/Global.h"
 #include "ClearDataConfirmation.h"
 
@@ -7,6 +8,7 @@ class Settings : public Screen {
     enum class State {
         RESTART,
         CLEAR_DATA,
+        WIFI_WIPE,
         BACK,
         RESTARTING,
     };
@@ -25,6 +27,9 @@ class Settings : public Screen {
                     currentState = State::CLEAR_DATA;
                     break;
                 case State::CLEAR_DATA:
+                    currentState = State::WIFI_WIPE;
+                    break;
+                case State::WIFI_WIPE:
                     currentState = State::BACK;
                     break;
                 case State::BACK:
@@ -38,6 +43,8 @@ class Settings : public Screen {
 
         button.setLongPressCallback([this]() {
             LOG_DEBUG("Settings onButtonLongPress");
+            WiFiManager wifiManager;  // Declare outside switch to avoid initialization bypass
+
             switch (currentState) {
                 case State::RESTART:
                     LOG_DEBUG("Settings onButtonLongPress RESTART");
@@ -47,6 +54,14 @@ class Settings : public Screen {
                 case State::CLEAR_DATA:
                     LOG_DEBUG("Settings onButtonLongPress CLEAR_DATA");
                     router.push(new ClearDataConfirmation());
+                    break;
+                case State::WIFI_WIPE:
+                    LOG_DEBUG("Settings onButtonLongPress WIFI_WIPE");
+                    // Wipe WiFi credentials
+                    wifiManager.resetSettings();
+                    // Restart to trigger WiFi setup
+                    currentState = State::RESTARTING;
+                    restartStartTime = millis();
                     break;
                 case State::BACK:
                     LOG_DEBUG("Settings onButtonLongPress BACK");
@@ -68,6 +83,9 @@ class Settings : public Screen {
                 break;
             case State::CLEAR_DATA:
                 drawClearData();
+                break;
+            case State::WIFI_WIPE:
+                drawWifiWipe();
                 break;
             case State::BACK:
                 drawBack();
@@ -95,12 +113,12 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Restart", "Clear Data", "Back"};
+        const char* menuItems[] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
         int startY = 20;
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             bool isSelected = (i == 0);  // Restart is selected
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
         }
     }
 
@@ -113,12 +131,30 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Restart", "Clear Data", "Back"};
+        const char* menuItems[] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
         int startY = 20;
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             bool isSelected = (i == 1);  // Clear Data is selected
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
+        }
+    }
+
+    void drawWifiWipe() {
+        // Draw title
+        display.setTextSize(1);
+        display.printCentered("Settings", 0);
+
+        // Draw horizontal line
+        display.drawLine(0, 12, display.getWidth(), 12);
+
+        // Show menu options with selection indicator
+        const char* menuItems[] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
+        int startY = 20;
+
+        for (int i = 0; i < 4; i++) {
+            bool isSelected = (i == 2);  // WiFi Wipe is selected
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
         }
     }
 
@@ -131,12 +167,12 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Restart", "Clear Data", "Back"};
+        const char* menuItems[] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
         int startY = 20;
 
-        for (int i = 0; i < 3; i++) {
-            bool isSelected = (i == 2);  // Back is selected
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+        for (int i = 0; i < 4; i++) {
+            bool isSelected = (i == 3);  // Back is selected
+            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
         }
     }
 

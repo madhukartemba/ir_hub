@@ -2,7 +2,7 @@
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 #include <LittleFS.h>
-#include <WiFiManager.h>  // <-- Add this line
+#include <WiFiManager.h>
 #include "config.h"
 #include "global/Global.h"
 #include "ui/HomeScreen.h"
@@ -123,93 +123,109 @@ void setup() {
 
     // WiFiManager setup
     WiFiManager wifiManager;
+
+    // Configure timeout (in seconds)
+    wifiManager.setConfigPortalTimeout(WIFI_AP_TIMEOUT);
+
     display.clear();
     display.printCentered("IR Hub", 20);
     display.printCentered("WiFi Setup...", 40);
     display.update();
 
-    // AutoConnect will start AP if no credentials are saved
-    if (!wifiManager.autoConnect("IRHub-Setup")) {
-        LOG_ERROR("WiFi failed to connect");
+    LOG_INFO("Starting WiFi connection attempt...");
+    LOG_DEBUG("WiFi timeout set to 60 seconds");
+
+    // Try to connect to WiFi, but don't restart if it fails
+    bool wifiConnected = wifiManager.autoConnect(WIFI_AP_NAME);
+
+    if (wifiConnected) {
+        LOG_INFO("WiFi connection successful!");
+        LOG_DEBUG("IP Address: %s", WiFi.localIP().toString().c_str());
+        LOG_DEBUG("SSID: %s", WiFi.SSID().c_str());
+        LOG_DEBUG("RSSI: %d dBm", WiFi.RSSI());
+
         display.clear();
-        display.printCentered("ERROR", 10);
-        display.printCentered("WiFi failed", 25);
-        display.printCentered("Restart device", 40);
+        display.printCentered("IR Hub", 20);
+        display.printCentered("WiFi Connected!", 40);
         display.update();
-        delay(3000);
-        ESP.restart();
-        while (1) delay(100);
+        delay(1000);
+
+        // Setup OTA
+        LOG_DEBUG("Setting up OTA...");
+        display.clear();
+        display.printCentered("IR Hub", 20);
+        display.printCentered("Setting up OTA...", 40);
+        display.update();
+
+        ArduinoOTA.setHostname("ir-hub");
+
+        ArduinoOTA.onStart([]() {
+            String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
+            LOG_INFO("Start updating " + type);
+            if (!display.isDisplayOn()) {
+                display.turnOn();
+            }
+            display.clear();
+            display.printCentered("OTA Update", 10);
+            display.printCentered("Starting...", 30);
+            display.update();
+        });
+
+        ArduinoOTA.onEnd([]() {
+            LOG_INFO("OTA Update Complete");
+            display.clear();
+            display.printCentered("OTA Complete", 20);
+            display.printCentered("Restarting...", 40);
+            display.update();
+        });
+
+        ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+            if (!display.isDisplayOn()) {
+                display.turnOn();
+            }
+            display.clear();
+            display.printCentered("OTA Update", 10);
+
+            display.drawProgressBar(10, 32, 108, 12, progress, total, true);
+
+            display.update();
+        });
+
+        ArduinoOTA.onError([](ota_error_t error) {
+            if (!display.isDisplayOn()) {
+                display.turnOn();
+            }
+            LOG_ERROR("OTA Error: " + String(error));
+            display.clear();
+            display.printCentered("OTA Error", 10);
+            display.printCentered("Error: " + String(error), 30);
+            display.update();
+        });
+
+        ArduinoOTA.begin();
+        LOG_INFO("OTA Ready");
+
+        // Display OTA info
+        display.clear();
+        display.printCentered("IR Hub", 10);
+        display.printCentered("IP: " + WiFi.localIP().toString(), 25);
+        display.printCentered("OTA: Ready", 40);
+        display.update();
+        delay(2000);
+    } else {
+        LOG_WARN("WiFi connection failed - continuing in offline mode");
+        LOG_DEBUG("WiFi status: %d", WiFi.status());
+        LOG_DEBUG("No saved credentials or connection timeout");
+
+        display.clear();
+        display.printCentered("IR Hub", 20);
+        display.printCentered("WiFi Failed", 30);
+        display.printCentered("Offline Mode", 40);
+        display.update();
+        delay(2000);
     }
 
-    display.clear();
-    display.printCentered("IR Hub", 20);
-    display.printCentered("WiFi Connected!", 40);
-    display.update();
-    delay(1000);
-
-    // Setup OTA
-    display.clear();
-    display.printCentered("IR Hub", 20);
-    display.printCentered("Setting up OTA...", 40);
-    display.update();
-
-    ArduinoOTA.setHostname("ir-hub");
-
-    ArduinoOTA.onStart([]() {
-        String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
-        LOG_INFO("Start updating " + type);
-        if (!display.isDisplayOn()) {
-            display.turnOn();
-        }
-        display.clear();
-        display.printCentered("OTA Update", 10);
-        display.printCentered("Starting...", 30);
-        display.update();
-    });
-
-    ArduinoOTA.onEnd([]() {
-        LOG_INFO("OTA Update Complete");
-        display.clear();
-        display.printCentered("OTA Complete", 20);
-        display.printCentered("Restarting...", 40);
-        display.update();
-    });
-
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        if (!display.isDisplayOn()) {
-            display.turnOn();
-        }
-        display.clear();
-        display.printCentered("OTA Update", 10);
-
-        display.drawProgressBar(10, 32, 108, 12, progress, total, true);
-
-        display.update();
-    });
-
-    ArduinoOTA.onError([](ota_error_t error) {
-        if (!display.isDisplayOn()) {
-            display.turnOn();
-        }
-        LOG_ERROR("OTA Error: " + String(error));
-        display.clear();
-        display.printCentered("OTA Error", 10);
-        display.printCentered("Error: " + String(error), 30);
-        display.update();
-    });
-
-    ArduinoOTA.begin();
-    LOG_INFO("OTA Ready");
-
-    // Display OTA info
-    display.clear();
-    display.printCentered("IR Hub", 10);
-    display.printCentered("IP: " + WiFi.localIP().toString(), 25);
-    display.printCentered("OTA: Ready", 40);
-    display.update();
-    delay(2000);
-
-    // Initialize AlexaConnector
+    // Initialize AlexaConnector (will handle WiFi status internally)
     alexaConnector.begin();
 
     // Initialize the global router
@@ -219,7 +235,11 @@ void setup() {
     delay(1000);
     display.clear();
     display.printCentered("IR Hub", 20);
-    display.printCentered("Ready!", 40);
+    if (wifiConnected) {
+        display.printCentered("Ready!", 40);
+    } else {
+        display.printCentered("Ready! (Offline)", 40);
+    }
     display.update();
     delay(500);
 
@@ -231,8 +251,10 @@ void setup() {
 }
 
 void loop() {
-    ArduinoOTA.handle();  // Handle OTA updates
-    router.update();      // Main app logic now handled by router
+    if (WiFi.status() == WL_CONNECTED) {
+        ArduinoOTA.handle();  // Handle OTA updates only if WiFi is connected
+    }
+    router.update();  // Main app logic now handled by router
     button.update();
     ring.update();
     alexaConnector.update();

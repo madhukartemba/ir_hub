@@ -14,4 +14,8 @@
 #define NUM_LEDS 13  // Number of LEDs in the circular strip
 #define CENTER_LED 8
 
+// WiFi configuration
+#define WIFI_AP_NAME "IRHub Setup"
+#define WIFI_AP_TIMEOUT 180  // 3 minutes timeout
+
 #endif  // CONFIG_H

@@ -14,20 +14,24 @@ class AlexaConnector {
     DeviceManager& deviceManager;
     IRManager& irManager;
     fauxmoESP fauxmo;
+    bool wifiEnabled;
 
    public:
     AlexaConnector(DeviceManager& deviceManager, IRManager& irManager)
-        : deviceManager(deviceManager), irManager(irManager) {};
+        : deviceManager(deviceManager), irManager(irManager), wifiEnabled(false) {};
 
     ~AlexaConnector() {};
 
     void begin() {
-        WiFi.mode(WIFI_STA);
-
+        // Check if WiFi is available and connected
         if (WiFi.status() != WL_CONNECTED) {
-            LOG_ERROR("[Alexa] Not connected to WiFi, skipping alexa setup");
+            LOG_INFO("[Alexa] WiFi not connected, Alexa functionality disabled");
+            wifiEnabled = false;
             return;
         }
+
+        wifiEnabled = true;
+        WiFi.mode(WIFI_STA);
 
         fauxmo.createServer(true);
         fauxmo.setPort(80);
@@ -65,10 +69,27 @@ class AlexaConnector {
             LOG_DEBUG("[Alexa] Device removed: %s (ID: %d)", device.name.c_str(), device.id);
             unregisterDevice(device);
         });
+
+        LOG_INFO("[Alexa] Alexa functionality enabled");
     }
 
-    void registerDevice(const Device& device) { fauxmo.addDevice(device.name.c_str()); }
-    void unregisterDevice(const Device& device) { fauxmo.removeDevice(device.name.c_str()); }
+    void registerDevice(const Device& device) {
+        if (wifiEnabled) {
+            fauxmo.addDevice(device.name.c_str());
+        }
+    }
 
-    void update() { fauxmo.handle(); }
+    void unregisterDevice(const Device& device) {
+        if (wifiEnabled) {
+            fauxmo.removeDevice(device.name.c_str());
+        }
+    }
+
+    void update() {
+        if (wifiEnabled) {
+            fauxmo.handle();
+        }
+    }
+
+    bool isEnabled() const { return wifiEnabled; }
 };
