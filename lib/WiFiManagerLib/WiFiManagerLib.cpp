@@ -117,7 +117,7 @@ void WiFiManagerLib::setupWiFiManager(const char* apName, int apTimeout, int con
         "</style>");
 
     // Set custom menu items to hide OTA and other advanced options
-    std::vector<const char*> menu = {"wifi", "info", "param"};
+    std::vector<const char*> menu = {"wifi", "info"};
     wifiManager.setMenu(menu);
 
     // Add custom parameters for better user experience
