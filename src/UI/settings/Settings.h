@@ -30,6 +30,9 @@ class Settings : public Screen {
                 case State::BACK:
                     currentState = State::RESTART;
                     break;
+                case State::RESTARTING:
+                    // Do nothing during restart
+                    break;
             }
         });
 
@@ -48,6 +51,9 @@ class Settings : public Screen {
                 case State::BACK:
                     LOG_DEBUG("Settings onButtonLongPress BACK");
                     router.pop();
+                    break;
+                case State::RESTARTING:
+                    // Do nothing during restart
                     break;
             }
         });
