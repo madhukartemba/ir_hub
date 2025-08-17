@@ -11,6 +11,7 @@
 #include "Log.h"
 #include "Router.h"
 #include "Speaker.h"
+#include "WiFiManagerLib.h"
 
 extern Button button;
 extern Router router;
@@ -21,3 +22,4 @@ extern IdGen idGen;
 extern IRManager irManager;
 extern DeviceManager deviceManager;
 extern AlexaConnector alexaConnector;
+extern WiFiManagerLib wifiManager;
