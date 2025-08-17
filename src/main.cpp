@@ -126,11 +126,29 @@ void setup() {
 
     // Configure timeout (in seconds)
     wifiManager.setConfigPortalTimeout(WIFI_AP_TIMEOUT);
+    wifiManager.setConnectTimeout(WIFI_CONNECT_TIMEOUT);
 
-    display.clear();
-    display.printCentered("IR Hub", 20);
-    display.printCentered("WiFi Setup...", 40);
-    display.update();
+    // Check if WiFi credentials exist using WiFiManager
+    bool hasCredentials = wifiManager.getWiFiIsSaved();
+
+    if (hasCredentials) {
+        display.clear();
+        display.printCentered("IR Hub", 20);
+        display.printCentered("Connecting...", 40);
+        display.update();
+
+        LOG_INFO("Found saved WiFi credentials, attempting connection...");
+        LOG_DEBUG("Saved SSID: %s", WiFi.SSID().c_str());
+    } else {
+        display.clear();
+        display.printCentered("IR Hub", 15);
+        display.printCentered("Connect to AP", 30);
+        display.printCentered(WIFI_AP_NAME, 45);
+        display.update();
+
+        LOG_INFO("No saved WiFi credentials found");
+        LOG_DEBUG("Will start AP with name: %s", WIFI_AP_NAME);
+    }
 
     LOG_INFO("Starting WiFi connection attempt...");
     LOG_DEBUG("WiFi timeout set to 60 seconds");
