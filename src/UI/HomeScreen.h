@@ -136,16 +136,48 @@ class HomeScreen : public Screen {
     }
 
     void drawCenteredIP() {
+        // Draw smaller folder-like card with IP information
+        int cardWidth = 96;
+        int cardHeight = 16;
+        int cardX = (128 - cardWidth) / 2;  // Center the box horizontally
+        int cardY = 30;                     // Moved down from 20 to 24
+
+        // Draw card outline
+        display.drawRect(cardX, cardY, cardWidth, cardHeight);
+
+        // Draw modern folder tab with "IP" text inside
+        int tabWidth = 28;
+        int tabHeight = 8;
+        display.fillRect(cardX + 2, cardY - tabHeight, tabWidth, tabHeight);
+
+        // Draw "IP" text in the tab
+        display.setTextSize(1);
+        display.setTextColor(0);  // Black text on filled tab
+        display.print("IP", cardX + 6, cardY - tabHeight + 1);
+
         if (WiFi.status() == WL_CONNECTED) {
             String ip = WiFi.localIP().toString();
 
-            // Draw IP in center of screen
+            // Draw IP address perfectly centered within the card (both horizontally and vertically)
             display.setTextSize(1);
-            display.printCentered(ip, 32);
+            display.setTextColor(1);  // White text on card
+            int textWidth = display.getTextWidth(ip);
+            int textHeight = display.getTextHeight();
+            int textX = cardX + (cardWidth - textWidth) / 2;
+            int textY = cardY + (cardHeight - textHeight) / 2;
+            display.print(ip, textX, textY);
+
         } else {
-            // Show disconnected message
+            // Show disconnected message perfectly centered within the card (both horizontally and
+            // vertically)
             display.setTextSize(1);
-            display.printCentered("Not Connected", 32);
+            display.setTextColor(1);
+            String message = "Not Connected";
+            int textWidth = display.getTextWidth(message);
+            int textHeight = display.getTextHeight();
+            int textX = cardX + (cardWidth - textWidth) / 2;
+            int textY = cardY + (cardHeight - textHeight) / 2;
+            display.print(message, textX, textY);
         }
     }
 
