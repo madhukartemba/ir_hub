@@ -68,7 +68,7 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Clear Data", "IR Test", "Back"};
+        const char* menuItems[] = {"Clear Data", "Back"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {
