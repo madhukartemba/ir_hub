@@ -16,7 +16,7 @@ class Settings : public Screen {
     State currentState;
     unsigned long restartStartTime;
     int selectedIndex;
-    const char* menuItems[4] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
+    const char* menuItems[4] = {"Restart", "Clear Data", "Wipe Wi-Fi", "Back"};
 
    public:
     void onEnter() override {
