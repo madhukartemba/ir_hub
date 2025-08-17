@@ -1,13 +1,11 @@
 #include <ESP.h>
 #include "../../global/Global.h"
 #include "ClearDataConfirmation.h"
-#include "IRTest.h"
 
 class Settings : public Screen {
    private:
     enum class State {
         CLEAR_DATA,
-        IR_TEST,
         BACK,
     };
     State currentState;
@@ -21,9 +19,6 @@ class Settings : public Screen {
             LOG_DEBUG("Settings onButtonClick");
             switch (currentState) {
                 case State::CLEAR_DATA:
-                    currentState = State::IR_TEST;
-                    break;
-                case State::IR_TEST:
                     currentState = State::BACK;
                     break;
                 case State::BACK:
@@ -39,10 +34,6 @@ class Settings : public Screen {
                     LOG_DEBUG("Settings onButtonLongPress CLEAR_DATA");
                     router.push(new ClearDataConfirmation());
                     break;
-                case State::IR_TEST:
-                    LOG_DEBUG("Entering IR Test");
-                    router.push(new IRTest());
-                    break;
                 case State::BACK:
                     LOG_DEBUG("Settings onButtonLongPress BACK");
                     router.pop();
@@ -57,9 +48,6 @@ class Settings : public Screen {
         switch (currentState) {
             case State::CLEAR_DATA:
                 drawClearData();
-                break;
-            case State::IR_TEST:
-                drawIRTest();
                 break;
             case State::BACK:
                 drawBack();
@@ -85,7 +73,7 @@ class Settings : public Screen {
 
         for (int i = 0; i < 3; i++) {
             bool isSelected = (i == 0);  // Clear Data is selected
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+            display.drawMenuItem(menuItems[i], i, 2, isSelected, startY);
         }
     }
 
