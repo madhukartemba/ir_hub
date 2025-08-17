@@ -103,7 +103,7 @@ void WiFiManagerLib::setupWiFiManager(const char* apName, int apTimeout, int con
         "box-shadow:0 8px 32px rgba(0,0,0,0.1);margin-bottom:20px;}"
         "input[type='text'],input[type='password']{width:100%;padding:12px;border:2px solid #ddd;"
         "border-radius:6px;font-size:16px;box-sizing:border-box;transition:border-color 0.3s;"
-        "color:#333;}"
+        "color:white;background-color:rgba(255,255,255,0.1);}"
         "input[type='text']:focus,input[type='password']:focus{border-color:#667eea;outline:none;}"
         "button{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;"
         "padding:12px 24px;border-radius:6px;font-size:16px;cursor:pointer;transition:transform "
