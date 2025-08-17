@@ -5,24 +5,30 @@
 class Settings : public Screen {
    private:
     enum class State {
+        RESTART,
         CLEAR_DATA,
         BACK,
+        RESTARTING,
     };
     State currentState;
+    unsigned long restartStartTime;
 
    public:
     void onEnter() override {
         LOG_DEBUG("Settings onEnter");
-        currentState = State::CLEAR_DATA;
+        currentState = State::RESTART;
 
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");
             switch (currentState) {
+                case State::RESTART:
+                    currentState = State::CLEAR_DATA;
+                    break;
                 case State::CLEAR_DATA:
                     currentState = State::BACK;
                     break;
                 case State::BACK:
-                    currentState = State::CLEAR_DATA;
+                    currentState = State::RESTART;
                     break;
             }
         });
@@ -30,6 +36,11 @@ class Settings : public Screen {
         button.setLongPressCallback([this]() {
             LOG_DEBUG("Settings onButtonLongPress");
             switch (currentState) {
+                case State::RESTART:
+                    LOG_DEBUG("Settings onButtonLongPress RESTART");
+                    currentState = State::RESTARTING;
+                    restartStartTime = millis();
+                    break;
                 case State::CLEAR_DATA:
                     LOG_DEBUG("Settings onButtonLongPress CLEAR_DATA");
                     router.push(new ClearDataConfirmation());
@@ -46,11 +57,21 @@ class Settings : public Screen {
         display.clear();
 
         switch (currentState) {
+            case State::RESTART:
+                drawRestart();
+                break;
             case State::CLEAR_DATA:
                 drawClearData();
                 break;
             case State::BACK:
                 drawBack();
+                break;
+            case State::RESTARTING:
+                drawRestarting();
+                // Restart after 2 seconds
+                if (millis() - restartStartTime > 2000) {
+                    ESP.restart();
+                }
                 break;
         }
 
@@ -58,6 +79,24 @@ class Settings : public Screen {
     }
 
     void onExit() override { LOG_DEBUG("Settings onExit"); }
+
+    void drawRestart() {
+        // Draw title
+        display.setTextSize(1);
+        display.printCentered("Settings", 0);
+
+        // Draw horizontal line
+        display.drawLine(0, 12, display.getWidth(), 12);
+
+        // Show menu options with selection indicator
+        const char* menuItems[] = {"Restart", "Clear Data", "Back"};
+        int startY = 20;
+
+        for (int i = 0; i < 3; i++) {
+            bool isSelected = (i == 0);  // Restart is selected
+            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
+        }
+    }
 
     void drawClearData() {
         // Draw title
@@ -68,29 +107,11 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Clear Data", "Back"};
+        const char* menuItems[] = {"Restart", "Clear Data", "Back"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {
-            bool isSelected = (i == 0);  // Clear Data is selected
-            display.drawMenuItem(menuItems[i], i, 2, isSelected, startY);
-        }
-    }
-
-    void drawIRTest() {
-        // Draw title
-        display.setTextSize(1);
-        display.printCentered("Settings", 0);
-
-        // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Show menu options with selection indicator
-        const char* menuItems[] = {"Clear Data", "IR Test", "Back"};
-        int startY = 20;
-
-        for (int i = 0; i < 3; i++) {
-            bool isSelected = (i == 1);  // IR Test is selected
+            bool isSelected = (i == 1);  // Clear Data is selected
             display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
         }
     }
@@ -104,12 +125,25 @@ class Settings : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show menu options with selection indicator
-        const char* menuItems[] = {"Clear Data", "IR Test", "Back"};
+        const char* menuItems[] = {"Restart", "Clear Data", "Back"};
         int startY = 20;
 
         for (int i = 0; i < 3; i++) {
             bool isSelected = (i == 2);  // Back is selected
             display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
         }
+    }
+
+    void drawRestarting() {
+        // Clear display and show restarting message
+        display.clear();
+
+        // Draw title
+        display.setTextSize(1);
+        display.printCentered("Restarting...", 20);
+
+        // Show a brief message before restart
+        display.setTextSize(1);
+        display.printCentered("Please wait", 35);
     }
 };
