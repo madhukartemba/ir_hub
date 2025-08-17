@@ -1,6 +1,7 @@
 #include <ESP.h>
 #include <WiFiManager.h>
 #include "../../global/Global.h"
+#include "../../utils/MenuUtils.h"
 #include "ClearDataConfirmation.h"
 
 class Settings : public Screen {
@@ -14,31 +15,25 @@ class Settings : public Screen {
     };
     State currentState;
     unsigned long restartStartTime;
+    int selectedIndex;
+    const char* menuItems[4] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
 
    public:
     void onEnter() override {
         LOG_DEBUG("Settings onEnter");
         currentState = State::RESTART;
+        selectedIndex = 0;
 
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");
-            switch (currentState) {
-                case State::RESTART:
-                    currentState = State::CLEAR_DATA;
-                    break;
-                case State::CLEAR_DATA:
-                    currentState = State::WIFI_WIPE;
-                    break;
-                case State::WIFI_WIPE:
-                    currentState = State::BACK;
-                    break;
-                case State::BACK:
-                    currentState = State::RESTART;
-                    break;
-                case State::RESTARTING:
-                    // Do nothing during restart
-                    break;
+            if (currentState == State::RESTARTING) {
+                // Do nothing during restart
+                return;
             }
+
+            // Navigate through menu items
+            selectedIndex = (selectedIndex + 1) % 4;
+            currentState = static_cast<State>(selectedIndex);
         });
 
         button.setLongPressCallback([this]() {
@@ -77,26 +72,14 @@ class Settings : public Screen {
     void onUpdate() override {
         display.clear();
 
-        switch (currentState) {
-            case State::RESTART:
-                drawRestart();
-                break;
-            case State::CLEAR_DATA:
-                drawClearData();
-                break;
-            case State::WIFI_WIPE:
-                drawWifiWipe();
-                break;
-            case State::BACK:
-                drawBack();
-                break;
-            case State::RESTARTING:
-                drawRestarting();
-                // Restart after 2 seconds
-                if (millis() - restartStartTime > 2000) {
-                    ESP.restart();
-                }
-                break;
+        if (currentState == State::RESTARTING) {
+            drawRestarting();
+            // Restart after 2 seconds
+            if (millis() - restartStartTime > 2000) {
+                ESP.restart();
+            }
+        } else {
+            drawMenu();
         }
 
         display.update();
@@ -104,7 +87,7 @@ class Settings : public Screen {
 
     void onExit() override { LOG_DEBUG("Settings onExit"); }
 
-    void drawRestart() {
+    void drawMenu() {
         // Draw title
         display.setTextSize(1);
         display.printCentered("Settings", 0);
@@ -112,68 +95,8 @@ class Settings : public Screen {
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
-        // Show menu options with selection indicator
-        const char* menuItems[] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
-        int startY = 20;
-
-        for (int i = 0; i < 4; i++) {
-            bool isSelected = (i == 0);  // Restart is selected
-            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
-        }
-    }
-
-    void drawClearData() {
-        // Draw title
-        display.setTextSize(1);
-        display.printCentered("Settings", 0);
-
-        // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Show menu options with selection indicator
-        const char* menuItems[] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
-        int startY = 20;
-
-        for (int i = 0; i < 4; i++) {
-            bool isSelected = (i == 1);  // Clear Data is selected
-            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
-        }
-    }
-
-    void drawWifiWipe() {
-        // Draw title
-        display.setTextSize(1);
-        display.printCentered("Settings", 0);
-
-        // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Show menu options with selection indicator
-        const char* menuItems[] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
-        int startY = 20;
-
-        for (int i = 0; i < 4; i++) {
-            bool isSelected = (i == 2);  // WiFi Wipe is selected
-            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
-        }
-    }
-
-    void drawBack() {
-        // Draw title
-        display.setTextSize(1);
-        display.printCentered("Settings", 0);
-
-        // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Show menu options with selection indicator
-        const char* menuItems[] = {"Restart", "Clear Data", "WiFi Wipe", "Back"};
-        int startY = 20;
-
-        for (int i = 0; i < 4; i++) {
-            bool isSelected = (i == 3);  // Back is selected
-            display.drawMenuItem(menuItems[i], i, 4, isSelected, startY);
-        }
+        // Use the scrollable menu utility
+        MenuUtils::drawScrollableMenu(menuItems, 4, selectedIndex, 3, 20);
     }
 
     void drawRestarting() {

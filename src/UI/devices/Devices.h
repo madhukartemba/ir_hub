@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <algorithm>
 #include "../../global/Global.h"
+#include "../../utils/MenuUtils.h"
 #include "DeviceActions.h"
 
 class Devices : public Screen {
@@ -62,42 +63,20 @@ class Devices : public Screen {
             return;
         }
 
-        // Show devices list
-        int startY = 20;
-        int maxVisible = 3;                   // Maximum devices visible at once
-        int totalItems = devices.size() + 1;  // +1 for back button
-
-        // Calculate which items to show
-        int startIndex = std::max(0, selectedIndex - 1);
-        int endIndex = std::min(totalItems, startIndex + maxVisible);
-
-        // Adjust if we're at the end and need to show back button
-        if (selectedIndex == static_cast<int>(devices.size()) &&
-            endIndex <= static_cast<int>(devices.size())) {
-            startIndex = std::max(0, static_cast<int>(devices.size()) - maxVisible + 1);
-            endIndex = totalItems;
-        }
-
-        for (int i = startIndex; i < endIndex; i++) {
-            bool isSelected = (i == selectedIndex);
-
-            if (i < static_cast<int>(devices.size())) {
-                // Show device
-                String deviceText = String(devices[i].id) + ": " + devices[i].name;
-
-                // Truncate if too long
-                if (deviceText.length() > 16) {
-                    deviceText = deviceText.substring(0, 13) + "...";
-                }
-
-                display.drawMenuItem(deviceText.c_str(), i - startIndex, endIndex - startIndex,
-                                     isSelected, startY);
-            } else {
-                // Show back button
-                display.drawMenuItem("Back", i - startIndex, endIndex - startIndex, isSelected,
-                                     startY);
+        // Create menu items vector
+        std::vector<std::string> menuItems;
+        for (const auto& device : devices) {
+            String deviceText = String(device.id) + ": " + device.name;
+            // Truncate if too long
+            if (deviceText.length() > 16) {
+                deviceText = deviceText.substring(0, 13) + "...";
             }
+            menuItems.push_back(deviceText.c_str());
         }
+        menuItems.push_back("Back");
+
+        // Use the scrollable menu utility
+        MenuUtils::drawScrollableMenu(menuItems, selectedIndex, 3, 20);
     }
 
     void onExit() override { LOG_DEBUG("Devices onExit"); }

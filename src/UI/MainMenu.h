@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "../global/Global.h"
+#include "../utils/MenuUtils.h"
 #include "../ui/adddevice/AddDevice.h"
 #include "../ui/devices/Devices.h"
 #include "../ui/settings/Settings.h"
@@ -10,13 +11,16 @@ class MainMenu : public Screen {
     enum class State { DEVICES, ADD_DEVICE, SETTINGS };
 
     State currentState;
+    int selectedIndex;
     unsigned long lastActivityTime;
     const unsigned long INACTIVITY_TIMEOUT = 30000;  // 30 seconds in milliseconds
+    const char* menuItems[3] = {"Devices", "Add Device", "Settings"};
 
    public:
     void onEnter() override {
         LOG_DEBUG("MainMenu onEnter");
         currentState = State::DEVICES;
+        selectedIndex = 0;
         lastActivityTime = millis();
 
         // Change button behavior
@@ -26,7 +30,8 @@ class MainMenu : public Screen {
 
             // Switch to next state using mod operator (now only 3 states)
             LOG_DEBUG("MainMenu onButtonClick");
-            currentState = static_cast<State>((static_cast<int>(currentState) + 1) % 3);
+            selectedIndex = (selectedIndex + 1) % 3;
+            currentState = static_cast<State>(selectedIndex);
         });
 
         // Change button long press behavior
@@ -74,13 +79,7 @@ class MainMenu : public Screen {
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
-        // Show menu options with selection indicator
-        const char* menuItems[] = {"Devices", "Add Device", "Settings"};
-        int startY = 20;
-
-        for (int i = 0; i < 3; i++) {
-            bool isSelected = (i == static_cast<int>(currentState));
-            display.drawMenuItem(menuItems[i], i, 3, isSelected, startY);
-        }
+        // Use the scrollable menu utility
+        MenuUtils::drawScrollableMenu(menuItems, 3, selectedIndex, 3, 20);
     }
 };

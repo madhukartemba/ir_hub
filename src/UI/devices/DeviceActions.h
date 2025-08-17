@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "../../global/Global.h"
+#include "../../utils/MenuUtils.h"
 #include "DeviceDeleteConfirmation.h"
 #include "DeviceDetails.h"
 
@@ -9,11 +10,12 @@ class DeviceActions : public Screen {
 
     Device device;
     ActionType selectedAction;
-    int scrollOffset;
+    int selectedIndex;
+    const char* actions[5] = {"Send ON", "Send OFF", "Details", "Delete Device", "Back"};
 
    public:
     DeviceActions(Device& device)
-        : device(device), selectedAction(ActionType::ON), scrollOffset(0) {}
+        : device(device), selectedAction(ActionType::ON), selectedIndex(0) {}
 
     void onEnter() override {
         LOG_DEBUG("DeviceActions onEnter for device %d", device.id);
@@ -21,25 +23,9 @@ class DeviceActions : public Screen {
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("DeviceActions onButtonClick");
-            // Navigate through actions: ON, OFF, Details, Remove, Back
-            switch (selectedAction) {
-                case ActionType::ON:
-                    selectedAction = ActionType::OFF;
-                    break;
-                case ActionType::OFF:
-                    selectedAction = ActionType::DETAILS;
-                    break;
-                case ActionType::DETAILS:
-                    selectedAction = ActionType::REMOVE;
-                    break;
-                case ActionType::REMOVE:
-                    selectedAction = ActionType::BACK;
-                    break;
-                case ActionType::BACK:
-                    selectedAction = ActionType::ON;
-                    break;
-            }
-            updateScrollOffset();
+            // Navigate through actions
+            selectedIndex = (selectedIndex + 1) % 5;
+            selectedAction = static_cast<ActionType>(selectedIndex);
         });
 
         // Change button long press behavior
@@ -82,19 +68,8 @@ class DeviceActions : public Screen {
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
-        // Show action options with scrolling
-        int startY = 20;
-        const char* actions[] = {"Send ON", "Send OFF", "Details", "Delete Device", "Back"};
-        const int totalActions = 5;
-        const int visibleActions = 3;
-
-        for (int i = 0; i < visibleActions; i++) {
-            int actionIndex = scrollOffset + i;
-            if (actionIndex < totalActions) {
-                bool isSelected = (static_cast<ActionType>(actionIndex) == selectedAction);
-                display.drawMenuItem(actions[actionIndex], i, visibleActions, isSelected, startY);
-            }
-        }
+        // Use the scrollable menu utility
+        MenuUtils::drawScrollableMenu(actions, 5, selectedIndex, 3, 20);
     }
 
     void executeAction() {
@@ -127,17 +102,6 @@ class DeviceActions : public Screen {
             default:
                 LOG_ERROR("Unhandled action type in executeAction: %d",
                           static_cast<int>(selectedAction));
-        }
-    }
-
-    void updateScrollOffset() {
-        // Calculate scroll offset based on selected action
-        int visibleActions = 3;  // Number of actions that can be displayed at once
-
-        if (static_cast<int>(selectedAction) >= scrollOffset + visibleActions) {
-            scrollOffset = static_cast<int>(selectedAction) - visibleActions + 1;
-        } else if (static_cast<int>(selectedAction) < scrollOffset) {
-            scrollOffset = static_cast<int>(selectedAction);
         }
     }
 
