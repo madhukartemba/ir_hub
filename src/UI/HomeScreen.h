@@ -118,20 +118,20 @@ class HomeScreen : public Screen {
             int signalStrength = map(rssi, -100, -30, 1, 5);  // Map RSSI to 1-5 bars
             signalStrength = constrain(signalStrength, 1, 5);
 
-            // Draw signal bars on the right (in correct order)
+            // Draw signal bars on the right
             for (int i = 0; i < signalStrength; i++) {
                 int barHeight = (i + 1) * 2;
                 int barWidth = 3;
-                int x = 106 + (i * 4);  // Start from left side of right area
+                int x = 108 + (i * 4);
                 int y = 12 - barHeight;
                 display.fillRect(x, y, barWidth, barHeight);
             }
 
         } else {
             // Draw disconnected state on the right
-            display.drawRect(106, 2, 20, 8);
-            display.drawLine(108, 4, 124, 10);
-            display.drawLine(108, 10, 124, 4);
+            display.drawRect(108, 2, 20, 8);
+            display.drawLine(110, 4, 126, 10);
+            display.drawLine(110, 10, 126, 4);
         }
     }
 
@@ -152,7 +152,7 @@ class HomeScreen : public Screen {
     void drawUptime() {
         // Draw uptime at bottom
         String uptimeStr = getFormattedUptime();
-        String fullText = "Uptime: " + uptimeStr;
+        String fullText = "Uptime " + uptimeStr;
 
         // Calculate text width (approximately 6 pixels per character for text size 1)
         int textWidth = fullText.length() * 6;
