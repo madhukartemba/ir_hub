@@ -9,12 +9,16 @@ class HomeScreen : public Screen {
     const unsigned long INACTIVITY_TIMEOUT = 30000;    // 30 seconds to show status
     const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
     bool isBlanked = false;
+    unsigned long animationTimer = 0;
+    int animationFrame = 0;
 
    public:
     void onEnter() override {
         LOG_DEBUG("HomeScreen onEnter");
         lastActivityTime = millis();
         isBlanked = false;
+        animationTimer = millis();
+        animationFrame = 0;
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -66,9 +70,15 @@ class HomeScreen : public Screen {
             return;
         }
 
+        // Update animation frame every 500ms
+        if (millis() - animationTimer > 500) {
+            animationFrame = (animationFrame + 1) % 4;
+            animationTimer = millis();
+        }
+
         // Update display
         display.clear();
-        showStatusScreen();
+        showBeautifulStatusScreen();
         display.update();
     }
 
@@ -79,50 +89,115 @@ class HomeScreen : public Screen {
     }
 
    private:
-    void showStatusScreen() {
-        // Show title
+    void showBeautifulStatusScreen() {
+        // Draw clean header with signal bar
+        drawHeader();
+
+        // Draw centered IP address
+        drawCenteredIP();
+
+        // Draw uptime at bottom
+        drawUptime();
+    }
+
+    void drawHeader() {
+        // Draw title in top left
         display.setTextSize(1);
-        display.printCentered("IR Hub - Status", 0);
+        display.setTextColor(1);  // White text
+        display.print("IR Hub", 2, 4);
 
-        // Draw horizontal line
-        display.drawLine(0, 12, display.getWidth(), 12);
+        // Draw top signal bar
+        drawSignalBar();
+    }
 
-        // Show WiFi status
-        display.print("WiFi: ", 2, 20);
-        if (WiFi.status() == WL_CONNECTED) {
-            display.print("Connected", 30, 20);
+    void drawSignalBar() {
+        bool connected = WiFi.status() == WL_CONNECTED;
+
+        if (connected) {
+            int rssi = WiFi.RSSI();
+            int signalStrength = map(rssi, -100, -30, 1, 5);  // Map RSSI to 1-5 bars
+            signalStrength = constrain(signalStrength, 1, 5);
+
+            // Draw signal bars on the right (in correct order)
+            for (int i = 0; i < signalStrength; i++) {
+                int barHeight = (i + 1) * 2;
+                int barWidth = 3;
+                int x = 106 + (i * 4);  // Start from left side of right area
+                int y = 12 - barHeight;
+                display.fillRect(x, y, barWidth, barHeight);
+            }
+
         } else {
-            display.print("Disconnected", 30, 20);
+            // Draw disconnected state on the right
+            display.drawRect(106, 2, 20, 8);
+            display.drawLine(108, 4, 124, 10);
+            display.drawLine(108, 10, 124, 4);
         }
+    }
 
-        // Show IP address
-        display.print("IP: ", 2, 32);
+    void drawCenteredIP() {
         if (WiFi.status() == WL_CONNECTED) {
             String ip = WiFi.localIP().toString();
-            display.print(ip, 20, 32);
+
+            // Draw IP in center of screen
+            display.setTextSize(1);
+            display.printCentered(ip, 32);
         } else {
-            display.print("N/A", 20, 32);
+            // Show disconnected message
+            display.setTextSize(1);
+            display.printCentered("Not Connected", 32);
+        }
+    }
+
+    void drawUptime() {
+        // Draw uptime at bottom
+        String uptimeStr = getFormattedUptime();
+        String fullText = "Uptime: " + uptimeStr;
+
+        // Calculate text width (approximately 6 pixels per character for text size 1)
+        int textWidth = fullText.length() * 6;
+
+        // Calculate center position for the entire uptime section
+        // Clock icon is 8x8 pixels, plus some spacing
+        int totalWidth = 8 + 4 + textWidth;   // icon + spacing + text
+        int startX = (128 - totalWidth) / 2;  // Center the entire section
+
+        // Position at the very bottom (64 - 16 = 48 for text baseline, 50 for icon center)
+        int iconY = 58;  // Bottom area for icon
+        int textY = 56;  // Bottom area for text baseline
+
+        // Draw clock icon
+        display.drawCircle(startX + 4, iconY, 4);
+        display.fillCircle(startX + 4, iconY, 1);
+
+        // Animate clock hands through all 4 positions
+        switch (animationFrame) {
+            case 0:  // 12 o'clock
+                display.drawLine(startX + 4, iconY, startX + 4, iconY - 4);
+                break;
+            case 1:  // 3 o'clock
+                display.drawLine(startX + 4, iconY, startX + 8, iconY);
+                break;
+            case 2:  // 6 o'clock
+                display.drawLine(startX + 4, iconY, startX + 4, iconY + 4);
+                break;
+            case 3:  // 9 o'clock
+                display.drawLine(startX + 4, iconY, startX, iconY);
+                break;
         }
 
-        // Show RSSI (signal strength)
-        display.print("Signal: ", 2, 44);
-        if (WiFi.status() == WL_CONNECTED) {
-            int rssi = WiFi.RSSI();
-            String signalStr = String(rssi) + " dBm";
-            display.print(signalStr, 45, 44);
-        } else {
-            display.print("N/A", 45, 44);
-        }
+        // Draw uptime text
+        display.setTextSize(1);
+        display.print(fullText, startX + 12, textY);
+    }
 
-        // Show uptime
+    String getFormattedUptime() {
         unsigned long uptime = millis() / 1000;  // Convert to seconds
         unsigned long hours = uptime / 3600;
         unsigned long minutes = (uptime % 3600) / 60;
         unsigned long seconds = uptime % 60;
 
-        display.print("Uptime: ", 2, 56);
-        String uptimeStr = String(hours) + ":" + (minutes < 10 ? "0" : "") + String(minutes) + ":" +
-                           (seconds < 10 ? "0" : "") + String(seconds);
-        display.print(uptimeStr, 45, 56);
+        return String(hours) + ":" + (minutes < 10 ? "0" : "") + String(minutes) + ":" +
+               (seconds < 10 ? "0" : "") + String(seconds);
     }
 };

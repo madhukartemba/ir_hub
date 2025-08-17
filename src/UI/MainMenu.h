@@ -69,7 +69,7 @@ class MainMenu : public Screen {
     void showMenuScreen() {
         // Show title
         display.setTextSize(1);
-        display.printCentered("IR Hub - Main Menu", 0);
+        display.printCentered("Main Menu", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
