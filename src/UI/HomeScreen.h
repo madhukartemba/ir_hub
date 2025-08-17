@@ -129,9 +129,9 @@ class HomeScreen : public Screen {
 
         } else {
             // Draw disconnected state on the right
-            display.drawRect(108, 2, 20, 8);
-            display.drawLine(110, 4, 126, 10);
-            display.drawLine(110, 10, 126, 4);
+            display.setTextSize(1);
+            display.setTextColor(1);
+            display.print("X", 115, 4);
         }
     }
 
