@@ -1,5 +1,4 @@
 #include <ESP.h>
-#include <WiFiManager.h>
 #include "../../global/Global.h"
 #include "../../utils/MenuUtils.h"
 #include "ClearDataConfirmation.h"
@@ -38,7 +37,6 @@ class Settings : public Screen {
 
         button.setLongPressCallback([this]() {
             LOG_DEBUG("Settings onButtonLongPress");
-            WiFiManager wifiManager;  // Declare outside switch to avoid initialization bypass
 
             switch (currentState) {
                 case State::RESTART:
@@ -52,8 +50,8 @@ class Settings : public Screen {
                     break;
                 case State::WIFI_WIPE:
                     LOG_DEBUG("Settings onButtonLongPress WIFI_WIPE");
-                    // Wipe WiFi credentials
-                    wifiManager.resetSettings();
+                    // Wipe WiFi credentials using our WiFiManagerLib
+                    wifiManager.resetWiFi();
                     // Restart to trigger WiFi setup
                     currentState = State::RESTARTING;
                     restartStartTime = millis();
