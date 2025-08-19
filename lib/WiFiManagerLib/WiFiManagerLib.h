@@ -141,10 +141,6 @@ class WiFiManagerLib {
         LOG_INFO("OTA Ready");
     }
 
-    void displayWiFiStatus() {
-        // This method can be implemented if needed for displaying WiFi status
-    }
-
    public:
     WiFiManagerLib(Display& display, Speaker& speaker)
         : display(display), speaker(speaker), wifiConnected(false) {}
