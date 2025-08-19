@@ -148,7 +148,7 @@ void setup() {
 
 // Demo variables
 unsigned long lastDemoChange = 0;
-const unsigned long DEMO_INTERVAL = 5000;  // 8 seconds per mode
+const unsigned long DEMO_INTERVAL = 10000;  // 8 seconds per mode
 int currentDemoMode = 0;
 const int NUM_DEMO_MODES = 5;
 
@@ -172,8 +172,8 @@ void runLedDemo() {
                 LOG_DEBUG("Demo: Rainbow mode");
                 break;
             case 3:
-                ring.progress(5, CRGB::WhiteSmoke, 0.9f);
-                LOG_DEBUG("Demo: Progress mode - Red (70%)");
+                ring.pulse(5, CRGB::WhiteSmoke, 3);
+                LOG_DEBUG("Demo: Pulse mode");
                 break;
             case 4:
                 ring.off();

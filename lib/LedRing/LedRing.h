@@ -4,7 +4,7 @@
 
 class LedRing {
    public:
-    enum State { OFF, WAVE, BREATHE, PROGRESS, RAINBOW };
+    enum State { OFF, WAVE, BREATHE, PROGRESS, RAINBOW, PULSE };
 
     LedRing() {}
     ~LedRing() {}
@@ -28,6 +28,9 @@ class LedRing {
         this->centerLed = centerLed;
         waveWidth = 255;        // Default wave width (full width)
         progressValue = -1.0f;  // -1 means use animated progress, 0.0-1.0 means static progress
+        pulseCount = 3;         // Default pulse count
+        pulsesCompleted = 0;    // Track completed pulses
+        pulseStartTime = 0;     // Track when current pulse started
         switch (pin) {
             case D7:
                 FastLED.addLeds<WS2812B, D7, GRB>(leds, numLeds);
@@ -49,6 +52,12 @@ class LedRing {
             transitionStartTime = millis();  // Capture the exact moment transition starts
             lastUpdateTime = millis();
 
+            // Reset pulse counters when entering PULSE mode
+            if (newState == PULSE) {
+                pulsesCompleted = 0;
+                pulseStartTime = millis();
+            }
+
             // Capture current LED state as snapshot for smooth blending
             for (uint16_t i = 0; i < numLeds; i++) {
                 transitionSnapshot[i] = leds[i];
@@ -57,7 +66,7 @@ class LedRing {
     }
 
     void nextState() {
-        State ns = static_cast<State>((targetState + 1) % 5);
+        State ns = static_cast<State>((targetState + 1) % 6);  // Updated to 6 states
         setState(ns);
     }
 
@@ -76,10 +85,20 @@ class LedRing {
 
     void setProgressValue(float progress) { progressValue = constrain(progress, 0.0f, 1.0f); }
 
+    void setPulseCount(uint8_t count) {
+        pulseCount = (count > 0) ? count : 1;  // Ensure at least 1 pulse
+    }
+
     void resetTransition() {
         transitionProgress = 0.0f;
         transitionStartTime = millis();
         lastUpdateTime = millis();
+
+        // Reset pulse counters
+        if (targetState == PULSE) {
+            pulsesCompleted = 0;
+            pulseStartTime = millis();
+        }
 
         // Capture current state
         for (uint16_t i = 0; i < numLeds; i++) {
@@ -116,6 +135,14 @@ class LedRing {
         setSpeed(rainbowSpeed);
         resetTransition();
         setState(RAINBOW);
+    }
+
+    void pulse(uint8_t pulseSpeed = 5, const CRGB& pulseColor = CRGB::White, uint8_t count = 3) {
+        setSpeed(pulseSpeed);
+        setColor(pulseColor);
+        setPulseCount(count);
+        resetTransition();
+        setState(PULSE);
     }
 
     void off() {
@@ -169,7 +196,10 @@ class LedRing {
     CRGB color;
     uint16_t centerLed;
     uint8_t waveWidth;
-    float progressValue;  // -1 means use animated progress, 0.0-1.0 means static progress
+    float progressValue;           // -1 means use animated progress, 0.0-1.0 means static progress
+    uint8_t pulseCount;            // Number of pulses to perform
+    uint8_t pulsesCompleted;       // Number of pulses completed
+    unsigned long pulseStartTime;  // When current pulse sequence started
 
     void fillState(State s, CRGB* buffer, unsigned long t) {
         switch (s) {
@@ -227,6 +257,27 @@ class LedRing {
 
             case RAINBOW: {
                 fill_rainbow(buffer, numLeds, (t / ((11 - speed) * 10)) % 255, 255 / numLeds);
+                break;
+            }
+
+            case PULSE: {
+                // Calculate pulse timing based on speed (slower speed = longer pulse period)
+                unsigned long pulsePeriod = (11 - speed) * 200;  // 200-2000ms per pulse
+                unsigned long timeSinceStart = t - pulseStartTime;
+                unsigned long currentPulseTime = timeSinceStart % pulsePeriod;
+                uint8_t currentPulseNumber = timeSinceStart / pulsePeriod;
+
+                if (currentPulseNumber < pulseCount) {
+                    // Still pulsing - create sine wave pulse
+                    float pulsePhase = (float)currentPulseTime / pulsePeriod;
+                    uint8_t b = sin8(pulsePhase * 255) / 2 + 127;  // Sine wave from 127 to 255
+                    fill_solid(buffer, numLeds, color);
+                    for (uint16_t i = 0; i < numLeds; i++) {
+                        buffer[i].fadeLightBy(255 - b);
+                    }
+                } else {
+                    setState(OFF);
+                }
                 break;
             }
         }
