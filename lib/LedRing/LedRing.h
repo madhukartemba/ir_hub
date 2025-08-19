@@ -15,6 +15,7 @@ class LedRing {
         leds = new CRGB[numLeds];
         tempPrev = new CRGB[numLeds];
         tempTarget = new CRGB[numLeds];
+        transitionSnapshot = new CRGB[numLeds];  // New snapshot buffer
         currentState = OFF;
         targetState = OFF;
         previousState = OFF;
@@ -23,6 +24,7 @@ class LedRing {
         color = CRGB::White;  // default
         transitionProgress = 1.0f;
         lastUpdateTime = millis();
+        transitionStartTime = millis();  // Initialize transition start time
         this->centerLed = centerLed;
         waveWidth = 255;        // Default wave width (full width)
         progressValue = -1.0f;  // -1 means use animated progress, 0.0-1.0 means static progress
@@ -44,7 +46,13 @@ class LedRing {
             previousState = currentState;
             targetState = newState;
             transitionProgress = 0.0f;
+            transitionStartTime = millis();  // Capture the exact moment transition starts
             lastUpdateTime = millis();
+
+            // Capture current LED state as snapshot for smooth blending
+            for (uint16_t i = 0; i < numLeds; i++) {
+                transitionSnapshot[i] = leds[i];
+            }
         }
     }
 
@@ -70,7 +78,13 @@ class LedRing {
 
     void resetTransition() {
         transitionProgress = 0.0f;
+        transitionStartTime = millis();
         lastUpdateTime = millis();
+
+        // Capture current state
+        for (uint16_t i = 0; i < numLeds; i++) {
+            transitionSnapshot[i] = leds[i];
+        }
     }
 
     // Convenience methods to set states with parameters
@@ -123,11 +137,17 @@ class LedRing {
             }
         }
 
-        fillState(previousState, tempPrev, now);
-        fillState(targetState, tempTarget, now);
+        if (transitionProgress < 1.0f) {
+            // During transition, blend from snapshot to target state
+            fillState(targetState, tempTarget, now);
 
-        for (uint16_t i = 0; i < numLeds; i++) {
-            leds[i] = blend(tempPrev[i], tempTarget[i], uint8_t(transitionProgress * 255));
+            for (uint16_t i = 0; i < numLeds; i++) {
+                leds[i] =
+                    blend(transitionSnapshot[i], tempTarget[i], uint8_t(transitionProgress * 255));
+            }
+        } else {
+            // Transition complete, just show target state
+            fillState(currentState, leds, now);
         }
 
         FastLED.show();
@@ -139,12 +159,14 @@ class LedRing {
     CRGB* leds;
     CRGB* tempPrev;
     CRGB* tempTarget;
+    CRGB* transitionSnapshot;  // New buffer to store state at transition start
 
     State currentState, targetState, previousState;
     uint8_t brightness;
     uint8_t speed;
     float transitionProgress;
     unsigned long lastUpdateTime;
+    unsigned long transitionStartTime;  // Track when transition started
     CRGB color;
     uint16_t centerLed;
     uint8_t waveWidth;
