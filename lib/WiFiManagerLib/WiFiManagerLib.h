@@ -13,8 +13,8 @@ class WiFiManagerLib {
    private:
     WiFiManager wifiManager;
     Display& display;
-    Speaker& speaker;
     LedRing& ring;
+    Speaker& speaker;
     bool wifiConnected;
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
