@@ -160,11 +160,11 @@ void runLedDemo() {
 
         switch (currentDemoMode) {
             case 0:
-                ring.wave(7, CRGB::Blue, 255);
+                ring.wave(10, CRGB::Yellow, 255);
                 LOG_DEBUG("Demo: Wave mode - Blue");
                 break;
             case 1:
-                ring.breathe(6, CRGB::Green);
+                ring.breathe(6, CRGB::Blue);
                 LOG_DEBUG("Demo: Breathe mode - Green");
                 break;
             case 2:
@@ -172,7 +172,7 @@ void runLedDemo() {
                 LOG_DEBUG("Demo: Rainbow mode");
                 break;
             case 3:
-                ring.progress(5, CRGB::Red, CENTER_LED, 0.7f);
+                ring.progress(5, CRGB::WhiteSmoke, 0.9f);
                 LOG_DEBUG("Demo: Progress mode - Red (70%)");
                 break;
             case 4:

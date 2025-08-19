@@ -104,10 +104,9 @@ class LedRing {
     }
 
     void progress(uint8_t progressSpeed = 5, const CRGB& progressColor = CRGB::White,
-                  uint16_t center = 0, float progress = -1.0f) {
+                  float progress = -1.0f) {
         setSpeed(progressSpeed);
         setColor(progressColor);
-        setCenterLed(center);
         setProgressValue(progress);
         resetTransition();
         setState(PROGRESS);
