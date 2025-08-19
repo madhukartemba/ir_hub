@@ -16,11 +16,17 @@ class WiFiManagerLib {
     LedRing& ring;
     Speaker& speaker;
     bool wifiConnected;
+    bool apTimeout;
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
+        this->apTimeout = apTimeout;
+
         // Configure timeout (in seconds)
         wifiManager.setConfigPortalTimeout(apTimeout);
         wifiManager.setConnectTimeout(connectTimeout);
+
+        // Non blocking connection
+        wifiManager.setConfigPortalBlocking(false);
 
         // Disable OTA update options and other advanced features
         wifiManager.setBreakAfterConfig(true);    // Exit after configuration
@@ -205,6 +211,8 @@ class WiFiManagerLib {
 
         return wifiConnected;
     }
+
+    void process() { wifiManager.process(); }
 
     bool isConnected() const { return wifiConnected && WiFi.status() == WL_CONNECTED; }
 

@@ -118,8 +118,17 @@ void setup() {
     }
     LOG_DEBUG("LED ring initialized on pin");
 
+    ring.wave(7, CRGB::Blue, 64);
+
     // Initialize WiFi Manager
     bool wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
+
+    while (!wifiManager.isConnected()) {
+        wifiManager.process();
+        ring.update();
+    }
+
+    wifiConnected = wifiManager.isConnected();
 
     // Initialize AlexaConnector (will handle WiFi status internally)
     alexaConnector.begin();
@@ -142,6 +151,8 @@ void setup() {
     // Play startup sound
     speaker.playStartupSound();
     LOG_DEBUG("Startup sound played");
+
+    ring.pulse(3, CRGB::Green, 1);
 
     LOG_INFO("IR Hub: System Ready");
 }
