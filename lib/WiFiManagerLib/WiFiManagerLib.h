@@ -14,6 +14,7 @@ class WiFiManagerLib {
     WiFiManager wifiManager;
     Display& display;
     Speaker& speaker;
+    LedRing& ring;
     bool wifiConnected;
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
@@ -142,8 +143,8 @@ class WiFiManagerLib {
     }
 
    public:
-    WiFiManagerLib(Display& display, Speaker& speaker)
-        : display(display), speaker(speaker), wifiConnected(false) {}
+    WiFiManagerLib(Display& display, LedRing& ring, Speaker& speaker)
+        : display(display), ring(ring), speaker(speaker), wifiConnected(false) {}
 
     bool begin(const char* apName = "IRHub Setup", int apTimeout = 180, int connectTimeout = 60) {
         setupWiFiManager(apName, apTimeout, connectTimeout);

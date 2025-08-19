@@ -10,4 +10,4 @@ IdGen idGen;
 IRManager irManager;
 DeviceManager deviceManager(idGen);
 AlexaConnector alexaConnector(deviceManager, irManager);
-WiFiManagerLib wifiManager(display, speaker);
+WiFiManagerLib wifiManager(display, ring, speaker);
