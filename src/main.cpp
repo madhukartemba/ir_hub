@@ -146,52 +146,10 @@ void setup() {
     LOG_INFO("IR Hub: System Ready");
 }
 
-// Demo variables
-unsigned long lastDemoChange = 0;
-const unsigned long DEMO_INTERVAL = 10000;  // 8 seconds per mode
-int currentDemoMode = 0;
-const int NUM_DEMO_MODES = 5;
-
-void runLedDemo() {
-    unsigned long now = millis();
-
-    if (now - lastDemoChange >= DEMO_INTERVAL) {
-        lastDemoChange = now;
-
-        switch (currentDemoMode) {
-            case 0:
-                ring.wave(10, CRGB::Yellow, 255);
-                LOG_DEBUG("Demo: Wave mode - Blue");
-                break;
-            case 1:
-                ring.breathe(6, CRGB::Blue);
-                LOG_DEBUG("Demo: Breathe mode - Green");
-                break;
-            case 2:
-                ring.rainbow(8);
-                LOG_DEBUG("Demo: Rainbow mode");
-                break;
-            case 3:
-                ring.pulse(5, CRGB::WhiteSmoke, 3);
-                LOG_DEBUG("Demo: Pulse mode");
-                break;
-            case 4:
-                ring.off();
-                LOG_DEBUG("Demo: Off mode");
-                break;
-        }
-
-        currentDemoMode = (currentDemoMode + 1) % NUM_DEMO_MODES;
-    }
-}
-
 void loop() {
     wifiManager.update();  // Handle WiFi and OTA updates
     router.update();       // Main app logic now handled by router
     button.update();
     ring.update();
     alexaConnector.update();
-
-    // Run LED demo
-    runLedDemo();
 }
