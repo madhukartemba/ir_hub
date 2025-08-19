@@ -36,17 +36,14 @@ class WiFiManagerLib {
         // Customize the portal appearance
         wifiManager.setTitle("IR Hub Wi-Fi Setup");
 
-        // Set custom callbacks for better user experience - use simpler callbacks to avoid memory
-        // issues
-        wifiManager.setAPCallback([this](WiFiManager* myWiFiManager) {
-            if (myWiFiManager != nullptr) {
-                display.clear();
-                display.printCentered("WiFi Setup Mode", 6);
-                display.printCentered("Connect to AP", 20);
-                display.printCentered("IRHub Setup", 35);
-                display.printCentered("IP: 192.168.4.1", 50);
-                display.update();
-            }
+        // Set custom callbacks for better user experience
+        wifiManager.setAPCallback([this, apName](WiFiManager* myWiFiManager) {
+            display.clear();
+            display.printCentered("WiFi Setup Mode", 6);
+            display.printCentered("Connect to AP", 20);
+            display.printCentered(apName, 35);
+            display.printCentered("IP: 192.168.4.1", 50);
+            display.update();
         });
 
         wifiManager.setSaveConfigCallback([this]() {
@@ -156,31 +153,26 @@ class WiFiManagerLib {
         : display(display), ring(ring), speaker(speaker), wifiConnected(false) {}
 
     bool begin(const char* apName = "IRHub Setup", int apTimeout = 180, int connectTimeout = 60) {
-        try {
-            setupWiFiManager(apName, apTimeout, connectTimeout);
+        setupWiFiManager(apName, apTimeout, connectTimeout);
 
-            // Check if WiFi credentials exist using WiFiManager
-            bool hasCredentials = wifiManager.getWiFiIsSaved();
+        // Check if WiFi credentials exist using WiFiManager
+        bool hasCredentials = wifiManager.getWiFiIsSaved();
 
-            if (hasCredentials) {
-                display.clear();
-                display.printCentered("IR Hub", 20);
-                display.printCentered("Connecting...", 40);
-                display.update();
+        if (hasCredentials) {
+            display.clear();
+            display.printCentered("IR Hub", 20);
+            display.printCentered("Connecting...", 40);
+            display.update();
 
-                LOG_INFO("Found saved WiFi credentials, attempting connection...");
-                LOG_DEBUG("Saved SSID: %s", WiFi.SSID().c_str());
-            }
-
-            LOG_INFO("Starting WiFi connection attempt...");
-            LOG_DEBUG("WiFi timeout set to %d seconds", connectTimeout);
-
-            // Try to connect to WiFi with error handling
-            wifiConnected = wifiManager.autoConnect(apName);
-        } catch (...) {
-            LOG_ERROR("Exception occurred during WiFi setup");
-            wifiConnected = false;
+            LOG_INFO("Found saved WiFi credentials, attempting connection...");
+            LOG_DEBUG("Saved SSID: %s", WiFi.SSID().c_str());
         }
+
+        LOG_INFO("Starting WiFi connection attempt...");
+        LOG_DEBUG("WiFi timeout set to %d seconds", connectTimeout);
+
+        // Try to connect to WiFi
+        wifiConnected = wifiManager.autoConnect(apName);
 
         if (wifiConnected) {
             LOG_INFO("WiFi connection successful!");
@@ -233,34 +225,6 @@ class WiFiManagerLib {
     void resetWiFi() {
         wifiManager.resetSettings();
         LOG_INFO("WiFi settings reset");
-    }
-
-    // Safe method to start configuration portal
-    bool startConfigPortal(const char* apName = "IRHub Setup") {
-        try {
-            LOG_INFO("Starting WiFi configuration portal");
-            display.clear();
-            display.printCentered("WiFi Config", 10);
-            display.printCentered("Starting...", 30);
-            display.update();
-
-            // Ensure WiFi is in AP mode
-            WiFi.mode(WIFI_AP);
-
-            // Start the configuration portal
-            bool result = wifiManager.startConfigPortal(apName);
-
-            if (result) {
-                LOG_INFO("Configuration portal started successfully");
-            } else {
-                LOG_ERROR("Failed to start configuration portal");
-            }
-
-            return result;
-        } catch (...) {
-            LOG_ERROR("Exception occurred while starting configuration portal");
-            return false;
-        }
     }
 };
 

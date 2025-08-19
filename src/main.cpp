@@ -158,14 +158,9 @@ void setup() {
 }
 
 void loop() {
-    try {
-        wifiManager.update();  // Handle WiFi and OTA updates
-        router.update();       // Main app logic now handled by router
-        button.update();
-        ring.update();
-        alexaConnector.update();
-    } catch (...) {
-        LOG_ERROR("Exception in main loop - restarting");
-        ESP.restart();
-    }
+    wifiManager.update();  // Handle WiFi and OTA updates
+    router.update();       // Main app logic now handled by router
+    button.update();
+    ring.update();
+    alexaConnector.update();
 }
