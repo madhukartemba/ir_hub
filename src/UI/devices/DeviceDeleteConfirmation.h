@@ -11,6 +11,7 @@ class DeviceDeleteConfirmation : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDeleteConfirmation onEnter for device %d", device.id);
+        ring.solid(CRGB::DarkRed);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -64,5 +65,8 @@ class DeviceDeleteConfirmation : public Screen {
         display.printCentered(confirmed ? "NO" : "> NO <", 55);
     }
 
-    void onExit() override { LOG_DEBUG("DeviceDeleteConfirmation onExit"); }
+    void onExit() override {
+        LOG_DEBUG("DeviceDeleteConfirmation onExit");
+        ring.off();
+    }
 };

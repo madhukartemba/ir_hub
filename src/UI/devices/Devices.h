@@ -15,6 +15,8 @@ class Devices : public Screen {
         selectedIndex = 0;
         loadDevices();
 
+        ring.solid(CRGB::CornflowerBlue, 32);
+
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("Devices onButtonClick");
@@ -79,5 +81,8 @@ class Devices : public Screen {
         MenuUtils::drawScrollableMenu(menuItems, selectedIndex, 3, 20);
     }
 
-    void onExit() override { LOG_DEBUG("Devices onExit"); }
+    void onExit() override {
+        LOG_DEBUG("Devices onExit");
+        ring.off();
+    }
 };

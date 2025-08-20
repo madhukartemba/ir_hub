@@ -10,6 +10,7 @@ class DeviceDetails : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDetails onEnter for device %d", device.id);
+        ring.solid(CRGB::DarkGreen, 32);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -61,5 +62,8 @@ class DeviceDetails : public Screen {
         y += 10;
     }
 
-    void onExit() override { LOG_DEBUG("DeviceDetails onExit"); }
+    void onExit() override {
+        LOG_DEBUG("DeviceDetails onExit");
+        ring.off();
+    }
 };

@@ -4,6 +4,7 @@ class ClearDataConfirmation : public Screen {
    public:
     void onEnter() override {
         LOG_DEBUG("ClearDataConfirmation onEnter");
+        ring.solid(CRGB::Red);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("ClearDataConfirmation onButtonClick - Exit");
@@ -40,7 +41,10 @@ class ClearDataConfirmation : public Screen {
         display.update();
     }
 
-    void onExit() override { LOG_DEBUG("ClearDataConfirmation onExit"); }
+    void onExit() override {
+        LOG_DEBUG("ClearDataConfirmation onExit");
+        ring.off();
+    }
 
    private:
     void clearAllDataAndRestart() {

@@ -23,6 +23,8 @@ class Settings : public Screen {
         currentState = State::RESTART;
         selectedIndex = 0;
 
+        ring.breathe(CRGB::DarkBlue);
+
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");
             if (currentState == State::RESTARTING) {
@@ -83,7 +85,10 @@ class Settings : public Screen {
         display.update();
     }
 
-    void onExit() override { LOG_DEBUG("Settings onExit"); }
+    void onExit() override {
+        LOG_DEBUG("Settings onExit");
+        ring.off();
+    }
 
     void drawMenu() {
         // Draw title
