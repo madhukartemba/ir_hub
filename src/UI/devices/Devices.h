@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <algorithm>
 #include "../../global/Global.h"
-#include "../../utils/MenuUtils.h"
 #include "../../preferences.h"
+#include "../../utils/MenuUtils.h"
 #include "DeviceActions.h"
 
 class Devices : public Screen {
@@ -69,7 +69,7 @@ class Devices : public Screen {
         // Create menu items vector
         std::vector<std::string> menuItems;
         for (const auto& device : devices) {
-            String deviceText = String(device.id) + ": " + device.name;
+            String deviceText = device.name;
             // Truncate if too long
             if (deviceText.length() > 16) {
                 deviceText = deviceText.substring(0, 13) + "...";

@@ -87,18 +87,15 @@ class DeviceDetails : public Screen {
         display.setTextSize(1);
 
         String description = device.onCommand.getDescription();
+        LOG_DEBUG("On command description: %s", description.c_str());
         if (description.isEmpty()) {
             display.printCentered("No description", 30);
         } else {
-            // Split description into multiple lines if needed
-            display.print("Description:", 0, y);
-            y += 10;
-
             // Handle long descriptions by wrapping text
             if (description.length() > 16) {
                 // Split into multiple lines
                 unsigned int startPos = 0;
-                while (startPos < description.length() && y < 50) {
+                while (startPos < description.length() && y < 64) {
                     String line = description.substring(startPos, startPos + 16);
                     display.print(line, 0, y);
                     y += 10;
@@ -123,13 +120,10 @@ class DeviceDetails : public Screen {
         display.setTextSize(1);
 
         String description = device.offCommand.getDescription();
+        LOG_DEBUG("Off command description: %s", description.c_str());
         if (description.isEmpty()) {
             display.printCentered("No description", 30);
         } else {
-            // Split description into multiple lines if needed
-            display.print("Description:", 0, y);
-            y += 10;
-
             // Handle long descriptions by wrapping text
             if (description.length() > 16) {
                 // Split into multiple lines

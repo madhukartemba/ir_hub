@@ -35,16 +35,15 @@ class HomeScreen : public Screen {
                 LOG_DEBUG("Screen turned back on from blanked state");
                 return;
             }
-
-            // Navigate to main menu
-            LOG_DEBUG("HomeScreen onButtonClick - navigating to MainMenu");
-            router.push(new MainMenu());
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
             // Reset activity timer
             lastActivityTime = millis();
+
+            // Long press could be used for system functions in the future
+            LOG_DEBUG("HomeScreen onButtonLongPress");
 
             // If screen is blanked, turn it back on
             if (isBlanked) {
@@ -55,8 +54,9 @@ class HomeScreen : public Screen {
                 return;
             }
 
-            // Long press could be used for system functions in the future
-            LOG_DEBUG("HomeScreen onButtonLongPress");
+            // Navigate to main menu
+            LOG_DEBUG("HomeScreen onButtonClick - navigating to MainMenu");
+            router.push(new MainMenu());
         });
     }
 
