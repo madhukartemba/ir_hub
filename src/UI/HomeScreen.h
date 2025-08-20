@@ -96,9 +96,9 @@ class HomeScreen : public Screen {
    private:
     void ringColor() {
         if (wifiManager.isConnected()) {
-            ring.wave(1, CRGB::Green, 128);
+            ring.wave(1, CRGB::Green);
         } else {
-            ring.wave(1, CRGB::Red, 128);
+            ring.wave(1, CRGB::Red);
         }
     }
 
