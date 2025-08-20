@@ -19,7 +19,7 @@ class AddDevice : public Screen {
     IRCode firstCode;
     IRCode secondCode;
     unsigned long recordingStartTime;
-    const unsigned long RECORDING_TIMEOUT = 5000;  // 5 seconds timeout
+    const unsigned long RECORDING_TIMEOUT = 10000;  // 10 seconds timeout
 
    public:
     AddDevice()
@@ -32,6 +32,7 @@ class AddDevice : public Screen {
         isTimeoutError = false;
         firstCode = IRCode();
         secondCode = IRCode();
+        ring.off();
 
         button.setClickCallback([this]() {
             LOG_DEBUG("AddDevice onButtonClick");
@@ -46,6 +47,7 @@ class AddDevice : public Screen {
                 case State::SUCCESS:
                 case State::ERROR:
                     // Go back to main menu
+                    ring.off();
                     router.pop();
                     break;
                 default:
@@ -80,6 +82,7 @@ class AddDevice : public Screen {
                 stopRecordingSecond();
             }
             currentState = State::ERROR;
+            setLedRingError();
         }
 
         // Check for IR code reception during recording
@@ -131,9 +134,36 @@ class AddDevice : public Screen {
     }
 
    private:
+    // LED Ring Methods for different states
+    void setLedRingRecording() {
+        // Breathing blue pattern during recording
+        ring.wave(5, CRGB::RoyalBlue, 32);
+    }
+
+    void setLedRingSuccess() {
+        // Green pulse for success
+        ring.rainbow(5);
+    }
+
+    void setLedRingError() {
+        // Red pulse for errors
+        ring.pulse(5, CRGB::Red, 3);
+    }
+
+    void setLedRingFirstCodeSuccess() {
+        // Green pulse for first code success
+        ring.pulse(5, CRGB::Green, 2);
+    }
+
+    void setLedRingSecondCodeSuccess() {
+        // Green pulse with more pulses for second code success
+        ring.pulse(3, CRGB::Green, 3);
+    }
+
     void startRecordingFirst() {
         LOG_DEBUG("Starting first code IR recording");
         currentState = State::RECORDING_FIRST;
+        setLedRingRecording();
         recordingStartTime = millis();
         irManager.startCapture();
     }
@@ -143,11 +173,13 @@ class AddDevice : public Screen {
         irManager.stopCapture();
 
         if (irManager.isValid()) {
+            setLedRingFirstCodeSuccess();
             firstCode = irManager.getLastCode();
             hasFirstCode = true;
             currentState = State::READY_TO_RECORD_SECOND;
             LOG_INFO("First code recorded successfully");
         } else {
+            setLedRingError();
             LOG_ERROR("Invalid first code received");
             currentState = State::ERROR;
         }
@@ -155,6 +187,7 @@ class AddDevice : public Screen {
 
     void startRecordingSecond() {
         LOG_DEBUG("Starting second code IR recording");
+        setLedRingRecording();
         currentState = State::RECORDING_SECOND;
         recordingStartTime = millis();
         irManager.startCapture();
@@ -165,6 +198,7 @@ class AddDevice : public Screen {
         irManager.stopCapture();
 
         if (irManager.isValid()) {
+            setLedRingSecondCodeSuccess();
             secondCode = irManager.getLastCode();
 
             // Compare the two codes
@@ -177,9 +211,11 @@ class AddDevice : public Screen {
                     if (deviceId != -1) {
                         LOG_INFO("Auto mode device saved with ID: %d", deviceId);
                         currentState = State::SUCCESS;
+                        setLedRingSuccess();
                     } else {
                         LOG_ERROR("Failed to save auto mode device");
                         currentState = State::ERROR;
+                        setLedRingError();
                     }
                 } else {
                     LOG_INFO("Codes don't match - saving as dual device");
@@ -188,12 +224,15 @@ class AddDevice : public Screen {
                     if (deviceId != -1) {
                         LOG_INFO("Auto mode device saved as dual device with ID: %d", deviceId);
                         currentState = State::SUCCESS;
+                        setLedRingSuccess();
                     } else {
                         LOG_ERROR("Failed to save auto mode device as dual device");
                         currentState = State::ERROR;
+                        setLedRingError();
                     }
                 }
             } else {
+                setLedRingError();
                 LOG_ERROR("Invalid codes - first: %s, second: %s",
                           firstCode.isValid() ? "valid" : "invalid",
                           secondCode.isValid() ? "valid" : "invalid");
@@ -201,6 +240,7 @@ class AddDevice : public Screen {
             }
         } else {
             LOG_ERROR("Invalid second code received");
+            setLedRingError();
             currentState = State::ERROR;
         }
     }
