@@ -47,7 +47,6 @@ class AddDevice : public Screen {
                 case State::SUCCESS:
                 case State::ERROR:
                     // Go back to main menu
-                    ring.off();
                     router.pop();
                     break;
                 default:
@@ -127,6 +126,7 @@ class AddDevice : public Screen {
 
     void onExit() override {
         LOG_DEBUG("AddDevice onExit");
+        ring.off();
         // Clean up any recording resources if needed
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
             irManager.stopCapture();

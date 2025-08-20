@@ -73,6 +73,7 @@ class Router {
             Screen* top = screenStack.top();
             screenStack.pop();
             LOG_INFO("Popped screen %d from stack", i + 1);
+            top->onExit();  // Call onExit before deleting
             delete top;
             poppedCount++;
         }
@@ -105,8 +106,10 @@ class Router {
 
         if (!screenStack.empty()) {
             LOG_DEBUG("Replacing current screen");
-            delete screenStack.top();
+            Screen* top = screenStack.top();
             screenStack.pop();
+            top->onExit();  // Call onExit before deleting
+            delete top;
         } else {
             LOG_DEBUG("Replacing empty screen stack");
         }
@@ -120,8 +123,10 @@ class Router {
         LOG_INFO("Clearing screen stack");
         int clearedCount = 0;
         while (!screenStack.empty()) {
-            delete screenStack.top();
+            Screen* top = screenStack.top();
             screenStack.pop();
+            top->onExit();  // Call onExit before deleting
+            delete top;
             clearedCount++;
         }
         LOG_INFO("Cleared %d screens from stack", clearedCount);

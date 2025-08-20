@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "../global/Global.h"
-#include "../utils/MenuUtils.h"
 #include "../ui/adddevice/AddDevice.h"
 #include "../ui/devices/Devices.h"
 #include "../ui/settings/Settings.h"
+#include "../utils/MenuUtils.h"
 
 class MainMenu : public Screen {
    private:
@@ -22,6 +22,7 @@ class MainMenu : public Screen {
         currentState = State::DEVICES;
         selectedIndex = 0;
         lastActivityTime = millis();
+        ring.solid(CRGB::GhostWhite, 32);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -66,6 +67,7 @@ class MainMenu : public Screen {
 
     void onExit() override {
         LOG_DEBUG("MainMenu onExit");
+        ring.off();
         // Make sure display is turned on when exiting
         display.turnOn();
     }
