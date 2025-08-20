@@ -13,7 +13,7 @@ class MainMenu : public Screen {
     State currentState;
     int selectedIndex;
     unsigned long lastActivityTime;
-    const unsigned long INACTIVITY_TIMEOUT = 30000;  // 30 seconds in milliseconds
+    const unsigned long INACTIVITY_TIMEOUT = 10000;  // 10 seconds in milliseconds
     const char* menuItems[3] = {"Devices", "Add Device", "Settings"};
 
    public:
