@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <functional>
 #include <stack>
 #include "../Log/Log.h"
 #include "../Screen/Screen.h"
@@ -14,13 +15,17 @@ class Router {
     bool timeoutEnabled;                // Whether timeout is enabled
     bool isDefaultScreen;               // Track if current screen is the default screen
 
+    // Activity monitoring callback
+    std::function<unsigned long()> activityCallback;  // Callback to get last activity time
+
    public:
     Router()
         : defaultScreen(nullptr),
           timeoutDuration(30000),
           lastScreenEnterTime(0),
           timeoutEnabled(false),
-          isDefaultScreen(false) {
+          isDefaultScreen(false),
+          activityCallback(nullptr) {
         LOG_DEBUG("[Router] Router initialized with timeout enabled");
     }
 
@@ -31,6 +36,12 @@ class Router {
             push(screen);
         }
         LOG_INFO("[Router] Default screen set");
+    }
+
+    // Activity monitoring setup
+    void setActivityCallback(std::function<unsigned long()> callback) {
+        activityCallback = callback;
+        LOG_INFO("[Router] Activity callback set");
     }
 
     // Timeout configuration methods
@@ -51,6 +62,17 @@ class Router {
     void resetTimeout() {
         lastScreenEnterTime = millis();
         LOG_DEBUG("[Router] Timeout reset");
+    }
+
+    // Check for activity and reset timeout if needed
+    void checkActivity() {
+        if (activityCallback && timeoutEnabled && !isDefaultScreen) {
+            unsigned long lastActivity = activityCallback();
+            if (lastActivity > lastScreenEnterTime) {
+                LOG_DEBUG("[Router] Activity detected, resetting timeout");
+                resetTimeout();
+            }
+        }
     }
 
     void push(Screen* screen) {
@@ -181,6 +203,9 @@ class Router {
 
     void update() {
         if (!screenStack.empty()) {
+            // Check for activity and reset timeout if needed
+            checkActivity();
+
             // Check for timeout
             if (timeoutEnabled && !isDefaultScreen && defaultScreen != nullptr) {
                 unsigned long currentTime = millis();

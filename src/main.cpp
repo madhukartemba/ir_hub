@@ -158,6 +158,9 @@ void setup() {
     router.setTimeoutDuration(TIMEOUT_DURATION);
     router.enableTimeout(true);
 
+    // Set up activity callback to reset timeout on button interactions
+    router.setActivityCallback([]() -> unsigned long { return button.getLastInteractionTime(); });
+
     LOG_INFO("IR Hub: System Ready");
 }
 

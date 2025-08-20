@@ -16,6 +16,7 @@ class Button {
     unsigned long longPressTime = 500;
     bool longPressTriggered = false;
     bool buttonPressed = false;
+    unsigned long lastInteractionTime = 0;  // Track last button interaction
 
     Speaker* speaker;
     bool soundEnabled = true;
@@ -43,9 +44,12 @@ class Button {
 
     void setLongPressTime(unsigned long longPressMs) { longPressTime = longPressMs; }
 
+    // Getter for last interaction time
+    unsigned long getLastInteractionTime() const { return lastInteractionTime; }
+
     void update() {
         if (!initialized) {
-            LOG_ERROR("Button not initialized");
+            LOG_ERROR("[Button] Button not initialized");
             return;
         }
 
@@ -57,6 +61,7 @@ class Button {
             pressStartTime = currentTime;
             buttonPressed = true;
             longPressTriggered = false;
+            lastInteractionTime = currentTime;  // Update interaction time on press
         }
 
         // Button is currently pressed
@@ -64,6 +69,7 @@ class Button {
             // Check if long press time has been reached
             if (!longPressTriggered && (currentTime - pressStartTime) >= longPressTime) {
                 longPressTriggered = true;
+                lastInteractionTime = currentTime;  // Update interaction time on long press
                 if (soundEnabled && speaker != nullptr) {
                     speaker->doubleBeep();
                 }
@@ -79,6 +85,7 @@ class Button {
 
             // Only trigger single click if debounce time has passed and it wasn't a long press
             if (pressDuration >= debounceTime && !longPressTriggered) {
+                lastInteractionTime = currentTime;  // Update interaction time on release
                 if (soundEnabled && speaker != nullptr) {
                     speaker->shortBeep();
                 }
