@@ -101,7 +101,7 @@ class WiFiManagerLib {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
-            ring.wave(10, CRGB::Blue, 64);
+            ring.wave(3, CRGB::Blue, 128);
             display.clear();
             display.printCentered("OTA Update", 10);
             display.printCentered("Starting...", 30);
