@@ -20,11 +20,15 @@ class LedRing {
         targetState = OFF;
         previousState = OFF;
         brightness = 255;
+        targetBrightness = 255;
+        currentBrightness = 255;
         speed = 5;            // Default to medium speed (1-10 range)
         color = CRGB::White;  // default
         transitionProgress = 1.0f;
+        brightnessTransitionProgress = 1.0f;
         lastUpdateTime = millis();
-        transitionStartTime = millis();  // Initialize transition start time
+        transitionStartTime = millis();        // Initialize transition start time
+        brightnessTransitionStart = millis();  // Initialize brightness transition start time
         this->centerLed = centerLed;
         waveWidth = 255;        // Default wave width (full width)
         progressValue = -1.0f;  // -1 means use animated progress, 0.0-1.0 means static progress
@@ -71,8 +75,12 @@ class LedRing {
     }
 
     void setBrightness(uint8_t b) {
-        brightness = b;
-        FastLED.setBrightness(brightness);
+        if (b != targetBrightness) {
+            currentBrightness = brightness;
+            targetBrightness = b;
+            brightnessTransitionStart = millis();
+            brightnessTransitionProgress = 0.0f;
+        }
     }
 
     void setSpeed(uint8_t s) { speed = s; }
@@ -156,6 +164,8 @@ class LedRing {
 
     float getTransitionProgress() { return transitionProgress; }
 
+    float getBrightnessTransitionProgress() { return brightnessTransitionProgress; }
+
     void off() {
         resetTransition();
         setState(OFF);
@@ -165,6 +175,20 @@ class LedRing {
         unsigned long now = millis();
         float delta = (now - lastUpdateTime) / 500.0f;  // Slower transition speed
         lastUpdateTime = now;
+
+        // Handle brightness transition
+        if (brightnessTransitionProgress < 1.0f) {
+            brightnessTransitionProgress += delta;
+            if (brightnessTransitionProgress >= 1.0f) {
+                brightnessTransitionProgress = 1.0f;
+                brightness = targetBrightness;
+                currentBrightness = targetBrightness;
+            } else {
+                // Smooth brightness interpolation
+                brightness = currentBrightness +
+                             (targetBrightness - currentBrightness) * brightnessTransitionProgress;
+            }
+        }
 
         if (transitionProgress < 1.0f) {
             transitionProgress += delta;
@@ -176,7 +200,7 @@ class LedRing {
 
         if (transitionProgress < 1.0f) {
             // During transition, blend from snapshot to target state
-            fillState(targetState, tempTarget, now);
+            fillState(targetState, tempTarget, now, brightness);
 
             for (uint16_t i = 0; i < numLeds; i++) {
                 leds[i] =
@@ -184,14 +208,16 @@ class LedRing {
             }
         } else {
             // Transition complete, just show target state
-            fillState(currentState, leds, now);
+            fillState(currentState, leds, now, brightness);
         }
 
+        // Apply full brightness since we're now handling it in fillState
+        FastLED.setBrightness(255);
         FastLED.show();
     }
 
     void finishTransition() {
-        while (transitionProgress < 1.0f) {
+        while (transitionProgress < 1.0f && brightnessTransitionProgress < 1.0f) {
             update();
         }
     }
@@ -206,10 +232,14 @@ class LedRing {
 
     State currentState, targetState, previousState;
     uint8_t brightness;
+    uint8_t targetBrightness;
+    uint8_t currentBrightness;
     uint8_t speed;
     float transitionProgress;
+    float brightnessTransitionProgress;
     unsigned long lastUpdateTime;
-    unsigned long transitionStartTime;  // Track when transition started
+    unsigned long transitionStartTime;        // Track when transition started
+    unsigned long brightnessTransitionStart;  // Track when brightness transition started
     CRGB color;
     uint16_t centerLed;
     uint8_t waveWidth;
@@ -218,7 +248,7 @@ class LedRing {
     uint8_t pulsesCompleted;       // Number of pulses completed
     unsigned long pulseStartTime;  // When current pulse sequence started
 
-    void fillState(State s, CRGB* buffer, unsigned long t) {
+    void fillState(State s, CRGB* buffer, unsigned long t, uint8_t currentBrightness = 255) {
         switch (s) {
             case OFF:
                 fill_solid(buffer, numLeds, CRGB::Black);
@@ -238,6 +268,8 @@ class LedRing {
                     uint8_t b = sin8(pos * 255 / waveWidth);
                     buffer[i] = color;
                     buffer[i].fadeLightBy(255 - b);
+                    // Apply brightness scaling
+                    buffer[i].fadeLightBy(255 - currentBrightness);
                 }
                 break;
             }
@@ -247,6 +279,8 @@ class LedRing {
                 fill_solid(buffer, numLeds, color);
                 for (uint16_t i = 0; i < numLeds; i++) {
                     buffer[i].fadeLightBy(255 - b);
+                    // Apply brightness scaling
+                    buffer[i].fadeLightBy(255 - currentBrightness);
                 }
                 break;
             }
@@ -268,12 +302,20 @@ class LedRing {
                         relativePos += numLeds;  // Wrap around for negative positions
                     }
                     buffer[i] = (relativePos < filled) ? color : CRGB::Black;
+                    // Apply brightness scaling to lit LEDs only
+                    if (relativePos < filled) {
+                        buffer[i].fadeLightBy(255 - currentBrightness);
+                    }
                 }
                 break;
             }
 
             case RAINBOW: {
                 fill_rainbow(buffer, numLeds, (t / ((11 - speed) * 10)) % 255, 255 / numLeds);
+                // Apply brightness scaling to all LEDs
+                for (uint16_t i = 0; i < numLeds; i++) {
+                    buffer[i].fadeLightBy(255 - currentBrightness);
+                }
                 break;
             }
 
@@ -296,6 +338,8 @@ class LedRing {
                     fill_solid(buffer, numLeds, color);
                     for (uint16_t i = 0; i < numLeds; i++) {
                         buffer[i].fadeLightBy(255 - b);
+                        // Apply brightness scaling
+                        buffer[i].fadeLightBy(255 - currentBrightness);
                     }
                 } else {
                     // All pulses completed. The last pulse has faded to black.
@@ -308,6 +352,10 @@ class LedRing {
             case SOLID: {
                 // Solid color mode - all LEDs show the same color at specified brightness
                 fill_solid(buffer, numLeds, color);
+                // Apply brightness scaling to all LEDs
+                for (uint16_t i = 0; i < numLeds; i++) {
+                    buffer[i].fadeLightBy(255 - currentBrightness);
+                }
                 break;
             }
         }
