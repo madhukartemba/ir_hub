@@ -87,25 +87,4 @@ class IRCode {
         code.description = description;
         return code;
     }
-
-    // Factory method from decode_results with AC description
-    static IRCode fromDecodeResultsWithACDescription(const decode_results& results) {
-        IRCode code;
-        code.protocol = results.decode_type;
-        code.value = results.value;
-        code.bits = results.bits;
-
-        // Generate description using IRutils
-        String description = "";
-        if (hasACState(results.decode_type)) {
-            // For AC protocols, try to get a readable description
-            description = "AC Code - " + String(typeToString(results.decode_type, false));
-        } else {
-            // For non-AC protocols, use a generic description
-            description = "Protocol: " + String(typeToString(results.decode_type, false));
-        }
-
-        code.description = description;
-        return code;
-    }
 };
