@@ -1,9 +1,9 @@
 #pragma once
 
 #include <ArduinoJson.h>
+#include <IRac.h>
 #include <IRrecv.h>
 #include <IRremoteESP8266.h>
-#include <IRutils.h>
 
 #include "Log.h"
 
@@ -74,8 +74,7 @@ class IRCode {
         code.protocol = results.decode_type;
         code.value = results.value;
         code.bits = results.bits;
-        code.description = "";
-        return code;
+        code.description = IRAcUtils::resultAcToString(&results);
     }
 
     // Factory method from decode_results with description
