@@ -129,9 +129,9 @@ void setup() {
     alexaConnector.setOnStateChangeCallback([](const Device& device, bool state) {
         LOG_DEBUG("Alexa state change: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
-            ring.pulse(5, CRGB::DeepSkyBlue, 1);
+            ring.pulse(5, CRGB::LightGreen, 1);
         } else {
-            ring.pulse(5, CRGB::Blue, 1);
+            ring.pulse(5, CRGB::Orange, 1);
         }
     });
 

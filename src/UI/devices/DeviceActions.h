@@ -80,7 +80,7 @@ class DeviceActions : public Screen {
                     LOG_INFO("Sending ON command for device %d", device.id);
                     irManager.sendProtocol(device.onCommand);
                     // Visual feedback for ON command
-                    ring.pulse(5, CRGB::DeepSkyBlue, 1);
+                    ring.pulse(5, CRGB::LightGreen, 1);
                 } else {
                     LOG_ERROR("Invalid ON command for device %d", device.id);
                     display.clear();
@@ -95,7 +95,7 @@ class DeviceActions : public Screen {
                     LOG_INFO("Sending OFF command for device %d", device.id);
                     irManager.sendProtocol(device.offCommand);
                     // Visual feedback for OFF command
-                    ring.pulse(5, CRGB::Blue, 1);
+                    ring.pulse(5, CRGB::Orange, 1);
                 } else {
                     LOG_ERROR("Invalid OFF command for device %d", device.id);
                     display.clear();
