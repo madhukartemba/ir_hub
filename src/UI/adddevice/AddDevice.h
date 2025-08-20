@@ -153,12 +153,12 @@ class AddDevice : public Screen {
 
     void setLedRingFirstCodeSuccess() {
         // Green pulse for first code success
-        ring.pulse(5, COLOR_SUCCESS_ALT, 2);
+        ring.pulse(5, COLOR_SUCCESS, 2);
     }
 
     void setLedRingSecondCodeSuccess() {
         // Green pulse with more pulses for second code success
-        ring.pulse(3, COLOR_SUCCESS_ALT, 3);
+        ring.pulse(3, COLOR_SUCCESS, 3);
     }
 
     void startRecordingFirst() {
