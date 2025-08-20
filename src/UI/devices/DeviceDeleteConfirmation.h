@@ -11,7 +11,7 @@ class DeviceDeleteConfirmation : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDeleteConfirmation onEnter for device %d", device.id);
-        ring.solid(CRGB::DarkRed);
+        ring.breathe(5, CRGB::DarkRed);
 
         // Change button behavior
         button.setClickCallback([this]() {

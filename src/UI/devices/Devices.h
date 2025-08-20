@@ -15,7 +15,7 @@ class Devices : public Screen {
         selectedIndex = 0;
         loadDevices();
 
-        ring.solid(CRGB::CornflowerBlue, 32);
+        ring.breathe(5, CRGB::CornflowerBlue);
 
         // Change button behavior
         button.setClickCallback([this]() {

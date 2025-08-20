@@ -217,7 +217,7 @@ class LedRing {
     }
 
     void finishTransition() {
-        while (transitionProgress < 1.0f && brightnessTransitionProgress < 1.0f) {
+        while (transitionProgress < 1.0f || brightnessTransitionProgress < 1.0f) {
             update();
         }
     }

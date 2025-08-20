@@ -22,7 +22,7 @@ class MainMenu : public Screen {
         currentState = State::DEVICES;
         selectedIndex = 0;
         lastActivityTime = millis();
-        ring.solid(CRGB::GhostWhite, 32);
+        ring.breathe(5, CRGB::DarkBlue);
 
         // Change button behavior
         button.setClickCallback([this]() {
