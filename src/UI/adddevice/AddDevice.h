@@ -32,7 +32,7 @@ class AddDevice : public Screen {
         isTimeoutError = false;
         firstCode = IRCode();
         secondCode = IRCode();
-        ring.off();
+        ring.breathe(5, CRGB::DarkGreen);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("AddDevice onButtonClick");
