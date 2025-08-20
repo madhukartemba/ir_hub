@@ -4,8 +4,8 @@
 #include <FastLED.h>
 
 // IR Code Colors
-#define SEND_ON_COMMAND_COLOR CRGB::LightGreen
-#define SEND_OFF_COMMAND_COLOR CRGB::DarkOrange
+#define SEND_ON_COMMAND_COLOR CRGB::Green
+#define SEND_OFF_COMMAND_COLOR CRGB::OrangeRed
 
 // Success/Positive States
 #define COLOR_SUCCESS CRGB::Green
@@ -20,6 +20,10 @@
 // Error/Danger States
 #define COLOR_ERROR CRGB::Red
 #define COLOR_ERROR_DARK CRGB::DarkRed
+
+// Home Screen Colors
+#define COLOR_HOME_SCREEN_WIFI_CONNECTED CRGB::White
+#define COLOR_HOME_SCREEN_WIFI_DISCONNECTED CRGB::Red
 
 // Information/Status States
 #define COLOR_INFO CRGB::Blue
