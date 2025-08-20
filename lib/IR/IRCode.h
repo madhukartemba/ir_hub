@@ -77,14 +77,4 @@ class IRCode {
         code.description = IRAcUtils::resultAcToString(&results);
         return code;
     }
-
-    // Factory method from decode_results with description
-    static IRCode fromDecodeResults(const decode_results& results, const String& description) {
-        IRCode code;
-        code.protocol = results.decode_type;
-        code.value = results.value;
-        code.bits = results.bits;
-        code.description = description;
-        return code;
-    }
 };
