@@ -59,17 +59,13 @@ class Router {
 
     bool isTimeoutEnabled() const { return timeoutEnabled; }
 
-    void resetTimeout() {
-        lastScreenEnterTime = millis();
-        LOG_DEBUG("[Router] Timeout reset");
-    }
+    void resetTimeout() { lastScreenEnterTime = millis(); }
 
     // Check for activity and reset timeout if needed
     void checkActivity() {
         if (activityCallback && timeoutEnabled && !isDefaultScreen) {
             unsigned long lastActivity = activityCallback();
             if (lastActivity > lastScreenEnterTime) {
-                LOG_DEBUG("[Router] Activity detected, resetting timeout");
                 resetTimeout();
             }
         }
@@ -181,7 +177,11 @@ class Router {
 
     void clear() {
         LOG_INFO("[Router] Clearing screen stack");
-        pop(screenStack.size());  // Pop all screens
+        int count = screenStack.size();
+        if (defaultScreen != nullptr) {
+            count--;
+        }
+        pop(count);  // Pop all screens except the default screen
     }
 
     void update() {
