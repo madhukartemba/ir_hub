@@ -3,9 +3,13 @@
 
 #include <FastLED.h>
 
+// IR Code Colors
+#define SEND_ON_COMMAND_COLOR CRGB::LightGreen
+#define SEND_OFF_COMMAND_COLOR CRGB::DarkOrange
+
 // Success/Positive States
-#define COLOR_SUCCESS CRGB::LightGreen
-#define COLOR_SUCCESS_ALT CRGB::Green
+#define COLOR_SUCCESS CRGB::Green
+#define COLOR_SUCCESS_ALT CRGB::LightGreen
 #define COLOR_SUCCESS_DARK CRGB::DarkGreen
 
 // Warning/Neutral States

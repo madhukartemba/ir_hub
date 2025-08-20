@@ -123,15 +123,16 @@ void setup() {
 
     // Initialize WiFi Manager
     bool wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
+    wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
 
     // Initialize AlexaConnector (will handle WiFi status internally)
     alexaConnector.begin();
     alexaConnector.setOnStateChangeCallback([](const Device& device, bool state) {
         LOG_DEBUG("Alexa state change: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
-            ring.pulse(5, COLOR_SUCCESS, 1);
+            ring.pulse(5, SEND_ON_COMMAND_COLOR, 1);
         } else {
-            ring.pulse(5, COLOR_WARNING, 1);
+            ring.pulse(5, SEND_OFF_COMMAND_COLOR, 1);
         }
     });
 

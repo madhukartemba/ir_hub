@@ -16,6 +16,10 @@ class WiFiManagerLib {
     LedRing& ring;
     Speaker& speaker;
     bool wifiConnected;
+    bool isOtaSetup = false;
+    CRGB otaColor = CRGB::Blue;
+    CRGB otaSuccessColor = CRGB::Green;
+    CRGB otaErrorColor = CRGB::Red;
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
         // Configure timeout (in seconds)
@@ -29,6 +33,7 @@ class WiFiManagerLib {
 
         // Customize the portal appearance
         wifiManager.setTitle("IR Hub Wi-Fi Setup");
+        wifiManager.setClass("invert");
 
         // Set custom callbacks for better user experience
         wifiManager.setAPCallback([this, apName](WiFiManager* myWiFiManager) {
@@ -47,34 +52,6 @@ class WiFiManagerLib {
             display.update();
         });
 
-        wifiManager.setCustomHeadElement(
-            "<style>"
-            "body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea "
-            "0%,#764ba2 "
-            "100%);"
-            "margin:0;padding:20px;color:white;}"
-            ".form-group{background:rgba(255,255,255,0.95);padding:20px;border-radius:10px;"
-            "box-shadow:0 8px 32px rgba(0,0,0,0.1);margin-bottom:20px;}"
-            "input[type='text'],input[type='password']{width:100%;padding:12px;border:2px solid "
-            "#ddd;"
-            "border-radius:6px;font-size:16px;box-sizing:border-box;transition:border-color 0.3s;"
-            "color:#333;}"
-            "input[type='text']:focus,input[type='password']:focus{border-color:#667eea;outline:"
-            "none;}"
-            "button{background:linear-gradient(135deg,#667eea 0%,#764ba2 "
-            "100%);color:white;border:none;"
-            "padding:12px "
-            "24px;border-radius:6px;font-size:16px;cursor:pointer;transition:transform "
-            "0.2s;}"
-            "button:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2);}"
-            "h1{text-align:center;color:white;margin-bottom:30px;font-size:28px;text-shadow:0 2px "
-            "4px "
-            "rgba(0,0,0,0.3);}"
-            "label{display:block;margin-bottom:8px;font-weight:bold;color:white;}"
-            ".btn-container{text-align:center;margin-top:20px;}"
-            ".btn-container button{margin:0 10px;}"
-            "</style>");
-
         // Set custom menu items to hide OTA and other advanced options
         std::vector<const char*> menu = {"wifi", "info"};
         wifiManager.setMenu(menu);
@@ -82,70 +59,8 @@ class WiFiManagerLib {
         // Add custom parameters for better user experience
         WiFiManagerParameter custom_text(
             "<p style='text-align:center;color:white;font-size:16px;margin:20px 0;'>"
-            "Welcome to IR Hub WiFi Setup</p>");
+            "IR Hub Wi-Fi Setup</p>");
         wifiManager.addParameter(&custom_text);
-    }
-
-    void setupOTA() {
-        LOG_DEBUG("Setting up OTA...");
-        display.clear();
-        display.printCentered("IR Hub", 20);
-        display.printCentered("Setting up OTA...", 40);
-        display.update();
-
-        ArduinoOTA.setHostname("ir-hub");
-
-        ArduinoOTA.onStart([this]() {
-            String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
-            LOG_INFO("Start updating " + type);
-            if (!display.isDisplayOn()) {
-                display.turnOn();
-            }
-            ring.wave(3, CRGB::Blue, 128);
-            display.clear();
-            display.printCentered("OTA Update", 10);
-            display.printCentered("Starting...", 30);
-            display.update();
-        });
-
-        ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
-            if (!display.isDisplayOn()) {
-                display.turnOn();
-            }
-            ring.update();
-            display.clear();
-            display.printCentered("OTA Update", 10);
-
-            display.drawProgressBar(10, 32, 108, 12, progress, total, true);
-
-            display.update();
-        });
-
-        ArduinoOTA.onEnd([this]() {
-            LOG_INFO("OTA Update Complete");
-            ring.solid(CRGB::Green);
-            ring.finishTransition();
-            display.clear();
-            display.printCentered("OTA Complete", 20);
-            display.printCentered("Restarting...", 40);
-            display.update();
-        });
-
-        ArduinoOTA.onError([this](ota_error_t error) {
-            if (!display.isDisplayOn()) {
-                display.turnOn();
-            }
-            ring.solid(CRGB::Red);
-            ring.finishTransition();
-            LOG_ERROR("OTA Error: " + String(error));
-            display.clear();
-            display.printCentered("OTA Error", 10);
-            display.printCentered("Error: " + String(error), 30);
-            display.update();
-        });
-
-        ArduinoOTA.begin();
-        LOG_INFO("OTA Ready");
     }
 
    public:
@@ -186,16 +101,6 @@ class WiFiManagerLib {
             display.update();
             delay(1000);
 
-            // Setup OTA
-            setupOTA();
-
-            // Display OTA info
-            display.clear();
-            display.printCentered("IR Hub", 10);
-            display.printCentered("IP: " + WiFi.localIP().toString(), 25);
-            display.printCentered("OTA: Ready", 40);
-            display.update();
-            delay(2000);
         } else {
             LOG_WARN("WiFi connection failed - continuing in offline mode");
             LOG_DEBUG("WiFi status: %d", WiFi.status());
@@ -212,11 +117,89 @@ class WiFiManagerLib {
         return wifiConnected;
     }
 
+    void setupOTA(CRGB otaColor = CRGB::Blue, CRGB otaSuccessColor = CRGB::Green,
+                  CRGB otaErrorColor = CRGB::Red) {
+        this->otaColor = otaColor;
+        this->otaSuccessColor = otaSuccessColor;
+        this->otaErrorColor = otaErrorColor;
+
+        LOG_DEBUG("Setting up OTA...");
+        display.clear();
+        display.printCentered("IR Hub", 20);
+        display.printCentered("Setting up OTA...", 40);
+        display.update();
+
+        ArduinoOTA.setHostname("ir-hub");
+
+        ArduinoOTA.onStart([this]() {
+            String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
+            LOG_INFO("Start updating " + type);
+            if (!display.isDisplayOn()) {
+                display.turnOn();
+            }
+            ring.wave(3, this->otaColor, 128);
+            display.clear();
+            display.printCentered("OTA Update", 10);
+            display.printCentered("Starting...", 30);
+            display.update();
+        });
+
+        ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
+            if (!display.isDisplayOn()) {
+                display.turnOn();
+            }
+            ring.update();
+            display.clear();
+            display.printCentered("OTA Update", 10);
+
+            display.drawProgressBar(10, 32, 108, 12, progress, total, true);
+
+            display.update();
+        });
+
+        ArduinoOTA.onEnd([this]() {
+            LOG_INFO("OTA Update Complete");
+            ring.solid(this->otaSuccessColor);
+            ring.finishTransition();
+            display.clear();
+            display.printCentered("OTA Complete", 20);
+            display.printCentered("Restarting...", 40);
+            display.update();
+        });
+
+        ArduinoOTA.onError([this](ota_error_t error) {
+            if (!display.isDisplayOn()) {
+                display.turnOn();
+            }
+            ring.solid(this->otaErrorColor);
+            ring.finishTransition();
+            LOG_ERROR("OTA Error: " + String(error));
+            display.clear();
+            display.printCentered("OTA Error", 10);
+            display.printCentered("Error: " + String(error), 30);
+            display.update();
+        });
+
+        ArduinoOTA.begin();
+        isOtaSetup = true;
+        LOG_INFO("OTA Ready");
+
+        // Display OTA info
+        display.clear();
+        display.printCentered("IR Hub", 10);
+        display.printCentered("IP: " + WiFi.localIP().toString(), 25);
+        display.printCentered("OTA: Ready", 40);
+        display.update();
+        delay(2000);
+    }
+
     bool isConnected() const { return wifiConnected && WiFi.status() == WL_CONNECTED; }
 
     void update() {
         if (isConnected()) {
-            ArduinoOTA.handle();  // Handle OTA updates only if WiFi is connected
+            if (isOtaSetup) {
+                ArduinoOTA.handle();  // Handle OTA updates only if WiFi is connected
+            }
         }
     }
 
