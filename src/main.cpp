@@ -118,6 +118,9 @@ void setup() {
     }
     LOG_DEBUG("LED ring initialized on pin");
 
+    ring.solid(CRGB::Blue, 255);
+    ring.blockingUpdate();
+
     // Initialize WiFi Manager
     bool wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
 
@@ -133,8 +136,10 @@ void setup() {
     display.printCentered("IR Hub", 20);
     if (wifiConnected) {
         display.printCentered("Ready!", 40);
+        ring.pulse(3, CRGB::Green, 3);
     } else {
         display.printCentered("Ready! (Offline)", 40);
+        ring.pulse(3, CRGB::Red, 3);
     }
     display.update();
     delay(500);

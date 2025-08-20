@@ -4,7 +4,7 @@
 
 class LedRing {
    public:
-    enum State { OFF, WAVE, BREATHE, PROGRESS, RAINBOW, PULSE };
+    enum State { OFF, WAVE, BREATHE, PROGRESS, RAINBOW, PULSE, SOLID };
 
     LedRing() {}
     ~LedRing() {}
@@ -66,7 +66,7 @@ class LedRing {
     }
 
     void nextState() {
-        State ns = static_cast<State>((targetState + 1) % 6);  // Updated to 6 states
+        State ns = static_cast<State>((targetState + 1) % 7);  // Updated to 7 states
         setState(ns);
     }
 
@@ -145,6 +145,15 @@ class LedRing {
         setState(PULSE);
     }
 
+    void solid(const CRGB& solidColor = CRGB::White, uint8_t solidBrightness = 255) {
+        setColor(solidColor);
+        setBrightness(solidBrightness);
+        resetTransition();
+        setState(SOLID);
+    }
+
+    float getTransitionProgress() { return transitionProgress; }
+
     void off() {
         resetTransition();
         setState(OFF);
@@ -177,6 +186,12 @@ class LedRing {
         }
 
         FastLED.show();
+    }
+
+    void blockingUpdate() {
+        while (transitionProgress < 1.0f) {
+            update();
+        }
     }
 
    private:
@@ -285,6 +300,12 @@ class LedRing {
                     // Now, formally switch to the OFF state.
                     setState(OFF);
                 }
+                break;
+            }
+
+            case SOLID: {
+                // Solid color mode - all LEDs show the same color at specified brightness
+                fill_solid(buffer, numLeds, color);
                 break;
             }
         }
