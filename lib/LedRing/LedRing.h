@@ -255,28 +255,19 @@ class LedRing {
                 break;
 
             case WAVE: {
-                // Smoother wave that starts from center and travels around the ring
-                float timeScale = (11 - speed) * 8.0f;  // Smoother time scaling
-                float waveTime = (float)t / timeScale;
-
+                // Wave that starts from center and travels around the ring
                 for (uint16_t i = 0; i < numLeds; i++) {
                     // Calculate position relative to center, going clockwise around the ring
                     int16_t relativePos = i - centerLed;
                     if (relativePos < 0) {
                         relativePos += numLeds;  // Wrap around for negative positions
                     }
-
-                    // Create smoother wave calculation using floating point
-                    float normalizedPos = (float)relativePos / numLeds;
-                    float wavePos = (normalizedPos * waveWidth + waveTime) / waveWidth;
-
-                    // Use smoother sine calculation with floating point
-                    float sineValue = sin(wavePos * 2 * PI);
-                    uint8_t brightness =
-                        (uint8_t)((sineValue + 1.0f) * 127.5f);  // Convert -1,1 to 0,255
-
+                    // Create wave that starts from center and travels clockwise
+                    uint8_t pos =
+                        (relativePos * waveWidth / numLeds + t / ((11 - speed) * 10)) % waveWidth;
+                    uint8_t b = sin8(pos * 255 / waveWidth);
                     buffer[i] = color;
-                    buffer[i].fadeLightBy(255 - brightness);
+                    buffer[i].fadeLightBy(255 - b);
                     // Apply brightness scaling
                     buffer[i].fadeLightBy(255 - currentBrightness);
                 }
