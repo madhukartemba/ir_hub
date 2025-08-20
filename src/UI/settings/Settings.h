@@ -23,7 +23,7 @@ class Settings : public Screen {
         currentState = State::RESTART;
         selectedIndex = 0;
 
-        ring.breathe(CRGB::DarkBlue);
+        ring.breathe(5, CRGB::DarkBlue);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");
