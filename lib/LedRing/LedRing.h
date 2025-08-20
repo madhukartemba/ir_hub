@@ -107,10 +107,12 @@ class LedRing {
     }
 
     // Convenience methods to set states with parameters
-    void wave(uint8_t waveSpeed = 5, const CRGB& waveColor = CRGB::White, uint8_t width = 255) {
+    void wave(uint8_t waveSpeed = 5, const CRGB& waveColor = CRGB::White, uint8_t width = 255,
+              uint8_t brightness = 255) {
         setSpeed(waveSpeed);
         setColor(waveColor);
         setWaveWidth(width);
+        setBrightness(brightness);
         resetTransition();
         setState(WAVE);
     }
@@ -188,7 +190,7 @@ class LedRing {
         FastLED.show();
     }
 
-    void blockingUpdate() {
+    void finishTransition() {
         while (transitionProgress < 1.0f) {
             update();
         }

@@ -19,6 +19,7 @@ class HomeScreen : public Screen {
         isBlanked = false;
         animationTimer = millis();
         animationFrame = 0;
+        ringColor();
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -28,6 +29,7 @@ class HomeScreen : public Screen {
             // If screen is blanked, turn it back on
             if (isBlanked) {
                 display.turnOn();
+                ringColor();
                 isBlanked = false;
                 LOG_DEBUG("Screen turned back on from blanked state");
                 return;
@@ -46,6 +48,7 @@ class HomeScreen : public Screen {
             // If screen is blanked, turn it back on
             if (isBlanked) {
                 display.turnOn();
+                ringColor();
                 isBlanked = false;
                 LOG_DEBUG("Screen turned back on from blanked state");
                 return;
@@ -61,6 +64,7 @@ class HomeScreen : public Screen {
         if (!isBlanked && (millis() - lastActivityTime) > STATUS_BLANK_TIMEOUT) {
             isBlanked = true;
             display.turnOff();
+            ring.off();
             LOG_DEBUG("Screen blanked due to inactivity on status screen");
             return;  // Don't update display when blanked
         }
@@ -84,11 +88,20 @@ class HomeScreen : public Screen {
 
     void onExit() override {
         LOG_DEBUG("HomeScreen onExit");
+        ring.off();
         // Make sure display is turned on when exiting
         display.turnOn();
     }
 
    private:
+    void ringColor() {
+        if (wifiManager.isConnected()) {
+            ring.wave(1, CRGB::Green, 128);
+        } else {
+            ring.wave(1, CRGB::Red, 128);
+        }
+    }
+
     void showBeautifulStatusScreen() {
         // Draw clean header with signal bar
         drawHeader();

@@ -101,17 +101,10 @@ class WiFiManagerLib {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
+            ring.wave(5, CRGB::Green, 128);
             display.clear();
             display.printCentered("OTA Update", 10);
             display.printCentered("Starting...", 30);
-            display.update();
-        });
-
-        ArduinoOTA.onEnd([this]() {
-            LOG_INFO("OTA Update Complete");
-            display.clear();
-            display.printCentered("OTA Complete", 20);
-            display.printCentered("Restarting...", 40);
             display.update();
         });
 
@@ -119,6 +112,7 @@ class WiFiManagerLib {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
+            ring.update();
             display.clear();
             display.printCentered("OTA Update", 10);
 
@@ -127,10 +121,22 @@ class WiFiManagerLib {
             display.update();
         });
 
+        ArduinoOTA.onEnd([this]() {
+            LOG_INFO("OTA Update Complete");
+            ring.solid(CRGB::Green);
+            ring.finishTransition();
+            display.clear();
+            display.printCentered("OTA Complete", 20);
+            display.printCentered("Restarting...", 40);
+            display.update();
+        });
+
         ArduinoOTA.onError([this](ota_error_t error) {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
+            ring.solid(CRGB::Red);
+            ring.finishTransition();
             LOG_ERROR("OTA Error: " + String(error));
             display.clear();
             display.printCentered("OTA Error", 10);

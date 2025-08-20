@@ -119,7 +119,7 @@ void setup() {
     LOG_DEBUG("LED ring initialized on pin");
 
     ring.solid(CRGB::Blue, 255);
-    ring.blockingUpdate();
+    ring.finishTransition();
 
     // Initialize WiFi Manager
     bool wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
@@ -127,19 +127,14 @@ void setup() {
     // Initialize AlexaConnector (will handle WiFi status internally)
     alexaConnector.begin();
 
-    // Initialize the global router
-    router.setDefaultScreen(new HomeScreen());  // Status screen is now the default
-
     // Show ready message on display
     delay(1000);
     display.clear();
     display.printCentered("IR Hub", 20);
     if (wifiConnected) {
         display.printCentered("Ready!", 40);
-        ring.pulse(3, CRGB::Green, 3);
     } else {
         display.printCentered("Ready! (Offline)", 40);
-        ring.pulse(3, CRGB::Red, 3);
     }
     display.update();
     delay(500);
@@ -147,6 +142,9 @@ void setup() {
     // Play startup sound
     speaker.playStartupSound();
     LOG_DEBUG("Startup sound played");
+
+    // Initialize the global router
+    router.setDefaultScreen(new HomeScreen());  // Status screen is now the default
 
     LOG_INFO("IR Hub: System Ready");
 }
