@@ -15,6 +15,7 @@ class AlexaConnector {
     IRManager& irManager;
     fauxmoESP fauxmo;
     bool wifiEnabled;
+    std::function<void(const Device& device, bool state)> onStateChangeCallback;
 
    public:
     AlexaConnector(DeviceManager& deviceManager, IRManager& irManager)
@@ -48,6 +49,7 @@ class AlexaConnector {
 
             Device* device = deviceManager.getDeviceByName(device_name);
             if (device) {
+                onStateChangeCallback(*device, state);
                 if (state) {
                     irManager.sendProtocol(device->onCommand);
                     LOG_INFO("[Alexa] Turning ON device %s (ID: %d)", device_name, device_id);
@@ -71,6 +73,10 @@ class AlexaConnector {
         });
 
         LOG_INFO("[Alexa] Alexa functionality enabled");
+    }
+
+    void setOnStateChangeCallback(std::function<void(const Device& device, bool state)> callback) {
+        onStateChangeCallback = callback;
     }
 
     void registerDevice(const Device& device) {

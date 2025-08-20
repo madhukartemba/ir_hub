@@ -126,6 +126,14 @@ void setup() {
 
     // Initialize AlexaConnector (will handle WiFi status internally)
     alexaConnector.begin();
+    alexaConnector.setOnStateChangeCallback([](const Device& device, bool state) {
+        LOG_DEBUG("Alexa state change: %s %s", device.name.c_str(), state ? "ON" : "OFF");
+        if (state) {
+            ring.pulse(5, CRGB::SkyBlue, 1);
+        } else {
+            ring.pulse(5, CRGB::Maroon, 1);
+        }
+    });
 
     // Show ready message on display
     delay(1000);
