@@ -71,9 +71,6 @@ class DeviceDetails : public Screen {
         // Protocol
         display.print("Protocol: " + device.protocolName, 0, y);
         y += 10;
-
-        // Show page indicator
-        display.printCentered("Page 1/3", 55);
     }
 
     void displayOnCommandDescription() {
@@ -110,9 +107,6 @@ class DeviceDetails : public Screen {
                 display.print(description, 0, y);
             }
         }
-
-        // Show page indicator
-        display.printCentered("Page 2/3", 55);
     }
 
     void displayOffCommandDescription() {
@@ -149,9 +143,6 @@ class DeviceDetails : public Screen {
                 display.print(description, 0, y);
             }
         }
-
-        // Show page indicator
-        display.printCentered("Page 3/3", 55);
     }
 
     void onExit() override {
