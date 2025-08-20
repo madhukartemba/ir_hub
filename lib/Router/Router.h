@@ -183,19 +183,32 @@ class Router {
         // Clear operation should always work regardless of pause state
         LOG_INFO("[Router] Clearing screen stack");
         int clearedCount = 0;
+        bool defaultScreenWasOnStack = false;
+        
+        // Clear all screens from stack, preserving the default screen object
         while (!screenStack.empty()) {
             Screen* top = screenStack.top();
             screenStack.pop();
-            top->onExit();  // Call onExit before deleting
-            delete top;
-            clearedCount++;
+            
+            // Don't delete if this is the default screen
+            if (top == defaultScreen) {
+                LOG_DEBUG("[Router] Preserving default screen during clear");
+                top->onExit();  // Still call onExit but don't delete
+                defaultScreenWasOnStack = true;
+            } else {
+                top->onExit();  // Call onExit before deleting
+                delete top;
+                clearedCount++;
+            }
         }
         LOG_INFO("[Router] Cleared %d screens from stack", clearedCount);
 
-        // Set default screen if available
-        if (defaultScreen != nullptr) {
-            LOG_DEBUG("[Router] Setting default screen after clear");
+        // Only push default screen if it wasn't already on the stack
+        if (defaultScreen != nullptr && !defaultScreenWasOnStack) {
+            LOG_DEBUG("[Router] Pushing default screen to empty stack");
             push(defaultScreen);
+        } else if (defaultScreen != nullptr && defaultScreenWasOnStack) {
+            LOG_DEBUG("[Router] Default screen was already on stack, no need to push again");
         } else {
             LOG_WARN("[Router] No default screen available after clear");
         }
