@@ -75,6 +75,7 @@ class IRCode {
         code.value = results.value;
         code.bits = results.bits;
         code.description = IRAcUtils::resultAcToString(&results);
+        return code;
     }
 
     // Factory method from decode_results with description
