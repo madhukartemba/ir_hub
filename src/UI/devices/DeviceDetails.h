@@ -20,30 +20,53 @@ class DeviceDetails : public Screen {
         // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("DeviceDetails onButtonClick");
-            if (currentPage == 1 || currentPage == 2) {
-                // On description pages, navigate through items
+            if (currentPage == 0) {
+                // On device details page, go to page 1
+                currentPage = 1;
+                selectedDescriptionItem = 0;
+                descriptionItems.clear();
+            } else if (currentPage == 1) {
+                // On page 1, navigate through items, then go to page 2
                 if (!descriptionItems.empty()) {
                     selectedDescriptionItem =
                         (selectedDescriptionItem + 1) % descriptionItems.size();
+                    // If we've cycled through all items, go to page 2
+                    if (selectedDescriptionItem == 0) {
+                        currentPage = 2;
+                        selectedDescriptionItem = 0;
+                        descriptionItems.clear();
+                    }
+                } else {
+                    // No items to cycle through, go directly to page 2
+                    currentPage = 2;
+                    selectedDescriptionItem = 0;
+                    descriptionItems.clear();
                 }
-            } else {
-                // On device details page, do nothing (or could be used for other purposes)
+            } else if (currentPage == 2) {
+                // On page 2, navigate through items, then go back to page 0
+                if (!descriptionItems.empty()) {
+                    selectedDescriptionItem =
+                        (selectedDescriptionItem + 1) % descriptionItems.size();
+                    // If we've cycled through all items, go back to page 0
+                    if (selectedDescriptionItem == 0) {
+                        currentPage = 0;
+                        selectedDescriptionItem = 0;
+                        descriptionItems.clear();
+                    }
+                } else {
+                    // No items to cycle through, go directly to page 0
+                    currentPage = 0;
+                    selectedDescriptionItem = 0;
+                    descriptionItems.clear();
+                }
             }
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("DeviceDetails onButtonLongPress");
-            if (currentPage == 2) {
-                // On last page (OFF command), exit
-                router.pop();
-            } else {
-                // Go to next page
-                currentPage = (currentPage + 1) % 3;
-                // Reset description items for new page
-                selectedDescriptionItem = 0;
-                descriptionItems.clear();
-            }
+            // Exit from anywhere
+            router.pop();
         });
     }
 
