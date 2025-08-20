@@ -19,14 +19,15 @@ class Router {
         : defaultScreen(nullptr),
           timeoutDuration(30000),
           lastScreenEnterTime(0),
-          timeoutEnabled(true),
-          isDefaultScreen(true) {
+          timeoutEnabled(false),
+          isDefaultScreen(false) {
         LOG_DEBUG("[Router] Router initialized with timeout enabled");
     }
 
     void setDefaultScreen(Screen* screen) {
         defaultScreen = screen;
         if (screenStack.empty()) {
+            isDefaultScreen = true;
             push(screen);
         }
         LOG_INFO("[Router] Default screen set");

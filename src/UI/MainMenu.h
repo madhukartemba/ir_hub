@@ -13,8 +13,6 @@ class MainMenu : public Screen {
 
     State currentState;
     int selectedIndex;
-    unsigned long lastActivityTime;
-    const unsigned long INACTIVITY_TIMEOUT = 10000;  // 10 seconds in milliseconds
     const char* menuItems[3] = {"Devices", "Add Device", "Settings"};
 
    public:
@@ -22,14 +20,10 @@ class MainMenu : public Screen {
         LOG_DEBUG("MainMenu onEnter");
         currentState = State::DEVICES;
         selectedIndex = 0;
-        lastActivityTime = millis();
         ring.breathe(5, COLOR_INFO_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {
-            // Reset activity timer
-            lastActivityTime = millis();
-
             // Switch to next state using mod operator (now only 3 states)
             LOG_DEBUG("MainMenu onButtonClick");
             selectedIndex = (selectedIndex + 1) % 3;
@@ -38,9 +32,6 @@ class MainMenu : public Screen {
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
-            // Reset activity timer
-            lastActivityTime = millis();
-
             LOG_DEBUG("MainMenu onButtonLongPress");
             if (currentState == State::DEVICES) {
                 router.push(new Devices());
@@ -53,13 +44,6 @@ class MainMenu : public Screen {
     }
 
     void onUpdate() override {
-        // Check for inactivity timeout - return to status screen (default screen)
-        if ((millis() - lastActivityTime) > INACTIVITY_TIMEOUT) {
-            LOG_DEBUG("Returning to status screen due to inactivity");
-            router.pop();  // This will return to the default screen (StatusScreen)
-            return;
-        }
-
         // Update display based on current state
         display.clear();
         showMenuScreen();

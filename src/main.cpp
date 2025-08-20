@@ -2,6 +2,7 @@
 #include <LittleFS.h>
 #include "config.h"
 #include "global/Global.h"
+#include "preferences.h"
 #include "ui/HomeScreen.h"
 
 void setup() {
@@ -154,6 +155,8 @@ void setup() {
 
     // Initialize the global router
     router.setDefaultScreen(new HomeScreen());  // Status screen is now the default
+    router.setTimeoutDuration(TIMEOUT_DURATION);
+    router.enableTimeout(true);
 
     LOG_INFO("IR Hub: System Ready");
 }
