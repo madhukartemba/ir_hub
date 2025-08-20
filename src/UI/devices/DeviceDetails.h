@@ -87,7 +87,6 @@ class DeviceDetails : public Screen {
         display.setTextSize(1);
 
         String description = device.onCommand.getDescription();
-        LOG_DEBUG("On command description: %s", description.c_str());
         if (description.isEmpty()) {
             display.printCentered("No description", 30);
         } else {
@@ -120,7 +119,6 @@ class DeviceDetails : public Screen {
         display.setTextSize(1);
 
         String description = device.offCommand.getDescription();
-        LOG_DEBUG("Off command description: %s", description.c_str());
         if (description.isEmpty()) {
             display.printCentered("No description", 30);
         } else {
