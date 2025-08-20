@@ -264,18 +264,25 @@ class LedRing {
                 // Calculate pulse timing based on speed (slower speed = longer pulse period)
                 unsigned long pulsePeriod = (11 - speed) * 200;  // 200-2000ms per pulse
                 unsigned long timeSinceStart = t - pulseStartTime;
-                unsigned long currentPulseTime = timeSinceStart % pulsePeriod;
                 uint8_t currentPulseNumber = timeSinceStart / pulsePeriod;
 
                 if (currentPulseNumber < pulseCount) {
-                    // Still pulsing - create sine wave pulse
+                    // Still pulsing
+                    unsigned long currentPulseTime = timeSinceStart % pulsePeriod;
                     float pulsePhase = (float)currentPulseTime / pulsePeriod;
-                    uint8_t b = sin8(pulsePhase * 255) / 2 + 127;  // Sine wave from 127 to 255
+
+                    // *** FIX: Use a quadratic wave for a smooth 0-255-0 pulse. ***
+                    // This ensures the pulse starts and ends at zero brightness, allowing
+                    // for a seamless transition to OFF after the last pulse completes.
+                    uint8_t b = quadwave8((uint8_t)(pulsePhase * 255));
+
                     fill_solid(buffer, numLeds, color);
                     for (uint16_t i = 0; i < numLeds; i++) {
                         buffer[i].fadeLightBy(255 - b);
                     }
                 } else {
+                    // All pulses completed. The last pulse has faded to black.
+                    // Now, formally switch to the OFF state.
                     setState(OFF);
                 }
                 break;
