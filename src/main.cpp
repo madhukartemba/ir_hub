@@ -131,7 +131,7 @@ void setup() {
         if (state) {
             ring.pulse(5, CRGB::SkyBlue, 1);
         } else {
-            ring.pulse(5, CRGB::Maroon, 1);
+            ring.pulse(5, CRGB::Blue, 1);
         }
     });
 
