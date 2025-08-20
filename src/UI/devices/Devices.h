@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "../../global/Global.h"
 #include "../../utils/MenuUtils.h"
+#include "../../preferences.h"
 #include "DeviceActions.h"
 
 class Devices : public Screen {
@@ -15,7 +16,7 @@ class Devices : public Screen {
         selectedIndex = 0;
         loadDevices();
 
-        ring.breathe(5, CRGB::CornflowerBlue);
+        ring.breathe(5, COLOR_INFO_LIGHT);
 
         // Change button behavior
         button.setClickCallback([this]() {

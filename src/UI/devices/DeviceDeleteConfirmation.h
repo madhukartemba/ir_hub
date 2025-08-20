@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "../../global/Global.h"
+#include "../../preferences.h"
 
 class DeviceDeleteConfirmation : public Screen {
    private:
@@ -11,7 +12,7 @@ class DeviceDeleteConfirmation : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDeleteConfirmation onEnter for device %d", device.id);
-        ring.breathe(5, CRGB::DarkRed);
+        ring.breathe(5, COLOR_ERROR_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {

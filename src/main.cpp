@@ -118,7 +118,7 @@ void setup() {
     }
     LOG_DEBUG("LED ring initialized on pin");
 
-    ring.solid(CRGB::Blue, 255);
+    ring.solid(COLOR_INFO, 255);
     ring.finishTransition();
 
     // Initialize WiFi Manager
@@ -129,9 +129,9 @@ void setup() {
     alexaConnector.setOnStateChangeCallback([](const Device& device, bool state) {
         LOG_DEBUG("Alexa state change: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
-            ring.pulse(5, CRGB::LightGreen, 1);
+            ring.pulse(5, COLOR_SUCCESS, 1);
         } else {
-            ring.pulse(5, CRGB::Orange, 1);
+            ring.pulse(5, COLOR_WARNING, 1);
         }
     });
 

@@ -12,6 +12,7 @@
 #include "Router.h"
 #include "Speaker.h"
 #include "WiFiManagerLib.h"
+#include "preferences.h"
 
 extern Button button;
 extern Router router;

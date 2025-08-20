@@ -1,10 +1,11 @@
 #include "../../global/Global.h"
+#include "../../preferences.h"
 
 class ClearDataConfirmation : public Screen {
    public:
     void onEnter() override {
         LOG_DEBUG("ClearDataConfirmation onEnter");
-        ring.breathe(5, CRGB::Red);
+        ring.breathe(5, COLOR_ERROR);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("ClearDataConfirmation onButtonClick - Exit");

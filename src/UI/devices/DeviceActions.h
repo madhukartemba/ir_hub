@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "../../global/Global.h"
+#include "../../preferences.h"
 #include "../../utils/MenuUtils.h"
 #include "DeviceDeleteConfirmation.h"
 #include "DeviceDetails.h"
@@ -19,7 +20,7 @@ class DeviceActions : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceActions onEnter for device %d", device.id);
-        ring.breathe(5, CRGB::DarkBlue);
+        ring.breathe(5, COLOR_INFO_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -80,7 +81,7 @@ class DeviceActions : public Screen {
                     LOG_INFO("Sending ON command for device %d", device.id);
                     irManager.sendProtocol(device.onCommand);
                     // Visual feedback for ON command
-                    ring.pulse(5, CRGB::LightGreen, 1);
+                    ring.pulse(5, COLOR_SUCCESS, 1);
                 } else {
                     LOG_ERROR("Invalid ON command for device %d", device.id);
                     display.clear();
@@ -95,7 +96,7 @@ class DeviceActions : public Screen {
                     LOG_INFO("Sending OFF command for device %d", device.id);
                     irManager.sendProtocol(device.offCommand);
                     // Visual feedback for OFF command
-                    ring.pulse(5, CRGB::Orange, 1);
+                    ring.pulse(5, COLOR_WARNING, 1);
                 } else {
                     LOG_ERROR("Invalid OFF command for device %d", device.id);
                     display.clear();

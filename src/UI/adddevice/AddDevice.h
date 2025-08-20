@@ -1,5 +1,6 @@
 #pragma once
 #include "../../global/Global.h"
+#include "../../preferences.h"
 
 class AddDevice : public Screen {
    private:
@@ -32,7 +33,7 @@ class AddDevice : public Screen {
         isTimeoutError = false;
         firstCode = IRCode();
         secondCode = IRCode();
-        ring.breathe(5, CRGB::RoyalBlue);
+        ring.breathe(5, COLOR_INFO_ROYAL);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("AddDevice onButtonClick");
@@ -137,7 +138,7 @@ class AddDevice : public Screen {
     // LED Ring Methods for different states
     void setLedRingRecording() {
         // Breathing blue pattern during recording
-        ring.wave(5, CRGB::RoyalBlue, 32);
+        ring.wave(5, COLOR_INFO_ROYAL, 32);
     }
 
     void setLedRingSuccess() {
@@ -147,17 +148,17 @@ class AddDevice : public Screen {
 
     void setLedRingError() {
         // Red pulse for errors
-        ring.pulse(5, CRGB::Red, 3);
+        ring.pulse(5, COLOR_ERROR, 3);
     }
 
     void setLedRingFirstCodeSuccess() {
         // Green pulse for first code success
-        ring.pulse(5, CRGB::Green, 2);
+        ring.pulse(5, COLOR_SUCCESS_ALT, 2);
     }
 
     void setLedRingSecondCodeSuccess() {
         // Green pulse with more pulses for second code success
-        ring.pulse(3, CRGB::Green, 3);
+        ring.pulse(3, COLOR_SUCCESS_ALT, 3);
     }
 
     void startRecordingFirst() {

@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "../../global/Global.h"
+#include "../../preferences.h"
 
 class DeviceDetails : public Screen {
    private:
@@ -11,7 +12,7 @@ class DeviceDetails : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDetails onEnter for device %d", device.id);
-        ring.breathe(5, CRGB::DarkGreen);
+        ring.breathe(5, COLOR_SUCCESS_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {

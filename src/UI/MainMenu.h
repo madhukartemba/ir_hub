@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "../global/Global.h"
+#include "../preferences.h"
 #include "../ui/adddevice/AddDevice.h"
 #include "../ui/devices/Devices.h"
 #include "../ui/settings/Settings.h"
@@ -22,7 +23,7 @@ class MainMenu : public Screen {
         currentState = State::DEVICES;
         selectedIndex = 0;
         lastActivityTime = millis();
-        ring.breathe(5, CRGB::DarkBlue);
+        ring.breathe(5, COLOR_INFO_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {

@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "../global/Global.h"
+#include "../preferences.h"
 #include "../ui/MainMenu.h"
 
 class HomeScreen : public Screen {
@@ -96,9 +97,9 @@ class HomeScreen : public Screen {
    private:
     void ringColor() {
         if (wifiManager.isConnected()) {
-            ring.wave(1, CRGB::Green);
+            ring.wave(1, COLOR_SUCCESS_ALT);
         } else {
-            ring.wave(1, CRGB::Red);
+            ring.wave(1, COLOR_ERROR);
         }
     }
 

@@ -1,6 +1,7 @@
 #include <ESP.h>
 #include "../../global/Global.h"
 #include "../../utils/MenuUtils.h"
+#include "../../preferences.h"
 #include "ClearDataConfirmation.h"
 
 class Settings : public Screen {
@@ -23,7 +24,7 @@ class Settings : public Screen {
         currentState = State::RESTART;
         selectedIndex = 0;
 
-        ring.breathe(5, CRGB::Yellow);
+        ring.breathe(5, COLOR_SETTINGS);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");
