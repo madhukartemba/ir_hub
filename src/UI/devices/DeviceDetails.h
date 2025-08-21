@@ -156,7 +156,6 @@ class DeviceDetails : public Screen {
         // Always show description items in scrollable list
         if (descriptionItems.empty()) {
             String description = device.onCommand.getDescription();
-            LOG_DEBUG("On command description: %s", description.c_str());
             if (!description.isEmpty()) {
                 parseDescription(description);
             }
