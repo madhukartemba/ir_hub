@@ -132,10 +132,10 @@ void setup() {
         LOG_DEBUG("Alexa state change: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
             ring.pulse(5, SEND_ON_COMMAND_COLOR, 1);
-            speaker.shortBeep();
+            speaker.beep();
         } else {
             ring.pulse(5, SEND_OFF_COMMAND_COLOR, 1);
-            speaker.shortBeep();
+            speaker.beep();
         }
     });
 
