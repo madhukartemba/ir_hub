@@ -9,7 +9,6 @@
 #include "IRManager.h"
 #include "Log.h"
 
-LOG_REGISTER_CLASS("AlexaConnector")
 class AlexaConnector {
    private:
     DeviceManager& deviceManager;
@@ -20,7 +19,7 @@ class AlexaConnector {
 
     void handleDeviceCallback(const String& deviceName, uint8_t brightness) {
         bool state = brightness > 0;
-        LOG_DEBUG("Set state for device %s to %s with brightness %d", deviceName.c_str(),
+        LOG_DEBUG("[Alexa] Set state for device %s to %s with brightness %d", deviceName.c_str(),
                   state ? "ON" : "OFF", brightness);
 
         // Look up the device from device manager
@@ -29,13 +28,13 @@ class AlexaConnector {
             onStateChangeCallback(*device, state);
             if (state) {
                 irManager.sendProtocol(device->onCommand);
-                LOG_INFO("Turning ON device %s", deviceName.c_str());
+                LOG_INFO("[Alexa] Turning ON device %s", deviceName.c_str());
             } else {
                 irManager.sendProtocol(device->offCommand);
-                LOG_INFO("Turning OFF device %s", deviceName.c_str());
+                LOG_INFO("[Alexa] Turning OFF device %s", deviceName.c_str());
             }
         } else {
-            LOG_ERROR("Device %s not found in device manager", deviceName.c_str());
+            LOG_ERROR("[Alexa] Device %s not found in device manager", deviceName.c_str());
         }
     }
 
@@ -48,7 +47,7 @@ class AlexaConnector {
     void begin() {
         // Check if WiFi is available and connected
         if (WiFi.status() != WL_CONNECTED) {
-            LOG_INFO("WiFi not connected, Alexa functionality disabled");
+            LOG_INFO("[Alexa] WiFi not connected, Alexa functionality disabled");
             wifiEnabled = false;
             return;
         }
@@ -63,17 +62,17 @@ class AlexaConnector {
 
         // Set up device callbacks
         deviceManager.setOnDeviceAdded([this](const Device& device) {
-            LOG_DEBUG("Device added: %s (ID: %d)", device.name.c_str(), device.id);
+            LOG_DEBUG("[Alexa] Device added: %s (ID: %d)", device.name.c_str(), device.id);
             registerDevice(device);
         });
 
         deviceManager.setOnDeviceRemoved([this](const Device& device) {
-            LOG_DEBUG("Device removed: %s (ID: %d)", device.name.c_str(), device.id);
+            LOG_DEBUG("[Alexa] Device removed: %s (ID: %d)", device.name.c_str(), device.id);
             unregisterDevice(device);
         });
 
         espalexa.begin();
-        LOG_INFO("Alexa functionality enabled");
+        LOG_INFO("[Alexa] Alexa functionality enabled");
     }
 
     void setOnStateChangeCallback(std::function<void(const Device& device, bool state)> callback) {
@@ -94,7 +93,7 @@ class AlexaConnector {
             // Espalexa doesn't have a direct removeDevice method
             // We'll need to handle this differently - devices will remain registered
             // but won't be accessible through the device manager
-            LOG_DEBUG("Device %s unregistered (note: Espalexa keeps devices registered)",
+            LOG_DEBUG("[Alexa] Device %s unregistered (note: Espalexa keeps devices registered)",
                       device.name.c_str());
         }
     }

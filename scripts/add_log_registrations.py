@@ -11,19 +11,12 @@ from pathlib import Path
 
 
 def find_cpp_files(directory):
-    """Find all .cpp and .h files in the directory, excluding .pio and other unwanted directories."""
+    """Find all .cpp and .h files in the directory."""
     cpp_files = []
     for root, dirs, files in os.walk(directory):
-        # Skip .pio directory and other unwanted directories
-        dirs[:] = [
-            d for d in dirs if d not in [".pio", ".git", "node_modules", "__pycache__"]
-        ]
-
-        # Only process files in /lib and /src directories
-        if "/lib" in root or "/src" in root:
-            for file in files:
-                if file.endswith((".cpp", ".h")):
-                    cpp_files.append(os.path.join(root, file))
+        for file in files:
+            if file.endswith((".cpp", ".h")):
+                cpp_files.append(os.path.join(root, file))
     return cpp_files
 
 
