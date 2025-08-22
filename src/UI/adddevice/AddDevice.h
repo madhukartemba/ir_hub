@@ -63,6 +63,7 @@ class AddDevice : public Screen {
                 LOG_DEBUG("Cancelling recording via long press");
                 irManager.stopCapture();
                 currentState = State::ERROR;
+                speaker.errorBeep();
             } else {
                 // Go back to main menu
                 router.pop();
@@ -83,6 +84,7 @@ class AddDevice : public Screen {
             }
             currentState = State::ERROR;
             setLedRingError();
+            speaker.errorBeep();
         }
 
         // Check for IR code reception during recording
@@ -183,6 +185,7 @@ class AddDevice : public Screen {
             setLedRingError();
             LOG_ERROR("Invalid first code received");
             currentState = State::ERROR;
+            speaker.errorBeep();
         }
     }
 
@@ -213,10 +216,12 @@ class AddDevice : public Screen {
                         LOG_INFO("Auto mode device saved with ID: %d", deviceId);
                         currentState = State::SUCCESS;
                         setLedRingSuccess();
+                        speaker.successBeep();
                     } else {
                         LOG_ERROR("Failed to save auto mode device");
                         currentState = State::ERROR;
                         setLedRingError();
+                        speaker.errorBeep();
                     }
                 } else {
                     LOG_INFO("Codes don't match - saving as dual device");
@@ -226,10 +231,12 @@ class AddDevice : public Screen {
                         LOG_INFO("Auto mode device saved as dual device with ID: %d", deviceId);
                         currentState = State::SUCCESS;
                         setLedRingSuccess();
+                        speaker.successBeep();
                     } else {
                         LOG_ERROR("Failed to save auto mode device as dual device");
                         currentState = State::ERROR;
                         setLedRingError();
+                        speaker.errorBeep();
                     }
                 }
             } else {
@@ -238,11 +245,13 @@ class AddDevice : public Screen {
                           firstCode.isValid() ? "valid" : "invalid",
                           secondCode.isValid() ? "valid" : "invalid");
                 currentState = State::ERROR;
+                speaker.errorBeep();
             }
         } else {
             LOG_ERROR("Invalid second code received");
             setLedRingError();
             currentState = State::ERROR;
+            speaker.errorBeep();
         }
     }
 
