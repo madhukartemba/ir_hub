@@ -14,13 +14,18 @@
 #define MIN_LOG_LEVEL LOG_LEVEL_DEBUG
 
 // Class name registration - use this at the top of your class
-#define LOG_REGISTER_CLASS(name) static const char* LOG_CLASS_NAME = name;
+#define LOG_REGISTER_CLASS(name) static const char* LOG_CLASS_NAME __attribute__((unused)) = name;
 
 // Default class name for when not registered
 #define LOG_DEFAULT_CLASS_NAME "Unknown"
 
 // Get current class name (will be "Unknown" if not registered)
-#define LOG_GET_CLASS_NAME() (LOG_CLASS_NAME ? LOG_CLASS_NAME : LOG_DEFAULT_CLASS_NAME)
+// Fixed version that handles undefined LOG_CLASS_NAME
+#ifdef LOG_CLASS_NAME
+#    define LOG_GET_CLASS_NAME() LOG_CLASS_NAME
+#else
+#    define LOG_GET_CLASS_NAME() LOG_DEFAULT_CLASS_NAME
+#endif
 
 // Enhanced logging macros with automatic class name detection
 #if LOGGING_ENABLED
@@ -30,7 +35,7 @@
             Serial.printf((String("[DEBUG][") + LOG_GET_CLASS_NAME() + "] " + fmt + "\n").c_str(), \
                           ##__VA_ARGS__)
 #    else
-#        define LOG_DEBUG(msg)
+#        define LOG_DEBUG(fmt, ...)
 #    endif
 
 // Info level logging
@@ -39,7 +44,7 @@
             Serial.printf((String("[INFO][") + LOG_GET_CLASS_NAME() + "] " + fmt + "\n").c_str(), \
                           ##__VA_ARGS__)
 #    else
-#        define LOG_INFO(msg)
+#        define LOG_INFO(fmt, ...)
 #    endif
 
 // Warning level logging
@@ -48,7 +53,7 @@
             Serial.printf((String("[WARN][") + LOG_GET_CLASS_NAME() + "] " + fmt + "\n").c_str(), \
                           ##__VA_ARGS__)
 #    else
-#        define LOG_WARN(msg)
+#        define LOG_WARN(fmt, ...)
 #    endif
 
 // Error level logging
@@ -57,7 +62,7 @@
             Serial.printf((String("[ERROR][") + LOG_GET_CLASS_NAME() + "] " + fmt + "\n").c_str(), \
                           ##__VA_ARGS__)
 #    else
-#        define LOG_ERROR(msg)
+#        define LOG_ERROR(fmt, ...)
 #    endif
 
 // Legacy macros for backward compatibility
@@ -66,10 +71,10 @@
 #    define LOG_LINE() Serial.println(F("-------------"))
 #else
 // When logging is disabled, all macros do nothing
-#    define LOG_DEBUG(msg)
-#    define LOG_INFO(msg)
-#    define LOG_WARN(msg)
-#    define LOG_ERROR(msg)
+#    define LOG_DEBUG(fmt, ...)
+#    define LOG_INFO(fmt, ...)
+#    define LOG_WARN(fmt, ...)
+#    define LOG_ERROR(fmt, ...)
 #    define LOG(msg)
 #    define LOG_LINE()
 #endif
