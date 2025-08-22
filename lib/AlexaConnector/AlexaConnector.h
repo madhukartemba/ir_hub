@@ -17,10 +17,10 @@ class AlexaConnector {
     bool wifiEnabled;
     std::function<void(const Device& device, bool state)> onStateChangeCallback;
 
-    void handleDeviceCallback(const String& deviceName, uint8_t brightness) {
-        bool state = brightness > 0;
-        LOG_DEBUG("[Alexa] Set state for device %s to %s with brightness %d", deviceName.c_str(),
-                  state ? "ON" : "OFF", brightness);
+    void handleDeviceCallback(const String& deviceName, uint8_t value) {
+        bool state = value > 0;
+        LOG_DEBUG("[Alexa] Set state for device %s to %s with value %d", deviceName.c_str(),
+                  state ? "ON" : "OFF", value);
 
         // Look up the device from device manager
         Device* device = deviceManager.getDeviceByName(deviceName);
@@ -81,10 +81,12 @@ class AlexaConnector {
 
     void registerDevice(const Device& device) {
         if (wifiEnabled) {
-            espalexa.addDevice(device.name.c_str(),
-                               [this, deviceName = device.name](uint8_t brightness) {
-                                   handleDeviceCallback(deviceName, brightness);
-                               });
+            espalexa.addDevice(
+                device.name.c_str(),
+                [this, deviceName = device.name](EspalexaDevice* d) {
+                    handleDeviceCallback(deviceName, d->getValue());
+                },
+                EspalexaDeviceType::onoff);
         }
     }
 
