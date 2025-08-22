@@ -1,7 +1,7 @@
 #include <ESP.h>
 #include "../../global/Global.h"
-#include "../../utils/MenuUtils.h"
 #include "../../preferences.h"
+#include "../../utils/MenuUtils.h"
 #include "ClearDataConfirmation.h"
 
 class Settings : public Screen {
@@ -55,6 +55,7 @@ class Settings : public Screen {
                     LOG_DEBUG("Settings onButtonLongPress WIFI_WIPE");
                     // Wipe WiFi credentials using our WiFiManagerLib
                     wifiManager.resetWiFi();
+                    speaker.successBeep();
                     // Restart to trigger WiFi setup
                     currentState = State::RESTARTING;
                     restartStartTime = millis();

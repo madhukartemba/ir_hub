@@ -26,13 +26,20 @@ class DeviceDeleteConfirmation : public Screen {
             if (confirmed) {
                 // Delete the device
                 LOG_INFO("Deleting device %d", device.id);
-                deviceManager.removeDeviceById(device.id);
-
-                // Show feedback
-                display.clear();
-                display.printCentered("Device deleted!", 30);
-                display.update();
-                delay(2000);
+                bool success = deviceManager.removeDeviceById(device.id);
+                if (success) {
+                    speaker.successBeep();
+                    display.clear();
+                    display.printCentered("Device deleted!", 30);
+                    display.update();
+                    delay(2000);
+                } else {
+                    speaker.errorBeep();
+                    display.clear();
+                    display.printCentered("Failed to delete device", 30);
+                    display.update();
+                    delay(2000);
+                }
 
                 // Go back to devices list
                 router.pop(2);  // Pop twice to go back to devices list

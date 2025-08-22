@@ -52,6 +52,9 @@ class ClearDataConfirmation : public Screen {
         // Clear all data from LittleFS
         LittleFS.format();
         LOG_INFO("All data cleared from LittleFS");
+
+        speaker.successBeep();
+
         // Restart the device
         ESP.restart();
     }
