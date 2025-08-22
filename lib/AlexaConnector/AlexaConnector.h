@@ -2,20 +2,41 @@
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <Espalexa.h>
 #include <functional>
 #include <vector>
 #include "DeviceManager.h"
 #include "IRManager.h"
 #include "Log.h"
-#include "fauxmoESP.h"
 
 class AlexaConnector {
    private:
     DeviceManager& deviceManager;
     IRManager& irManager;
-    fauxmoESP fauxmo;
+    Espalexa espalexa;
     bool wifiEnabled;
     std::function<void(const Device& device, bool state)> onStateChangeCallback;
+
+    void handleDeviceCallback(const String& deviceName, uint8_t brightness) {
+        bool state = brightness > 0;
+        LOG_DEBUG("[Alexa] Set state for device %s to %s with brightness %d", deviceName.c_str(),
+                  state ? "ON" : "OFF", brightness);
+
+        // Look up the device from device manager
+        Device* device = deviceManager.getDeviceByName(deviceName);
+        if (device) {
+            onStateChangeCallback(*device, state);
+            if (state) {
+                irManager.sendProtocol(device->onCommand);
+                LOG_INFO("[Alexa] Turning ON device %s", deviceName.c_str());
+            } else {
+                irManager.sendProtocol(device->offCommand);
+                LOG_INFO("[Alexa] Turning OFF device %s", deviceName.c_str());
+            }
+        } else {
+            LOG_ERROR("[Alexa] Device %s not found in device manager", deviceName.c_str());
+        }
+    }
 
    public:
     AlexaConnector(DeviceManager& deviceManager, IRManager& irManager)
@@ -34,34 +55,12 @@ class AlexaConnector {
         wifiEnabled = true;
         WiFi.mode(WIFI_STA);
 
-        fauxmo.createServer(true);
-        fauxmo.setPort(80);
-        fauxmo.enable(true);
-
+        // Register all existing devices
         for (Device& device : deviceManager.getDevices()) {
             registerDevice(device);
         }
 
-        fauxmo.onSetState([this](unsigned char device_id, const char* device_name, bool state,
-                                 unsigned char value) {
-            LOG_DEBUG("[Alexa] Set state for device %s (ID: %d) to %s with value %d", device_name,
-                      device_id, state ? "ON" : "OFF", value);
-
-            Device* device = deviceManager.getDeviceByName(device_name);
-            if (device) {
-                onStateChangeCallback(*device, state);
-                if (state) {
-                    irManager.sendProtocol(device->onCommand);
-                    LOG_INFO("[Alexa] Turning ON device %s (ID: %d)", device_name, device_id);
-                } else {
-                    irManager.sendProtocol(device->offCommand);
-                    LOG_INFO("[Alexa] Turning OFF device %s (ID: %d)", device_name, device_id);
-                }
-            } else {
-                LOG_ERROR("[Alexa] Device %s (ID: %d) not found", device_name, device_id);
-            }
-        });
-
+        // Set up device callbacks
         deviceManager.setOnDeviceAdded([this](const Device& device) {
             LOG_DEBUG("[Alexa] Device added: %s (ID: %d)", device.name.c_str(), device.id);
             registerDevice(device);
@@ -72,6 +71,7 @@ class AlexaConnector {
             unregisterDevice(device);
         });
 
+        espalexa.begin();
         LOG_INFO("[Alexa] Alexa functionality enabled");
     }
 
@@ -81,19 +81,26 @@ class AlexaConnector {
 
     void registerDevice(const Device& device) {
         if (wifiEnabled) {
-            fauxmo.addDevice(device.name.c_str());
+            espalexa.addDevice(device.name.c_str(),
+                               [this, deviceName = device.name](uint8_t brightness) {
+                                   handleDeviceCallback(deviceName, brightness);
+                               });
         }
     }
 
     void unregisterDevice(const Device& device) {
         if (wifiEnabled) {
-            fauxmo.removeDevice(device.name.c_str());
+            // Espalexa doesn't have a direct removeDevice method
+            // We'll need to handle this differently - devices will remain registered
+            // but won't be accessible through the device manager
+            LOG_DEBUG("[Alexa] Device %s unregistered (note: Espalexa keeps devices registered)",
+                      device.name.c_str());
         }
     }
 
     void update() {
         if (wifiEnabled) {
-            fauxmo.handle();
+            espalexa.loop();
         }
     }
 
