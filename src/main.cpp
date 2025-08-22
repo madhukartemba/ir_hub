@@ -11,9 +11,6 @@ void setup() {
     // Initialize display first so we can show error messages
     if (!display.begin(OLED_SDA_PIN, OLED_SCL_PIN)) {
         LOG_ERROR("Failed to initialize display");
-        while (1) {
-            delay(100);
-        }
     }
 
     display.clear();
@@ -119,11 +116,10 @@ void setup() {
     }
     LOG_DEBUG("LED ring initialized on pin");
 
-    // Successfull core initialization sound
-    speaker.playStartupSound();
-
-    ring.solid(COLOR_INFO, 255);
+    // Successful core initialization now setup wireless connection
+    ring.solid(COLOR_WIFI_INIT, 255);
     ring.finishTransition();
+    speaker.playStartupSound();
 
     // Initialize WiFi Manager
     bool wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
@@ -148,10 +144,10 @@ void setup() {
     display.printCentered("IR Hub", 20);
     if (wifiConnected) {
         display.printCentered("Ready!", 40);
-        speaker.tripleBeep();
+        speaker.successBeep();
     } else {
         display.printCentered("Ready! (Offline)", 40);
-        speaker.longBeep();
+        speaker.errorBeep();
     }
     display.update();
     delay(500);

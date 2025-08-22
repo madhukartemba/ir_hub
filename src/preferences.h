@@ -25,6 +25,9 @@
 #define COLOR_HOME_SCREEN_WIFI_CONNECTED CRGB::White
 #define COLOR_HOME_SCREEN_WIFI_DISCONNECTED CRGB::Red
 
+// Wi-Fi
+#define COLOR_WIFI_INIT CRGB::Blue
+
 // Information/Status States
 #define COLOR_INFO CRGB::Blue
 #define COLOR_INFO_DARK CRGB::DarkBlue

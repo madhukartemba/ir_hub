@@ -68,13 +68,26 @@ class Speaker {
         beep(100);
     }
 
-    // Triple beep
     void tripleBeep() {
         beep(100);
         delay(100);
         beep(100);
         delay(100);
         beep(100);
+    }
+
+    // Success sound - ascending double beep
+    void successBeep() {
+        beep(800, 100);   // Lower frequency
+        delay(50);        // Short pause
+        beep(1200, 150);  // Higher frequency, longer duration
+    }
+
+    // Error sound - descending double beep
+    void errorBeep() {
+        beep(1200, 100);  // Higher frequency
+        delay(50);        // Short pause
+        beep(600, 200);   // Lower frequency, longer duration
     }
 
     // Stop any ongoing tone
