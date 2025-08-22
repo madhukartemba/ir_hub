@@ -119,6 +119,9 @@ void setup() {
     }
     LOG_DEBUG("LED ring initialized on pin");
 
+    // Successfull core initialization sound
+    speaker.playStartupSound();
+
     ring.solid(COLOR_INFO, 255);
     ring.finishTransition();
 
@@ -145,15 +148,13 @@ void setup() {
     display.printCentered("IR Hub", 20);
     if (wifiConnected) {
         display.printCentered("Ready!", 40);
+        speaker.tripleBeep();
     } else {
         display.printCentered("Ready! (Offline)", 40);
+        speaker.longBeep();
     }
     display.update();
     delay(500);
-
-    // Play startup sound
-    speaker.playStartupSound();
-    LOG_DEBUG("Startup sound played");
 
     // Initialize the global router
     router.setDefaultScreen(new HomeScreen());  // Status screen is now the default
