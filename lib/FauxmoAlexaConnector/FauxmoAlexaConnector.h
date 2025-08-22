@@ -9,6 +9,8 @@
 #include "Log.h"
 #include "fauxmoESP.h"
 
+// Legacy code, not used anymore due to unsupported value errors popping up
+// and the device being shown as unresponsive. Kept it here for reference.
 class FauxmoAlexaConnector {
    private:
     DeviceManager& deviceManager;
