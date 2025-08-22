@@ -71,7 +71,7 @@ class Button {
                 longPressTriggered = true;
                 lastInteractionTime = currentTime;  // Update interaction time on long press
                 if (soundEnabled && speaker != nullptr) {
-                    speaker->beep();
+                    speaker->doubleBeep();
                 }
                 if (longPressCallback) {
                     longPressCallback();
