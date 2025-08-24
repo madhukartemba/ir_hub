@@ -1,0 +1,14 @@
+** Drc report for IRHub_PCB.kicad_pcb **
+** Created on 2025-08-24T17:18:47+0530 **
+
+** Found 0 DRC violations **
+
+** Found 1 unconnected pads **
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(101.0000 mm, 58.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+    @(171.7500 mm, 93.0000 mm): PTH pad 2 [GND] of Speaker1
+
+** Found 0 Footprint errors **
+
+** End of Report **
