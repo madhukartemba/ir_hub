@@ -39,8 +39,8 @@ class Display {
             return false;
         }
 
-        // Set default text properties - using font that matches Adafruit_GFX 6x8
-        display->setFont(u8g2_font_6x10_tr);  // Default font, similar to Adafruit's 6x8
+        // Set default text properties - use a cleaner, modern Helvetica font
+        display->setFont(u8g2_font_helvR08_tr);
         display->setFontDirection(0);
         display->setFontMode(1);  // Transparent mode
 
@@ -218,19 +218,19 @@ class Display {
         textSize = size;
         if (display) {
             // U8g2 doesn't have a direct setTextSize method like Adafruit_GFX
-            // We'll use different fonts for different sizes
+            // Use modern Helvetica fonts for different sizes
             switch (size) {
                 case 1:
-                    display->setFont(u8g2_font_6x10_tr);  // ~6x10, similar to Adafruit size 1
+                    display->setFont(u8g2_font_helvR08_tr);  // Small
                     break;
                 case 2:
-                    display->setFont(u8g2_font_8x13_tr);  // ~8x13, similar to Adafruit size 2
+                    display->setFont(u8g2_font_helvR10_tr);  // Medium
                     break;
                 case 3:
-                    display->setFont(u8g2_font_10x20_tr);  // ~10x20, similar to Adafruit size 3
+                    display->setFont(u8g2_font_helvR12_tr);  // Large
                     break;
                 default:
-                    display->setFont(u8g2_font_6x10_tr);
+                    display->setFont(u8g2_font_helvR08_tr);
                     break;
             }
         }
