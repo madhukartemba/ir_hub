@@ -39,8 +39,8 @@ class Display {
             return false;
         }
 
-        // Set default text properties
-        display->setFont(u8g2_font_6x10_tr);  // Default font
+        // Set default text properties - using font that matches Adafruit_GFX 6x8
+        display->setFont(u8g2_font_6x10_tr);  // Default font, similar to Adafruit's 6x8
         display->setFontDirection(0);
         display->setFontMode(1);  // Transparent mode
 
@@ -101,14 +101,18 @@ class Display {
     void print(const String& text, int x = 0, int y = 0) { print(text.c_str(), x, y); }
     void print(const char* text, int x = 0, int y = 0) {
         if (display) {
-            display->setCursor(x, y);
+            // Adjust Y coordinate for U8g2 baseline difference
+            int adjustedY = y + getTextHeight() - 2;  // U8g2 baseline is at bottom, Adafruit at top
+            display->setCursor(x, adjustedY);
             display->print(text);
         }
     }
     void println(const String& text, int x = 0, int y = 0) { println(text.c_str(), x, y); }
     void println(const char* text, int x = 0, int y = 0) {
         if (display) {
-            display->setCursor(x, y);
+            // Adjust Y coordinate for U8g2 baseline difference
+            int adjustedY = y + getTextHeight() - 2;  // U8g2 baseline is at bottom, Adafruit at top
+            display->setCursor(x, adjustedY);
             display->print(text);
         }
     }
@@ -125,7 +129,9 @@ class Display {
             y = (SCREEN_HEIGHT - getTextHeight()) / 2;
         }
 
-        display->setCursor(x, y);
+        // Adjust Y coordinate for U8g2 baseline difference
+        int adjustedY = y + getTextHeight() - 2;
+        display->setCursor(x, adjustedY);
         display->print(text);
     }
     void printAligned(const String& text, TextAlign align, int y = 0, int x = 0) {
@@ -135,7 +141,9 @@ class Display {
         if (!display) return;
 
         int textX = calculateTextX(String(text), align, x);
-        display->setCursor(textX, y);
+        // Adjust Y coordinate for U8g2 baseline difference
+        int adjustedY = y + getTextHeight() - 2;
+        display->setCursor(textX, adjustedY);
         display->print(text);
     }
     void printVerticallyAligned(const String& text, VerticalAlign valign,
@@ -199,7 +207,9 @@ class Display {
             textX = x + width - textWidth - 2;  // Padding from right edge
         }
 
-        display->setCursor(textX, textY);
+        // Adjust Y coordinate for U8g2 baseline difference
+        int adjustedTextY = textY + getTextHeight() - 2;
+        display->setCursor(textX, adjustedTextY);
         display->print(text);
     }
 
@@ -211,13 +221,13 @@ class Display {
             // We'll use different fonts for different sizes
             switch (size) {
                 case 1:
-                    display->setFont(u8g2_font_6x10_tr);
+                    display->setFont(u8g2_font_6x10_tr);  // ~6x10, similar to Adafruit size 1
                     break;
                 case 2:
-                    display->setFont(u8g2_font_8x13_tr);
+                    display->setFont(u8g2_font_8x13_tr);  // ~8x13, similar to Adafruit size 2
                     break;
                 case 3:
-                    display->setFont(u8g2_font_10x20_tr);
+                    display->setFont(u8g2_font_10x20_tr);  // ~10x20, similar to Adafruit size 3
                     break;
                 default:
                     display->setFont(u8g2_font_6x10_tr);
@@ -411,7 +421,9 @@ class Display {
             // Print the line
             if ((int)line.length() > 0) {
                 int lineX = calculateTextX(line, align, x, maxWidth);
-                display->setCursor(lineX, currentY);
+                // Adjust Y coordinate for U8g2 baseline difference
+                int adjustedCurrentY = currentY + getTextHeight() - 2;
+                display->setCursor(lineX, adjustedCurrentY);
                 display->print(line);
                 currentY += lineHeight;
             }
