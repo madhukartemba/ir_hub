@@ -9,7 +9,7 @@ void setup() {
     Serial.begin(9600);
 
     // Initialize display first so we can show error messages
-    if (!display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DisplayType::SSD1306)) {
+    if (!display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE)) {
         LOG_ERROR("Failed to initialize display");
     }
 

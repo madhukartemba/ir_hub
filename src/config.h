@@ -1,6 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// Display type
+#define DISPLAY_TYPE DisplayType::SSD1306
+
 // Pin definitions
 #define TOUCH_BUTTON_PIN D0
 #define OLED_SCL_PIN D1
