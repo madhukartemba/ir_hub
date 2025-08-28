@@ -11,6 +11,9 @@
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 
+// Display type enum
+enum DisplayType { SSD1306, SSH1106 };
+
 // Text alignment constants
 enum TextAlign { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT };
 
@@ -19,20 +22,28 @@ enum VerticalAlign { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM };
 class Display {
    public:
     // Constructor
-    Display() : textSize(1), textColor(1), displayFlipped(true), displayOn(false) {}
+    Display()
+        : textSize(1), textColor(1), displayFlipped(true), displayOn(false), displayType(SSD1306) {}
 
     // Destructor
     ~Display() = default;
 
     // Initialize the display
-    bool begin(int sdaPin = -1, int sclPin = -1) {
+    bool begin(int sdaPin = -1, int sclPin = -1, DisplayType type = SSD1306) {
+        displayType = type;
+
         // Initialize I2C if pins are specified
         if (sdaPin != -1 && sclPin != -1) {
             Wire.begin(sdaPin, sclPin);
         }
 
-        // Create display object - using U8G2_SSD1306_128X64_NONAME_F_HW_I2C
-        display = std::make_unique<U8G2_SSD1306_128X64_NONAME_F_HW_I2C>(U8G2_R0, U8X8_PIN_NONE);
+        // Create display object based on type
+        if (displayType == SSH1106) {
+            display = std::make_unique<U8G2_SH1106_128X64_NONAME_F_HW_I2C>(U8G2_R0, U8X8_PIN_NONE);
+        } else {
+            // Default to SSD1306
+            display = std::make_unique<U8G2_SSD1306_128X64_NONAME_F_HW_I2C>(U8G2_R0, U8X8_PIN_NONE);
+        }
 
         // Initialize display
         if (!display->begin()) {
@@ -364,11 +375,12 @@ class Display {
     U8G2* getDisplay() { return display.get(); }
 
    private:
-    std::unique_ptr<U8G2_SSD1306_128X64_NONAME_F_HW_I2C> display;
+    std::unique_ptr<U8G2> display;
     uint8_t textSize;
     uint16_t textColor;
     bool displayFlipped;
     bool displayOn;
+    DisplayType displayType;
 
     // Helper methods
     void wrapText(const String& text, int x, int y, int maxWidth, TextAlign align = ALIGN_LEFT) {
