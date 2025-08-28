@@ -1,9 +1,8 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #include <Arduino.h>
+#include <U8g2lib.h>
 #include <Wire.h>
 #include <memory>
 
@@ -11,7 +10,9 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-#define SCREEN_ADDRESS 0x3C
+
+// Display type enum
+enum DisplayType { SSD1306, SSH1106 };
 
 // Text alignment constants
 enum TextAlign { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT };
@@ -21,34 +22,43 @@ enum VerticalAlign { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM };
 class Display {
    public:
     // Constructor
-    Display() : textSize(1), textColor(1), displayFlipped(true), displayOn(false) {}
+    Display()
+        : textSize(1), textColor(1), displayFlipped(true), displayOn(false), displayType(SSD1306) {}
 
     // Destructor
     ~Display() = default;
 
     // Initialize the display
-    bool begin(int sdaPin = -1, int sclPin = -1) {
+    bool begin(int sdaPin = -1, int sclPin = -1, DisplayType type = SSD1306) {
+        displayType = type;
+
         // Initialize I2C if pins are specified
         if (sdaPin != -1 && sclPin != -1) {
             Wire.begin(sdaPin, sclPin);
         }
 
-        // Create display object
-        display =
-            std::make_unique<Adafruit_SSD1306>(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+        // Create display object based on type
+        if (displayType == SSH1106) {
+            display = std::make_unique<U8G2_SH1106_128X64_NONAME_F_HW_I2C>(U8G2_R0, U8X8_PIN_NONE);
+        } else {
+            // Default to SSD1306
+            display = std::make_unique<U8G2_SSD1306_128X64_NONAME_F_HW_I2C>(U8G2_R0, U8X8_PIN_NONE);
+        }
 
         // Initialize display
-        if (!display->begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+        if (!display->begin()) {
             return false;
         }
 
-        // Set default text properties
-        display->setTextSize(textSize);
-        display->setTextColor(textColor);
-        display->cp437(true);  // Use full 256 char 'Code Page 437' font
+        // Set default text properties - use a cleaner, modern Helvetica font
+        display->setFont(u8g2_font_helvR08_tr);
+        display->setFontDirection(0);
+        display->setFontMode(1);  // Transparent mode
 
         // Apply display rotation if flipped
-        display->setRotation(displayFlipped ? 2 : 0);
+        if (displayFlipped) {
+            display->setDisplayRotation(U8G2_R2);
+        }
 
         clear();
         displayOn = true;  // Display is on after successful initialization
@@ -58,44 +68,43 @@ class Display {
     // Basic display control
     void clear() {
         if (display) {
-            display->clearDisplay();
+            display->clearBuffer();
         }
     }
     void update() {
         if (display) {
-            display->display();
+            display->sendBuffer();
         }
     }
     void turnOn() {
         if (display) {
-            display->ssd1306_command(SSD1306_DISPLAYON);
+            display->setPowerSave(0);
             displayOn = true;
         }
     }
     void turnOff() {
         if (display) {
-            display->ssd1306_command(SSD1306_DISPLAYOFF);
+            display->setPowerSave(1);
             displayOn = false;
         }
     }
     bool isDisplayOn() const { return displayOn; }
     void setBrightness(uint8_t brightness) {
         if (display) {
-            display->ssd1306_command(SSD1306_SETCONTRAST);
-            display->ssd1306_command(brightness);
+            display->setContrast(brightness);
         }
     }
     void setFlip(bool flip) {
         displayFlipped = flip;
         if (display) {
-            display->setRotation(displayFlipped ? 2 : 0);
+            display->setDisplayRotation(displayFlipped ? U8G2_R2 : U8G2_R0);
         }
     }
     bool getFlip() const { return displayFlipped; }
     void toggleFlip() {
         displayFlipped = !displayFlipped;
         if (display) {
-            display->setRotation(displayFlipped ? 2 : 0);
+            display->setDisplayRotation(displayFlipped ? U8G2_R2 : U8G2_R0);
         }
     }
 
@@ -103,15 +112,19 @@ class Display {
     void print(const String& text, int x = 0, int y = 0) { print(text.c_str(), x, y); }
     void print(const char* text, int x = 0, int y = 0) {
         if (display) {
-            display->setCursor(x, y);
+            // Adjust Y coordinate for U8g2 baseline difference
+            int adjustedY = y + getTextHeight() - 2;  // U8g2 baseline is at bottom, Adafruit at top
+            display->setCursor(x, adjustedY);
             display->print(text);
         }
     }
     void println(const String& text, int x = 0, int y = 0) { println(text.c_str(), x, y); }
     void println(const char* text, int x = 0, int y = 0) {
         if (display) {
-            display->setCursor(x, y);
-            display->println(text);
+            // Adjust Y coordinate for U8g2 baseline difference
+            int adjustedY = y + getTextHeight() - 2;  // U8g2 baseline is at bottom, Adafruit at top
+            display->setCursor(x, adjustedY);
+            display->print(text);
         }
     }
 
@@ -127,7 +140,9 @@ class Display {
             y = (SCREEN_HEIGHT - getTextHeight()) / 2;
         }
 
-        display->setCursor(x, y);
+        // Adjust Y coordinate for U8g2 baseline difference
+        int adjustedY = y + getTextHeight() - 2;
+        display->setCursor(x, adjustedY);
         display->print(text);
     }
     void printAligned(const String& text, TextAlign align, int y = 0, int x = 0) {
@@ -137,7 +152,9 @@ class Display {
         if (!display) return;
 
         int textX = calculateTextX(String(text), align, x);
-        display->setCursor(textX, y);
+        // Adjust Y coordinate for U8g2 baseline difference
+        int adjustedY = y + getTextHeight() - 2;
+        display->setCursor(textX, adjustedY);
         display->print(text);
     }
     void printVerticallyAligned(const String& text, VerticalAlign valign,
@@ -201,7 +218,9 @@ class Display {
             textX = x + width - textWidth - 2;  // Padding from right edge
         }
 
-        display->setCursor(textX, textY);
+        // Adjust Y coordinate for U8g2 baseline difference
+        int adjustedTextY = textY + getTextHeight() - 2;
+        display->setCursor(textX, adjustedTextY);
         display->print(text);
     }
 
@@ -209,13 +228,29 @@ class Display {
     void setTextSize(uint8_t size) {
         textSize = size;
         if (display) {
-            display->setTextSize(size);
+            // U8g2 doesn't have a direct setTextSize method like Adafruit_GFX
+            // Use modern Helvetica fonts for different sizes
+            switch (size) {
+                case 1:
+                    display->setFont(u8g2_font_helvR08_tr);  // Small
+                    break;
+                case 2:
+                    display->setFont(u8g2_font_helvR10_tr);  // Medium
+                    break;
+                case 3:
+                    display->setFont(u8g2_font_helvR12_tr);  // Large
+                    break;
+                default:
+                    display->setFont(u8g2_font_helvR08_tr);
+                    break;
+            }
         }
     }
     void setTextColor(uint16_t color) {
         textColor = color;
+        // U8g2 doesn't have setTextColor, it uses the current drawing color
         if (display) {
-            display->setTextColor(color);
+            display->setDrawColor(color);
         }
     }
     uint8_t getTextSize() const { return textSize; }
@@ -224,26 +259,19 @@ class Display {
     int getTextWidth(const String& text) { return getTextWidth(text.c_str()); }
     int getTextWidth(const char* text) {
         if (!display) return 0;
-
-        int16_t x1, y1;
-        uint16_t w, h;
-        display->getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
-        return w;
+        return display->getStrWidth(text);
     }
     int getTextHeight() {
         if (!display) return 0;
-
-        int16_t x1, y1;
-        uint16_t w, h;
-        display->getTextBounds("Ag", 0, 0, &x1, &y1, &w,
-                               &h);  // Use characters with ascenders and descenders
-        return h;
+        return display->getMaxCharHeight();
     }
     int getCharWidth() {
-        return 6 * textSize;  // Standard character width
+        if (!display) return 6 * textSize;
+        return display->getStrWidth("A");  // Width of a single character
     }
     int getCharHeight() {
-        return 8 * textSize;  // Standard character height
+        if (!display) return 8 * textSize;
+        return display->getMaxCharHeight();
     }
 
     // Screen dimensions
@@ -253,32 +281,42 @@ class Display {
     // Drawing methods
     void drawPixel(int x, int y, uint16_t color = 1) {
         if (display) {
-            display->drawPixel(x, y, color);
+            display->setDrawColor(color);
+            display->drawPixel(x, y);
         }
     }
     void drawLine(int x0, int y0, int x1, int y1, uint16_t color = 1) {
         if (display) {
-            display->drawLine(x0, y0, x1, y1, color);
+            display->setDrawColor(color);
+            display->drawLine(x0, y0, x1, y1);
         }
     }
     void drawRect(int x, int y, int width, int height, uint16_t color = 1) {
         if (display) {
-            display->drawRect(x, y, width, height, color);
+            display->setDrawColor(color);
+            display->drawFrame(x, y, width, height);
         }
     }
     void fillRect(int x, int y, int width, int height, uint16_t color = 1) {
         if (display) {
-            display->fillRect(x, y, width, height, color);
+            display->setDrawColor(color);
+            display->drawBox(x, y, width, height);
         }
     }
     void drawCircle(int x, int y, int radius, uint16_t color = 1) {
         if (display) {
-            display->drawCircle(x, y, radius, color);
+            display->setDrawColor(color);
+            display->drawCircle(x, y, radius,
+                                U8G2_DRAW_UPPER_RIGHT | U8G2_DRAW_UPPER_LEFT |
+                                    U8G2_DRAW_LOWER_LEFT | U8G2_DRAW_LOWER_RIGHT);
         }
     }
     void fillCircle(int x, int y, int radius, uint16_t color = 1) {
         if (display) {
-            display->fillCircle(x, y, radius, color);
+            display->setDrawColor(color);
+            display->drawDisc(x, y, radius,
+                              U8G2_DRAW_UPPER_RIGHT | U8G2_DRAW_UPPER_LEFT | U8G2_DRAW_LOWER_LEFT |
+                                  U8G2_DRAW_LOWER_RIGHT);
         }
     }
 
@@ -334,14 +372,15 @@ class Display {
     }
 
     // Get raw display object for advanced operations
-    Adafruit_SSD1306* getDisplay() { return display.get(); }
+    U8G2* getDisplay() { return display.get(); }
 
    private:
-    std::unique_ptr<Adafruit_SSD1306> display;
+    std::unique_ptr<U8G2> display;
     uint8_t textSize;
     uint16_t textColor;
     bool displayFlipped;
     bool displayOn;
+    DisplayType displayType;
 
     // Helper methods
     void wrapText(const String& text, int x, int y, int maxWidth, TextAlign align = ALIGN_LEFT) {
@@ -394,7 +433,9 @@ class Display {
             // Print the line
             if ((int)line.length() > 0) {
                 int lineX = calculateTextX(line, align, x, maxWidth);
-                display->setCursor(lineX, currentY);
+                // Adjust Y coordinate for U8g2 baseline difference
+                int adjustedCurrentY = currentY + getTextHeight() - 2;
+                display->setCursor(lineX, adjustedCurrentY);
                 display->print(line);
                 currentY += lineHeight;
             }
@@ -438,7 +479,8 @@ class Display {
 
     void drawBorder(int x, int y, int width, int height) {
         if (display) {
-            display->drawRect(x, y, width, height, 1);
+            display->setDrawColor(1);
+            display->drawFrame(x, y, width, height);
         }
     }
 };
