@@ -6,10 +6,10 @@
 #include "ui/HomeScreen.h"
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     // Initialize display first so we can show error messages
-    if (!display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE)) {
+    if (!display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE, DISPLAY_FLIPPED)) {
         LOG_ERROR("Failed to initialize display");
     }
 
