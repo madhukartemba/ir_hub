@@ -29,8 +29,9 @@ class Display {
     ~Display() = default;
 
     // Initialize the display
-    bool begin(int sdaPin = -1, int sclPin = -1, DisplayType type = SSD1306) {
+    bool begin(int sdaPin = -1, int sclPin = -1, DisplayType type = SSD1306, bool flipped = false) {
         displayType = type;
+        displayFlipped = flipped;
 
         // Initialize I2C if pins are specified
         if (sdaPin != -1 && sclPin != -1) {

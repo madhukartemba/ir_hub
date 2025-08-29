@@ -4,6 +4,7 @@
 #ifdef USE_VERSION_0
 // Display type
 #    define DISPLAY_TYPE DisplayType::SSD1306
+#    define DISPLAY_FLIPPED true
 
 // Pin definitions
 #    define TOUCH_BUTTON_PIN D0
@@ -29,6 +30,7 @@
 
 // Display type
 #    define DISPLAY_TYPE DisplayType::SH1106
+#    define DISPLAY_FLIPPED false
 
 // Pin definitions
 #    define TOUCH_BUTTON_PIN D0
