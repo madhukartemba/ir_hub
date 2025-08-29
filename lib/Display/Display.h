@@ -12,7 +12,7 @@
 #define OLED_RESET -1
 
 // Display type enum
-enum DisplayType { SSD1306, SSH1106 };
+enum DisplayType { SSD1306, SH1106 };
 
 // Text alignment constants
 enum TextAlign { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT };
@@ -38,7 +38,7 @@ class Display {
         }
 
         // Create display object based on type
-        if (displayType == SSH1106) {
+        if (displayType == SH1106) {
             display = std::make_unique<U8G2_SH1106_128X64_NONAME_F_HW_I2C>(U8G2_R0, U8X8_PIN_NONE);
         } else {
             // Default to SSD1306
