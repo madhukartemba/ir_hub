@@ -42,7 +42,7 @@
 #    define NEOPIXEL_PIN D7
 
 // LED configuration
-#    define NUM_LEDS 26  // Number of LEDs in the circular strip
+#    define NUM_LEDS 27  // Number of LEDs in the circular strip
 #    define CENTER_LED 12
 
 // WiFi configuration
