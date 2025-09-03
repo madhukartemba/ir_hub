@@ -161,13 +161,13 @@ class HomeScreen : public Screen {
 
         // Draw modern folder tab with "IP" text inside
         int tabWidth = 28;
-        int tabHeight = 8;
+        int tabHeight = 10;
         display.fillRect(cardX + 2, cardY - tabHeight, tabWidth, tabHeight);
 
         // Draw "IP" text in the tab
         display.setTextSize(1);
         display.setTextColor(0);  // Black text on filled tab
-        display.print("IP", cardX + 10, cardY - tabHeight + 1);
+        display.print("IP", cardX + 10, cardY - tabHeight);
 
         if (WiFi.status() == WL_CONNECTED) {
             String ip = WiFi.localIP().toString();
@@ -178,7 +178,7 @@ class HomeScreen : public Screen {
             int textWidth = display.getTextWidth(ip);
             int textHeight = display.getTextHeight();
             int textX = cardX + (cardWidth - textWidth) / 2;
-            int textY = cardY + (cardHeight - textHeight) / 2;
+            int textY = cardY + (cardHeight - textHeight) / 2 + 1;
             display.print(ip, textX, textY);
 
         } else {
@@ -210,7 +210,7 @@ class HomeScreen : public Screen {
 
         // Position at the very bottom (64 - 16 = 48 for text baseline, 50 for icon center)
         int iconY = 58;  // Bottom area for icon
-        int textY = 55;  // Bottom area for text baseline
+        int textY = 53;  // Bottom area for text baseline
 
         // Draw clock icon
         display.drawCircle(startX + 4, iconY, 4);

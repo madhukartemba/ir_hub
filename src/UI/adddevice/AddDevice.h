@@ -265,12 +265,12 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to begin", 15);
+        display.printCentered("Click to begin", 53);
 
         // LED-style indicators with power symbols
         // Power ON indicator (active - filled circle)
         display.fillCircle(32, 32, 6);  // Active indicator
-        display.print("ON", 27, 42);
+        display.print("ON", 24, 42);
 
         // Power OFF indicator (inactive - outline circle)
         display.drawCircle(96, 32, 6);  // Inactive indicator (empty)
@@ -287,7 +287,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING ON...", 15);
+        display.printCentered("RECORDING ON...", 12);
 
         // LED-style indicators with recording animation
         // Power ON indicator with pulsing animation
@@ -299,7 +299,7 @@ class AddDevice : public Screen {
             // Normal filled circle
             display.fillCircle(32, 32, 6);
         }
-        display.print("ON", 27, 42);
+        display.print("ON", 24, 42);
 
         // Power OFF indicator (inactive - outline circle)
         display.drawCircle(96, 32, 6);
@@ -309,7 +309,7 @@ class AddDevice : public Screen {
         unsigned long elapsed = millis() - recordingStartTime;
         int progress = (elapsed * 100) / RECORDING_TIMEOUT;
         progress = constrain(progress, 0, 100);
-        display.drawProgressBar(15, 52, 98, 6, progress, 100, false);
+        display.drawProgressBar(15, 56, 98, 6, progress, 100, false);
     }
 
     void drawReadyToRecordSecond() {
@@ -322,7 +322,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("Click to begin", 15);
+        display.printCentered("Click to begin", 53);
 
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
@@ -332,7 +332,7 @@ class AddDevice : public Screen {
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
-        display.print("ON", 27, 42);
+        display.print("ON", 24, 42);
 
         // Power OFF indicator (active - filled circle, ready to record)
         display.fillCircle(96, 32, 6);
@@ -349,7 +349,7 @@ class AddDevice : public Screen {
 
         // Show status
         display.setTextSize(1);
-        display.printCentered("RECORDING OFF...", 15);
+        display.printCentered("RECORDING OFF...", 12);
 
         // LED-style indicators
         // Power ON indicator (completed - filled circle with checkmark)
@@ -359,7 +359,7 @@ class AddDevice : public Screen {
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
-        display.print("ON", 27, 42);
+        display.print("ON", 24, 42);
 
         // Power OFF indicator with pulsing animation
         unsigned long pulse = (millis() / 300) % 2;
@@ -376,7 +376,7 @@ class AddDevice : public Screen {
         unsigned long elapsed = millis() - recordingStartTime;
         int progress = (elapsed * 100) / RECORDING_TIMEOUT;
         progress = constrain(progress, 0, 100);
-        display.drawProgressBar(15, 52, 98, 6, progress, 100, false);
+        display.drawProgressBar(15, 56, 98, 6, progress, 100, false);
     }
 
     void drawComparing() {
@@ -399,7 +399,7 @@ class AddDevice : public Screen {
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
-        display.print("ON", 27, 42);
+        display.print("ON", 24, 42);
 
         // Power OFF indicator (completed - filled circle with checkmark)
         display.fillCircle(96, 32, 6);
@@ -423,14 +423,10 @@ class AddDevice : public Screen {
         display.drawLine(0, 10, display.getWidth(), 10);
 
         // Better centered content layout
-        display.setTextSize(1);
-        display.printCentered("SUCCESS!", 18);
 
         // Show result based on whether codes matched
-        if (firstCode == secondCode) {
-            display.printCentered("Single device saved", 28);
-        } else {
-            display.printCentered("Device saved", 28);
+        if (firstCode != secondCode) {
+            display.printCentered("Device saved", 12);
         }
 
         // Show protocol info with better centering
@@ -440,21 +436,21 @@ class AddDevice : public Screen {
 
         if (firstCode == secondCode) {
             // Single device - show centered success icon and protocol
-            display.drawCircle(64, 46, 8);
-            display.drawLine(60, 47, 62, 49);
-            display.drawLine(62, 49, 68, 43);
-            display.printCentered("Protocol: " + firstProtocol, 56);
+            display.drawCircle(64, 37, 8);
+            display.drawLine(60, 38, 62, 40);
+            display.drawLine(62, 40, 68, 34);
+            display.printCentered("Protocol: " + firstProtocol, 49);
         } else {
             if (firstProtocol == secondProtocol) {
                 // Same protocol - show centered success icon and protocol
-                display.drawCircle(64, 46, 8);
-                display.drawLine(60, 47, 62, 49);
-                display.drawLine(62, 49, 68, 43);
-                display.printCentered("Protocol: " + firstProtocol, 56);
+                display.drawCircle(64, 37, 8);
+                display.drawLine(60, 38, 62, 40);
+                display.drawLine(62, 40, 68, 34);
+                display.printCentered("Protocol: " + firstProtocol, 49);
             } else {
                 // Different protocols - center the protocol info vertically
-                display.printCentered("ON: " + firstProtocol, 42);
-                display.printCentered("OFF: " + secondProtocol, 54);
+                display.printCentered("ON: " + firstProtocol, 32);
+                display.printCentered("OFF: " + secondProtocol, 49);
             }
         }
     }
