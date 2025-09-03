@@ -200,14 +200,7 @@ class HomeScreen : public Screen {
         String uptimeStr = getFormattedUptime();
         String fullText = "Uptime " + uptimeStr;
 
-        // Calculate text width (approximately 6 pixels per character for text size 1)
-        int textWidth = fullText.length() * 6;
-
-        // Calculate center position for the entire uptime section
-        // Clock icon is 8x8 pixels, plus some spacing
-        int totalWidth = 8 + 4 + textWidth;   // icon + spacing + text
-        int startX = (128 - totalWidth) / 2;  // Center the entire section
-
+        int startX = 22;
         // Position at the very bottom (64 - 16 = 48 for text baseline, 50 for icon center)
         int iconY = 58;  // Bottom area for icon
         int textY = 53;  // Bottom area for text baseline
