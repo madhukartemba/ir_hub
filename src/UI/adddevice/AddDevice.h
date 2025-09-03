@@ -426,7 +426,7 @@ class AddDevice : public Screen {
 
         // Show result based on whether codes matched
         if (firstCode != secondCode) {
-            display.printCentered("Device saved", 12);
+            display.printCentered("Device saved", 14);
         }
 
         // Show protocol info with better centering
@@ -439,7 +439,7 @@ class AddDevice : public Screen {
             display.drawCircle(64, 37, 8);
             display.drawLine(60, 38, 62, 40);
             display.drawLine(62, 40, 68, 34);
-            display.printCentered("Protocol: " + firstProtocol, 49);
+            display.printCentered("Protocol: " + firstProtocol, 54);
         } else {
             if (firstProtocol == secondProtocol) {
                 // Same protocol - show centered success icon and protocol
