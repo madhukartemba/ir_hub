@@ -118,7 +118,7 @@ class HomeScreen : public Screen {
         // Draw title in top left
         display.setTextSize(1);
         display.setTextColor(1);  // White text
-        display.print("IR Hub", 2, 4);
+        display.print("IR Hub", 2, 0);
 
         // Draw top signal bar
         drawSignalBar();
