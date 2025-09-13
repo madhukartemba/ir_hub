@@ -1,0 +1,36 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#(c) SnapEDA 2016 (snapeda.com)
+#This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA) with Design Exception 1.0
+#
+# CMT-7525-80-SMT-TR
+#
+DEF CMT-7525-80-SMT-TR LS 0 40 N N 1 L N
+F0 "LS" -150 350 50 H V L BNN
+F1 "CMT-7525-80-SMT-TR" -150 -400 50 H V L BNN
+F2 "XDCR_CMT-7525-80-SMT-TR" 0 0 50 H I L BNN
+F3 "" 0 0 50 H I L BNN
+F4 "N/A" 0 0 50 H I L BNN "PARTREV"
+F5 "Manufacturer Recommendations" 0 0 50 H I L BNN "STANDARD"
+F6 "2.50mm" 0 0 50 H I L BNN "MAXIMUM_PACKAGE_HEIGHT"
+F7 "CUI Inc." 0 0 50 H I L BNN "MANUFACTURER"
+DRAW
+P 2 0 0 10 -25 75 -25 -75 N
+P 2 0 0 10 -25 -75 0 -75 N
+P 2 0 0 10 50 -75 50 75 N
+P 2 0 0 10 -25 75 0 75 N
+P 2 0 0 10 50 -75 150 -200 N
+P 2 0 0 10 150 -200 150 200 N
+P 2 0 0 10 50 75 150 200 N
+P 2 0 0 6 0 -100 0 -75 N
+P 2 0 0 10 0 -75 50 -75 N
+P 2 0 0 6 0 100 0 75 N
+P 2 0 0 10 0 75 50 75 N
+T 0 -100 150 50 0 0 0 + Normal 0 L T
+T 0 -100 -100 50 0 0 0 - Normal 0 L T
+X ~ N 0 -200 100 U 40 40 0 0 P 
+X ~ P 0 200 100 D 40 40 0 0 P 
+ENDDRAW
+ENDDEF
+#
+# End Library
