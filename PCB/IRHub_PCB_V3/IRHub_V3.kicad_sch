@@ -301,7 +301,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Connector:Conn_01x04_Pin"
+		(symbol "Connector:Conn_01x06_Socket"
 			(pin_names
 				(offset 1.016)
 				(hide yes)
@@ -310,15 +310,15 @@
 			(in_bom yes)
 			(on_board yes)
 			(property "Reference" "J"
-				(at 0 5.08 0)
+				(at 0 7.62 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Value" "Conn_01x04_Pin"
-				(at 0 -7.62 0)
+			(property "Value" "Conn_01x06_Socket"
+				(at 0 -10.16 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -343,7 +343,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Generic connector, single row, 01x04, script generated"
+			(property "Description" "Generic connector, single row, 01x06, script generated"
 				(at 0 0 0)
 				(effects
 					(font
@@ -378,54 +378,10 @@
 					(hide yes)
 				)
 			)
-			(symbol "Conn_01x04_Pin_1_1"
-				(rectangle
-					(start 0.8636 2.667)
-					(end 0 2.413)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
-					(start 0.8636 0.127)
-					(end 0 -0.127)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
-					(start 0.8636 -2.413)
-					(end 0 -2.667)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
-					(start 0.8636 -4.953)
-					(end 0 -5.207)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
+			(symbol "Conn_01x06_Socket_1_1"
 				(polyline
 					(pts
-						(xy 1.27 2.54) (xy 0.8636 2.54)
+						(xy -1.27 5.08) (xy -0.508 5.08)
 					)
 					(stroke
 						(width 0.1524)
@@ -437,7 +393,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 0) (xy 0.8636 0)
+						(xy -1.27 2.54) (xy -0.508 2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -449,7 +405,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 -2.54) (xy 0.8636 -2.54)
+						(xy -1.27 0) (xy -0.508 0)
 					)
 					(stroke
 						(width 0.1524)
@@ -461,8 +417,104 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 -5.08) (xy 0.8636 -5.08)
+						(xy -1.27 -2.54) (xy -0.508 -2.54)
 					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -5.08) (xy -0.508 -5.08)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -7.62) (xy -0.508 -7.62)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 4.572)
+					(mid -0.5058 5.08)
+					(end 0 5.588)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 2.032)
+					(mid -0.5058 2.54)
+					(end 0 3.048)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -0.508)
+					(mid -0.5058 0)
+					(end 0 0.508)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -3.048)
+					(mid -0.5058 -2.54)
+					(end 0 -2.032)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -5.588)
+					(mid -0.5058 -5.08)
+					(end 0 -4.572)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -8.128)
+					(mid -0.5058 -7.62)
+					(end 0 -7.112)
 					(stroke
 						(width 0.1524)
 						(type default)
@@ -472,7 +524,7 @@
 					)
 				)
 				(pin passive line
-					(at 5.08 2.54 180)
+					(at -5.08 5.08 0)
 					(length 3.81)
 					(name "Pin_1"
 						(effects
@@ -490,7 +542,7 @@
 					)
 				)
 				(pin passive line
-					(at 5.08 0 180)
+					(at -5.08 2.54 0)
 					(length 3.81)
 					(name "Pin_2"
 						(effects
@@ -508,7 +560,7 @@
 					)
 				)
 				(pin passive line
-					(at 5.08 -2.54 180)
+					(at -5.08 0 0)
 					(length 3.81)
 					(name "Pin_3"
 						(effects
@@ -526,7 +578,7 @@
 					)
 				)
 				(pin passive line
-					(at 5.08 -5.08 180)
+					(at -5.08 -2.54 0)
 					(length 3.81)
 					(name "Pin_4"
 						(effects
@@ -536,6 +588,149 @@
 						)
 					)
 					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -5.08 0)
+					(length 3.81)
+					(name "Pin_5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -7.62 0)
+					(length 3.81)
+					(name "Pin_6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Connector:TestPoint"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0.762)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "TP"
+				(at 0 6.858 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "TestPoint"
+				(at 0 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 5.08 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 5.08 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "test point"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "test point tp"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Pin* Test*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "TestPoint_0_1"
+				(circle
+					(center 0 3.302)
+					(radius 0.762)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "TestPoint_1_1"
+				(pin passive line
+					(at 0 0 90)
+					(length 2.54)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -4870,7 +5065,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 116.84) (xy 207.01 116.84)
+			(xy 218.44 134.62) (xy 222.25 134.62)
 		)
 		(stroke
 			(width 0)
@@ -4890,7 +5085,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 124.46) (xy 207.01 124.46)
+			(xy 218.44 142.24) (xy 222.25 142.24)
 		)
 		(stroke
 			(width 0)
@@ -4900,7 +5095,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 93.98) (xy 207.01 93.98)
+			(xy 218.44 111.76) (xy 222.25 111.76)
 		)
 		(stroke
 			(width 0)
@@ -4980,7 +5175,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 101.6) (xy 207.01 101.6)
+			(xy 218.44 119.38) (xy 222.25 119.38)
 		)
 		(stroke
 			(width 0)
@@ -5100,7 +5295,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 109.22) (xy 207.01 109.22)
+			(xy 218.44 127) (xy 222.25 127)
 		)
 		(stroke
 			(width 0)
@@ -5130,7 +5325,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 132.08) (xy 207.01 132.08)
+			(xy 218.44 149.86) (xy 222.25 149.86)
 		)
 		(stroke
 			(width 0)
@@ -5190,6 +5385,26 @@
 	)
 	(wire
 		(pts
+			(xy 194.31 72.39) (xy 194.31 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6152f1b4-f584-4cf1-95c9-4f18864a2872")
+	)
+	(wire
+		(pts
+			(xy 191.77 69.85) (xy 194.31 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "63dc78a9-764b-4b64-8584-9983b62be6a2")
+	)
+	(wire
+		(pts
 			(xy 127 21.59) (xy 142.24 21.59)
 		)
 		(stroke
@@ -5197,6 +5412,16 @@
 			(type default)
 		)
 		(uuid "65b735a5-fa65-4c27-89d8-c449979bafc7")
+	)
+	(wire
+		(pts
+			(xy 243.84 153.67) (xy 254 153.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "65eff09e-8030-4351-9fc8-9319c358f83b")
 	)
 	(wire
 		(pts
@@ -5270,7 +5495,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 86.36) (xy 207.01 86.36)
+			(xy 218.44 104.14) (xy 222.25 104.14)
 		)
 		(stroke
 			(width 0)
@@ -5387,6 +5612,16 @@
 			(type default)
 		)
 		(uuid "9d71b225-d2a3-4a07-a3a6-999bd20dc0f6")
+	)
+	(wire
+		(pts
+			(xy 243.84 151.13) (xy 254 151.13)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a17069d6-e4c2-4ea0-9186-6ff14ff92966")
 	)
 	(wire
 		(pts
@@ -5510,7 +5745,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 139.7) (xy 207.01 139.7)
+			(xy 218.44 157.48) (xy 222.25 157.48)
 		)
 		(stroke
 			(width 0)
@@ -5850,7 +6085,7 @@
 	)
 	(global_label "IR_GND"
 		(shape input)
-		(at 187.96 109.22 180)
+		(at 203.2 127 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5860,7 +6095,7 @@
 		)
 		(uuid "06f07886-d147-4470-8b9d-c86aa56ed1f5")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 178.2619 109.22 0)
+			(at 193.5019 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6004,7 +6239,7 @@
 	)
 	(global_label "IR_GND"
 		(shape input)
-		(at 187.96 124.46 180)
+		(at 203.2 142.24 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6014,7 +6249,29 @@
 		)
 		(uuid "25efbb82-067c-4966-8c69-e257fc1a3962")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 178.2619 124.46 0)
+			(at 193.5019 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "D6"
+		(shape input)
+		(at 254 132.08 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "264a46b4-4545-479c-a765-96f97c932647")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 248.5353 132.08 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6070,7 +6327,7 @@
 	)
 	(global_label "IR_GND"
 		(shape input)
-		(at 187.96 139.7 180)
+		(at 203.2 157.48 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6080,7 +6337,7 @@
 		)
 		(uuid "3edb72e7-6e4b-4712-8cc8-fef516af3f10")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 178.2619 139.7 0)
+			(at 193.5019 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6112,9 +6369,31 @@
 			)
 		)
 	)
+	(global_label "D-"
+		(shape input)
+		(at 254 125.73 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "447178ed-6b92-4b99-b620-f4bbdaa96b81")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 248.1724 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "IR_GND"
 		(shape input)
-		(at 187.96 86.36 180)
+		(at 203.2 104.14 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6124,7 +6403,7 @@
 		)
 		(uuid "4a520cdc-835c-430a-a920-8bc8a5b4d31f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 178.2619 86.36 0)
+			(at 193.5019 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6174,6 +6453,50 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "TX"
+		(shape input)
+		(at 254 142.24 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "6703f055-80e6-4e94-b8a1-e8d767ad6868")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 248.8377 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "D7"
+		(shape input)
+		(at 254 134.62 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "75d21af9-a235-41c6-9cc3-51fa88157266")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 248.5353 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -6378,7 +6701,7 @@
 	)
 	(global_label "IR_GND"
 		(shape input)
-		(at 187.96 93.98 180)
+		(at 203.2 111.76 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6388,7 +6711,7 @@
 		)
 		(uuid "984e7396-9d45-4115-b167-e87c1afad435")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 178.2619 93.98 0)
+			(at 193.5019 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6464,6 +6787,28 @@
 			)
 		)
 	)
+	(global_label "RX"
+		(shape input)
+		(at 254 144.78 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "ac52ce12-678b-49d9-8d26-404fcb56d893")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 248.5353 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "D+"
 		(shape input)
 		(at 69.85 146.05 0)
@@ -6530,9 +6875,31 @@
 			)
 		)
 	)
+	(global_label "D+"
+		(shape input)
+		(at 254 123.19 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "d21d260b-3bc2-4111-9858-da7c6a43dd3d")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 248.1724 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "IR_GND"
 		(shape input)
-		(at 187.96 101.6 180)
+		(at 203.2 119.38 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6542,7 +6909,7 @@
 		)
 		(uuid "d63d6798-426d-42a2-8154-b5006e037f7e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 178.2619 101.6 0)
+			(at 193.5019 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6620,7 +6987,7 @@
 	)
 	(global_label "IR_GND"
 		(shape input)
-		(at 187.96 116.84 180)
+		(at 203.2 134.62 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6630,7 +6997,7 @@
 		)
 		(uuid "e62bc72d-7c40-418a-b00b-f33509559701")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 178.2619 116.84 0)
+			(at 193.5019 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6658,6 +7025,28 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "D0"
+		(shape input)
+		(at 189.23 69.85 270)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "e836c5d4-7d35-4f7e-ac1c-6fe4658f83c5")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 189.23 75.3147 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -6708,7 +7097,7 @@
 	)
 	(global_label "IR_GND"
 		(shape input)
-		(at 187.96 132.08 180)
+		(at 203.2 149.86 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6718,7 +7107,7 @@
 		)
 		(uuid "f4d1681d-27e8-4ec2-b5eb-7d7183e1ba34")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 178.2619 132.08 0)
+			(at 193.5019 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6821,6 +7210,72 @@
 			(project "IRHub_V3"
 				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
 					(reference "D29")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 243.84 151.13 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "0d2811c9-958a-41e8-897f-6c05c9f21082")
+		(property "Reference" "#PWR034"
+			(at 243.84 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 243.84 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 243.84 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 243.84 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 243.84 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "9c4b5a91-af3e-4378-b4c8-9745ece086f5")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "#PWR034")
 					(unit 1)
 				)
 			)
@@ -7082,33 +7537,35 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 199.39 132.08 90)
+		(lib_id "Connector:TestPoint")
+		(at 254 151.13 270)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "11b50dd0-a5e2-4273-a47b-3bcf4ecbe305")
-		(property "Reference" "R13"
-			(at 199.39 125.73 90)
+		(uuid "1103f1af-f9e3-446c-824c-a4b236037692")
+		(property "Reference" "5V1"
+			(at 259.08 149.8599 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
-		(property "Value" "68"
-			(at 199.39 128.27 90)
+		(property "Value" "VCC"
+			(at 259.08 152.3999 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
-			(at 199.39 133.858 90)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 156.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7117,7 +7574,72 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 199.39 132.08 0)
+			(at 254 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5ff4e773-b302-4f6f-9a49-72bd8248de1f")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "5V1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 214.63 149.86 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "11b50dd0-a5e2-4273-a47b-3bcf4ecbe305")
+		(property "Reference" "R13"
+			(at 214.63 143.51 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "68"
+			(at 214.63 146.05 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+			(at 214.63 151.638 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 214.63 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7126,7 +7648,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 199.39 132.08 0)
+			(at 214.63 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7144,6 +7666,140 @@
 			(project "IRHub_V3"
 				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
 					(reference "R13")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 254 125.73 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "126469e9-07c9-43b8-b725-76c01bd3a0a5")
+		(property "Reference" "T_D-1"
+			(at 259.08 124.4599 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "D-"
+			(at 259.08 126.9999 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 130.81 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 254 130.81 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "4dfb8960-f342-40b0-9939-90679deb1a97")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "T_D-1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 254 144.78 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "14499a4d-0f45-42d7-9d83-97924284563c")
+		(property "Reference" "T_RX1"
+			(at 259.08 143.5099 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "RX"
+			(at 259.08 146.0499 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 254 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f24dfb42-e51b-47ad-87bb-753740bd5f00")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "T_RX1")
 					(unit 1)
 				)
 			)
@@ -7220,6 +7876,73 @@
 			(project "IRHub_V3"
 				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
 					(reference "D19")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 254 123.19 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "1e71dc3a-72b4-45b9-9401-a14181d3f7c8")
+		(property "Reference" "T_D+1"
+			(at 259.08 121.9199 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "D+"
+			(at 259.08 124.4599 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 254 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "a0ec7481-da6a-4ccb-8b32-cc0a52d83c8c")
+		)
+		(instances
+			(project ""
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "T_D+1")
 					(unit 1)
 				)
 			)
@@ -7723,8 +8446,75 @@
 		)
 	)
 	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 254 142.24 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "2fb1888e-e20f-425d-8bb3-0df9ceb5b148")
+		(property "Reference" "T_TX1"
+			(at 259.08 140.9699 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "TX"
+			(at 259.08 143.5099 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 147.32 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 254 147.32 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "7e29a64e-42f5-41bc-8c42-36e805be65bd")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "T_TX1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+5V")
-		(at 207.01 93.98 0)
+		(at 222.25 111.76 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -7733,7 +8523,7 @@
 		(fields_autoplaced yes)
 		(uuid "3084ff3f-39f3-4821-a391-0bb91b74bb58")
 		(property "Reference" "#PWR021"
-			(at 207.01 97.79 0)
+			(at 222.25 115.57 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7742,7 +8532,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 207.01 88.9 0)
+			(at 222.25 106.68 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7750,7 +8540,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 207.01 93.98 0)
+			(at 222.25 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7759,7 +8549,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 207.01 93.98 0)
+			(at 222.25 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7768,7 +8558,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 207.01 93.98 0)
+			(at 222.25 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7790,7 +8580,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 207.01 132.08 0)
+		(at 222.25 149.86 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -7799,7 +8589,7 @@
 		(fields_autoplaced yes)
 		(uuid "34689bf8-8179-448d-b4ea-6fd7d1a31ea0")
 		(property "Reference" "#PWR031"
-			(at 207.01 135.89 0)
+			(at 222.25 153.67 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7808,7 +8598,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 207.01 127 0)
+			(at 222.25 144.78 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7816,7 +8606,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 207.01 132.08 0)
+			(at 222.25 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7825,7 +8615,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 207.01 132.08 0)
+			(at 222.25 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7834,7 +8624,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 207.01 132.08 0)
+			(at 222.25 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7998,7 +8788,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 199.39 93.98 90)
+		(at 214.63 111.76 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8007,7 +8797,7 @@
 		(fields_autoplaced yes)
 		(uuid "36d591b9-a4ee-4f63-92ce-c3ae802d54ff")
 		(property "Reference" "R8"
-			(at 199.39 87.63 90)
+			(at 214.63 105.41 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8015,7 +8805,7 @@
 			)
 		)
 		(property "Value" "68"
-			(at 199.39 90.17 90)
+			(at 214.63 107.95 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8023,7 +8813,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
-			(at 199.39 95.758 90)
+			(at 214.63 113.538 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8032,7 +8822,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 199.39 93.98 0)
+			(at 214.63 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8041,7 +8831,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 199.39 93.98 0)
+			(at 214.63 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8453,7 +9243,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 199.39 116.84 90)
+		(at 214.63 134.62 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8462,7 +9252,7 @@
 		(fields_autoplaced yes)
 		(uuid "4690a93e-ce0e-4eab-8cf5-4fcbace0e07b")
 		(property "Reference" "R11"
-			(at 199.39 110.49 90)
+			(at 214.63 128.27 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8470,7 +9260,7 @@
 			)
 		)
 		(property "Value" "68"
-			(at 199.39 113.03 90)
+			(at 214.63 130.81 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8478,7 +9268,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
-			(at 199.39 118.618 90)
+			(at 214.63 136.398 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8487,7 +9277,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 199.39 116.84 0)
+			(at 214.63 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8496,7 +9286,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 199.39 116.84 0)
+			(at 214.63 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8815,7 +9605,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 199.39 109.22 90)
+		(at 214.63 127 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8824,7 +9614,7 @@
 		(fields_autoplaced yes)
 		(uuid "572a8f6e-0144-4179-b929-08e585f949bd")
 		(property "Reference" "R10"
-			(at 199.39 102.87 90)
+			(at 214.63 120.65 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8832,7 +9622,7 @@
 			)
 		)
 		(property "Value" "68"
-			(at 199.39 105.41 90)
+			(at 214.63 123.19 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8840,7 +9630,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
-			(at 199.39 110.998 90)
+			(at 214.63 128.778 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8849,7 +9639,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 199.39 109.22 0)
+			(at 214.63 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8858,7 +9648,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 199.39 109.22 0)
+			(at 214.63 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8883,7 +9673,7 @@
 	)
 	(symbol
 		(lib_id "LED:IR204A")
-		(at 193.04 101.6 0)
+		(at 208.28 119.38 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8892,7 +9682,7 @@
 		(fields_autoplaced yes)
 		(uuid "578a16e8-e233-4de5-97dc-cc9d49a23ff1")
 		(property "Reference" "D33"
-			(at 191.897 93.98 0)
+			(at 207.137 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8900,7 +9690,7 @@
 			)
 		)
 		(property "Value" "IR204A"
-			(at 191.897 96.52 0)
+			(at 207.137 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8908,7 +9698,7 @@
 			)
 		)
 		(property "Footprint" "LED_THT:LED_D3.0mm_IRBlack"
-			(at 193.04 97.155 0)
+			(at 208.28 114.935 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8917,7 +9707,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.everlight.com/file/ProductFile/IR204-A.pdf"
-			(at 191.77 101.6 0)
+			(at 207.01 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8926,7 +9716,7 @@
 			)
 		)
 		(property "Description" "Infrared LED , 3mm LED package"
-			(at 193.04 101.6 0)
+			(at 208.28 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9160,33 +9950,35 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 199.39 101.6 90)
+		(lib_id "Connector:TestPoint")
+		(at 254 161.29 270)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "5b2ab079-5aa1-4692-b754-b6e13a69ffc8")
-		(property "Reference" "R9"
-			(at 199.39 95.25 90)
+		(uuid "5b12d744-6ab8-49bd-8f6a-c8b08831d3b9")
+		(property "Reference" "TP9"
+			(at 259.08 160.0199 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
-		(property "Value" "68"
-			(at 199.39 97.79 90)
+		(property "Value" "3V3"
+			(at 259.08 162.5599 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
-			(at 199.39 103.378 90)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 166.37 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9195,7 +9987,72 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 199.39 101.6 0)
+			(at 254 166.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "2f13f2e4-d352-40f3-9433-92b08ba19975")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "TP9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 214.63 119.38 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "5b2ab079-5aa1-4692-b754-b6e13a69ffc8")
+		(property "Reference" "R9"
+			(at 214.63 113.03 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "68"
+			(at 214.63 115.57 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+			(at 214.63 121.158 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 214.63 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9204,7 +10061,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 199.39 101.6 0)
+			(at 214.63 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9297,7 +10154,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 199.39 86.36 90)
+		(at 214.63 104.14 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9306,7 +10163,7 @@
 		(fields_autoplaced yes)
 		(uuid "5eef83f5-0f96-4d31-8392-ece09a046964")
 		(property "Reference" "R7"
-			(at 199.39 80.01 90)
+			(at 214.63 97.79 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9314,7 +10171,7 @@
 			)
 		)
 		(property "Value" "68"
-			(at 199.39 82.55 90)
+			(at 214.63 100.33 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9322,7 +10179,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
-			(at 199.39 88.138 90)
+			(at 214.63 105.918 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9331,7 +10188,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 199.39 86.36 0)
+			(at 214.63 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9340,7 +10197,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 199.39 86.36 0)
+			(at 214.63 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9631,7 +10488,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 207.01 86.36 0)
+		(at 222.25 104.14 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9640,7 +10497,7 @@
 		(fields_autoplaced yes)
 		(uuid "668b8b9d-40b0-4f19-a24f-f9eaa077d048")
 		(property "Reference" "#PWR020"
-			(at 207.01 90.17 0)
+			(at 222.25 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9649,7 +10506,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 207.01 81.28 0)
+			(at 222.25 99.06 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9657,7 +10514,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 207.01 86.36 0)
+			(at 222.25 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9666,7 +10523,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 207.01 86.36 0)
+			(at 222.25 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9675,7 +10532,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 207.01 86.36 0)
+			(at 222.25 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9980,7 +10837,7 @@
 	)
 	(symbol
 		(lib_id "LED:IR204A")
-		(at 193.04 116.84 0)
+		(at 208.28 134.62 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9989,7 +10846,7 @@
 		(fields_autoplaced yes)
 		(uuid "705745e8-d870-4dd4-a932-4d1d8108bb46")
 		(property "Reference" "D35"
-			(at 191.897 109.22 0)
+			(at 207.137 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9997,7 +10854,7 @@
 			)
 		)
 		(property "Value" "IR204A"
-			(at 191.897 111.76 0)
+			(at 207.137 129.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10005,7 +10862,7 @@
 			)
 		)
 		(property "Footprint" "LED_THT:LED_D3.0mm_IRBlack"
-			(at 193.04 112.395 0)
+			(at 208.28 130.175 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10014,7 +10871,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.everlight.com/file/ProductFile/IR204-A.pdf"
-			(at 191.77 116.84 0)
+			(at 207.01 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10023,7 +10880,7 @@
 			)
 		)
 		(property "Description" "Infrared LED , 3mm LED package"
-			(at 193.04 116.84 0)
+			(at 208.28 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10635,6 +11492,73 @@
 		)
 	)
 	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 254 153.67 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "7cdc3c93-22ca-4c72-a774-b3b6b1ac4221")
+		(property "Reference" "T_GND1"
+			(at 259.08 152.3999 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "GND"
+			(at 259.08 154.9399 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 254 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "ff967ba2-3e1c-4657-88c5-59543944466a")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "T_GND1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+3.3V")
 		(at 237.49 67.31 0)
 		(unit 1)
@@ -10998,7 +11922,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 207.01 109.22 0)
+		(at 222.25 127 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -11007,7 +11931,7 @@
 		(fields_autoplaced yes)
 		(uuid "91d1a835-ea58-4c0a-9244-94b103c14c70")
 		(property "Reference" "#PWR023"
-			(at 207.01 113.03 0)
+			(at 222.25 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11016,7 +11940,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 207.01 104.14 0)
+			(at 222.25 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11024,7 +11948,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 207.01 109.22 0)
+			(at 222.25 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11033,7 +11957,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 207.01 109.22 0)
+			(at 222.25 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11042,7 +11966,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 207.01 109.22 0)
+			(at 222.25 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11063,17 +11987,17 @@
 		)
 	)
 	(symbol
-		(lib_id "power:+5V")
-		(at 207.01 116.84 0)
+		(lib_id "power:+3.3V")
+		(at 254 161.29 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "a1da1b7b-3025-4318-93a9-6af27e1c46f3")
-		(property "Reference" "#PWR024"
-			(at 207.01 120.65 0)
+		(uuid "9dd0c51f-8b6d-44fa-b6f8-52d3e8c39cb8")
+		(property "Reference" "#PWR035"
+			(at 254 165.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11081,8 +12005,8 @@
 				(hide yes)
 			)
 		)
-		(property "Value" "+5V"
-			(at 207.01 111.76 0)
+		(property "Value" "+3.3V"
+			(at 254 156.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11090,7 +12014,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 207.01 116.84 0)
+			(at 254 161.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11099,7 +12023,73 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 207.01 116.84 0)
+			(at 254 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3.3V\""
+			(at 254 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "151e2f35-4578-4ce9-aa9e-1a0bc44d867e")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "#PWR035")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 222.25 134.62 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "a1da1b7b-3025-4318-93a9-6af27e1c46f3")
+		(property "Reference" "#PWR024"
+			(at 222.25 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 222.25 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 222.25 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 222.25 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11108,7 +12098,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 207.01 116.84 0)
+			(at 222.25 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11282,7 +12272,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 207.01 101.6 0)
+		(at 222.25 119.38 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -11291,7 +12281,7 @@
 		(fields_autoplaced yes)
 		(uuid "a7a13d49-8ca5-4b79-b73d-35865e4fa432")
 		(property "Reference" "#PWR022"
-			(at 207.01 105.41 0)
+			(at 222.25 123.19 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11300,7 +12290,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 207.01 96.52 0)
+			(at 222.25 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11308,7 +12298,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 207.01 101.6 0)
+			(at 222.25 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11317,7 +12307,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 207.01 101.6 0)
+			(at 222.25 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11326,7 +12316,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 207.01 101.6 0)
+			(at 222.25 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11348,7 +12338,7 @@
 	)
 	(symbol
 		(lib_id "LED:IR204A")
-		(at 193.04 109.22 0)
+		(at 208.28 127 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -11357,7 +12347,7 @@
 		(fields_autoplaced yes)
 		(uuid "a8468143-2d3d-4a08-8f18-1b36dcbeebcc")
 		(property "Reference" "D34"
-			(at 191.897 101.6 0)
+			(at 207.137 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11365,7 +12355,7 @@
 			)
 		)
 		(property "Value" "IR204A"
-			(at 191.897 104.14 0)
+			(at 207.137 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11373,7 +12363,7 @@
 			)
 		)
 		(property "Footprint" "LED_THT:LED_D3.0mm_IRBlack"
-			(at 193.04 104.775 0)
+			(at 208.28 122.555 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11382,7 +12372,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.everlight.com/file/ProductFile/IR204-A.pdf"
-			(at 191.77 109.22 0)
+			(at 207.01 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11391,7 +12381,7 @@
 			)
 		)
 		(property "Description" "Infrared LED , 3mm LED package"
-			(at 193.04 109.22 0)
+			(at 208.28 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11442,7 +12432,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "CMT-7525-80-SMT-TR:XDCR_CMT-7525-80-SMT-TR"
+		(property "Footprint" "CMT-7525:XDCR_CMT-7525-80-SMT-TR"
 			(at 237.49 72.39 0)
 			(effects
 				(font
@@ -11802,7 +12792,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 199.39 124.46 90)
+		(at 214.63 142.24 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -11811,7 +12801,7 @@
 		(fields_autoplaced yes)
 		(uuid "b0dabb20-9039-45df-97fb-3ffed22d9ec4")
 		(property "Reference" "R12"
-			(at 199.39 118.11 90)
+			(at 214.63 135.89 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11819,7 +12809,7 @@
 			)
 		)
 		(property "Value" "68"
-			(at 199.39 120.65 90)
+			(at 214.63 138.43 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11827,7 +12817,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
-			(at 199.39 126.238 90)
+			(at 214.63 144.018 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11836,7 +12826,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 199.39 124.46 0)
+			(at 214.63 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11845,7 +12835,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 199.39 124.46 0)
+			(at 214.63 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12014,7 +13004,7 @@
 	)
 	(symbol
 		(lib_id "LED:IR204A")
-		(at 193.04 124.46 0)
+		(at 208.28 142.24 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -12023,7 +13013,7 @@
 		(fields_autoplaced yes)
 		(uuid "b839edcd-75e1-4716-8f0c-ea67abbd185f")
 		(property "Reference" "D36"
-			(at 191.897 116.84 0)
+			(at 207.137 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12031,7 +13021,7 @@
 			)
 		)
 		(property "Value" "IR204A"
-			(at 191.897 119.38 0)
+			(at 207.137 137.16 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12039,7 +13029,7 @@
 			)
 		)
 		(property "Footprint" "LED_THT:LED_D3.0mm_IRBlack"
-			(at 193.04 120.015 0)
+			(at 208.28 137.795 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12048,7 +13038,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.everlight.com/file/ProductFile/IR204-A.pdf"
-			(at 191.77 124.46 0)
+			(at 207.01 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12057,7 +13047,7 @@
 			)
 		)
 		(property "Description" "Infrared LED , 3mm LED package"
-			(at 193.04 124.46 0)
+			(at 208.28 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12082,7 +13072,7 @@
 	)
 	(symbol
 		(lib_id "LED:IR204A")
-		(at 193.04 132.08 0)
+		(at 208.28 149.86 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -12091,7 +13081,7 @@
 		(fields_autoplaced yes)
 		(uuid "b91c81b3-e3a7-495b-8429-d6968ccb9e38")
 		(property "Reference" "D37"
-			(at 191.897 124.46 0)
+			(at 207.137 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12099,7 +13089,7 @@
 			)
 		)
 		(property "Value" "IR204A"
-			(at 191.897 127 0)
+			(at 207.137 144.78 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12107,7 +13097,7 @@
 			)
 		)
 		(property "Footprint" "LED_THT:LED_D3.0mm_IRBlack"
-			(at 193.04 127.635 0)
+			(at 208.28 145.415 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12116,7 +13106,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.everlight.com/file/ProductFile/IR204-A.pdf"
-			(at 191.77 132.08 0)
+			(at 207.01 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12125,7 +13115,7 @@
 			)
 		)
 		(property "Description" "Infrared LED , 3mm LED package"
-			(at 193.04 132.08 0)
+			(at 208.28 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12150,7 +13140,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 199.39 139.7 90)
+		(at 214.63 157.48 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -12159,7 +13149,7 @@
 		(fields_autoplaced yes)
 		(uuid "b9860280-2c45-4c7e-96b7-f04493574d9c")
 		(property "Reference" "R14"
-			(at 199.39 133.35 90)
+			(at 214.63 151.13 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12167,7 +13157,7 @@
 			)
 		)
 		(property "Value" "68"
-			(at 199.39 135.89 90)
+			(at 214.63 153.67 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12175,7 +13165,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
-			(at 199.39 141.478 90)
+			(at 214.63 159.258 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12184,7 +13174,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 199.39 139.7 0)
+			(at 214.63 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12193,7 +13183,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 199.39 139.7 0)
+			(at 214.63 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12354,7 +13344,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 207.01 124.46 0)
+		(at 222.25 142.24 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -12363,7 +13353,7 @@
 		(fields_autoplaced yes)
 		(uuid "c496be49-c46a-4f0c-b86a-022c61825bf3")
 		(property "Reference" "#PWR025"
-			(at 207.01 128.27 0)
+			(at 222.25 146.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12372,7 +13362,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 207.01 119.38 0)
+			(at 222.25 137.16 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12380,7 +13370,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 207.01 124.46 0)
+			(at 222.25 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12389,7 +13379,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 207.01 124.46 0)
+			(at 222.25 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12398,7 +13388,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 207.01 124.46 0)
+			(at 222.25 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12845,6 +13835,72 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 194.31 72.39 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d36754ec-3c04-429d-92e0-f56cbc8b79e2")
+		(property "Reference" "#PWR036"
+			(at 194.31 78.74 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 194.31 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 194.31 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 194.31 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 194.31 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "cfe13b72-4b31-4df8-a34f-70a233df325e")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "#PWR036")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "LED:WS2812B-2020")
 		(at 96.52 46.99 0)
 		(unit 1)
@@ -12922,7 +13978,7 @@
 	)
 	(symbol
 		(lib_id "LED:IR204A")
-		(at 193.04 139.7 0)
+		(at 208.28 157.48 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -12931,7 +13987,7 @@
 		(fields_autoplaced yes)
 		(uuid "d49e3c94-98e5-40d3-8b2d-a8b9d2b4e891")
 		(property "Reference" "D38"
-			(at 191.897 132.08 0)
+			(at 207.137 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12939,7 +13995,7 @@
 			)
 		)
 		(property "Value" "IR204A"
-			(at 191.897 134.62 0)
+			(at 207.137 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12947,7 +14003,7 @@
 			)
 		)
 		(property "Footprint" "LED_THT:LED_D3.0mm_IRBlack"
-			(at 193.04 135.255 0)
+			(at 208.28 153.035 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12956,7 +14012,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.everlight.com/file/ProductFile/IR204-A.pdf"
-			(at 191.77 139.7 0)
+			(at 207.01 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12965,7 +14021,7 @@
 			)
 		)
 		(property "Description" "Infrared LED , 3mm LED package"
-			(at 193.04 139.7 0)
+			(at 208.28 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13065,6 +14121,72 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 243.84 153.67 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d7003b01-cc1d-49cf-8de1-7c408489006c")
+		(property "Reference" "#PWR033"
+			(at 243.84 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 243.84 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 243.84 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 243.84 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 243.84 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "ab7ea94b-d215-46e8-9093-b7a4fef0d2bd")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "#PWR033")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C_Small")
 		(at 40.64 73.66 0)
 		(unit 1)
@@ -13129,80 +14251,6 @@
 			(project "IRHub_V3"
 				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
 					(reference "C4")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:Conn_01x04_Pin")
-		(at 184.15 64.77 270)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "d86ad1a3-d546-405f-87dd-53bfdae47edc")
-		(property "Reference" "OLED1"
-			(at 182.88 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "Conn_01x04_Pin"
-			(at 182.88 62.23 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical"
-			(at 184.15 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 184.15 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x04, script generated"
-			(at 184.15 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "633dbc7d-b5f4-4904-89da-39d7b9177a13")
-		)
-		(pin "2"
-			(uuid "59994dfe-8311-47e3-873e-489a2c944686")
-		)
-		(pin "3"
-			(uuid "c50b5cfd-bd24-48ae-9db7-8821babf4ebb")
-		)
-		(pin "4"
-			(uuid "439e5661-fe06-48c2-bf4e-48acca672198")
-		)
-		(instances
-			(project ""
-				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
-					(reference "OLED1")
 					(unit 1)
 				)
 			)
@@ -13356,8 +14404,75 @@
 		)
 	)
 	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 254 132.08 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "e3d7e824-f31c-4796-ac62-738ac2a43af5")
+		(property "Reference" "T_D6"
+			(at 259.08 130.8099 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "D6"
+			(at 259.08 133.3499 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 137.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 254 137.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 132.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "ef1c34ee-7cb9-47c6-a01d-f2b7a960f7d5")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "T_D6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+5V")
-		(at 207.01 139.7 0)
+		(at 222.25 157.48 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -13366,7 +14481,7 @@
 		(fields_autoplaced yes)
 		(uuid "e9717793-f6ea-4555-9434-e8393c8a5a3c")
 		(property "Reference" "#PWR032"
-			(at 207.01 143.51 0)
+			(at 222.25 161.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13375,7 +14490,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 207.01 134.62 0)
+			(at 222.25 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13383,7 +14498,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 207.01 139.7 0)
+			(at 222.25 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13392,7 +14507,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 207.01 139.7 0)
+			(at 222.25 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13401,7 +14516,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 207.01 139.7 0)
+			(at 222.25 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13500,7 +14615,7 @@
 	)
 	(symbol
 		(lib_id "LED:IR204A")
-		(at 193.04 86.36 0)
+		(at 208.28 104.14 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -13509,7 +14624,7 @@
 		(fields_autoplaced yes)
 		(uuid "ed3c2d18-de77-4e5b-9272-05ecd0dfa216")
 		(property "Reference" "D31"
-			(at 191.897 78.74 0)
+			(at 207.137 96.52 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13517,7 +14632,7 @@
 			)
 		)
 		(property "Value" "IR204A"
-			(at 191.897 81.28 0)
+			(at 207.137 99.06 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13525,7 +14640,7 @@
 			)
 		)
 		(property "Footprint" "LED_THT:LED_D3.0mm_IRBlack"
-			(at 193.04 81.915 0)
+			(at 208.28 99.695 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13534,7 +14649,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.everlight.com/file/ProductFile/IR204-A.pdf"
-			(at 191.77 86.36 0)
+			(at 207.01 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13543,7 +14658,7 @@
 			)
 		)
 		(property "Description" "Infrared LED , 3mm LED package"
-			(at 193.04 86.36 0)
+			(at 208.28 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13773,8 +14888,155 @@
 		)
 	)
 	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 254 134.62 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "ef3698ac-fd65-46bb-a4e4-8008556d9015")
+		(property "Reference" "T_D7"
+			(at 259.08 133.3499 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "D7"
+			(at 259.08 135.8899 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D2.0mm"
+			(at 254 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 254 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 254 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "deb03889-16fe-4664-94fa-417f4ef472e9")
+		)
+		(instances
+			(project ""
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "T_D7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x06_Socket")
+		(at 184.15 64.77 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f02586a0-050b-4775-b52e-d7e5110bc757")
+		(property "Reference" "DispTouch"
+			(at 185.42 59.69 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "DispTouch"
+			(at 185.42 62.23 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_JST:JST_SH_BM06B-SRSS-TB_1x06-1MP_P1.00mm_Vertical"
+			(at 184.15 64.77 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 184.15 64.77 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x06, script generated"
+			(at 184.15 64.77 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "6"
+			(uuid "3f90595a-9d47-4ec4-a75f-a1e88fe7ad88")
+		)
+		(pin "5"
+			(uuid "e5a88323-8daf-4639-8a16-959f744a6011")
+		)
+		(pin "4"
+			(uuid "a097533e-2779-435c-90a5-5cf764e815ac")
+		)
+		(pin "3"
+			(uuid "1a3687f1-73ac-4621-955f-57c88e3a4d7a")
+		)
+		(pin "2"
+			(uuid "454fe58c-0eed-46f4-a562-be1ca07e8a34")
+		)
+		(pin "1"
+			(uuid "ea5844e5-9830-4cc9-82a0-ed691d315bf8")
+		)
+		(instances
+			(project ""
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "DispTouch")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "LED:IR204A")
-		(at 193.04 93.98 0)
+		(at 208.28 111.76 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -13783,7 +15045,7 @@
 		(fields_autoplaced yes)
 		(uuid "f536f922-8616-48ba-95d9-4a549fd071fc")
 		(property "Reference" "D32"
-			(at 191.897 86.36 0)
+			(at 207.137 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13791,7 +15053,7 @@
 			)
 		)
 		(property "Value" "IR204A"
-			(at 191.897 88.9 0)
+			(at 207.137 106.68 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13799,7 +15061,7 @@
 			)
 		)
 		(property "Footprint" "LED_THT:LED_D3.0mm_IRBlack"
-			(at 193.04 89.535 0)
+			(at 208.28 107.315 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13808,7 +15070,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.everlight.com/file/ProductFile/IR204-A.pdf"
-			(at 191.77 93.98 0)
+			(at 207.01 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13817,7 +15079,7 @@
 			)
 		)
 		(property "Description" "Infrared LED , 3mm LED package"
-			(at 193.04 93.98 0)
+			(at 208.28 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
