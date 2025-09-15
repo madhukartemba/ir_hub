@@ -4,6 +4,12 @@
 	(generator_version "9.0")
 	(uuid "aae96d67-430c-4b50-8ebf-3dca81de3bb1")
 	(paper "A4")
+	(title_block
+		(title "IR Hub")
+		(date "2025-09-15")
+		(rev "3")
+		(company "Madhukar Temba")
+	)
 	(lib_symbols
 		(symbol "CMT-7525-80-SMT-TR:CMT-7525-80-SMT-TR"
 			(pin_numbers
