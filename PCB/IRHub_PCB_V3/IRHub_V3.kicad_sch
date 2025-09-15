@@ -5285,6 +5285,12 @@
 		(uuid "77696793-1c6c-4cfa-af6f-a06c91af760b")
 	)
 	(junction
+		(at 246.38 116.84)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "7cdc16fa-2736-442f-ac4a-340f3dd2a2bd")
+	)
+	(junction
 		(at 78.74 154.94)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5940,6 +5946,16 @@
 	)
 	(wire
 		(pts
+			(xy 237.49 111.76) (xy 238.76 111.76)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6d07a16c-e1ee-4232-9830-ea268bf47c36")
+	)
+	(wire
+		(pts
 			(xy 50.8 36.83) (xy 66.04 36.83)
 		)
 		(stroke
@@ -6307,6 +6323,16 @@
 			(type default)
 		)
 		(uuid "b8e918f1-e9b0-46ce-a865-f1d1c291c6c7")
+	)
+	(wire
+		(pts
+			(xy 246.38 111.76) (xy 246.38 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c05a8aa8-4802-4f42-89b7-03fa0c7d347d")
 	)
 	(wire
 		(pts
@@ -7269,6 +7295,28 @@
 		(uuid "77e23264-8149-4a22-8e3d-949f52858ffc")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 194.31 161.6747 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "D3"
+		(shape input)
+		(at 237.49 111.76 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "7b75c334-7b1a-496a-8bc2-2659a3975182")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 232.0253 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13584,6 +13632,74 @@
 			(project "IRHub_V3"
 				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
 					(reference "IR_L6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 242.57 111.76 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "a5eaea13-81d3-4455-9407-51045d9e3bcf")
+		(property "Reference" "R21"
+			(at 242.57 105.41 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "12000"
+			(at 242.57 107.95 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+			(at 242.57 113.538 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 242.57 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 242.57 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "95d63a41-7e9b-447e-bd20-90fbb81b5487")
+		)
+		(pin "2"
+			(uuid "1560633c-64c7-47d4-84a4-4c13eb875d5a")
+		)
+		(instances
+			(project "IRHub_V3"
+				(path "/aae96d67-430c-4b50-8ebf-3dca81de3bb1"
+					(reference "R21")
 					(unit 1)
 				)
 			)
