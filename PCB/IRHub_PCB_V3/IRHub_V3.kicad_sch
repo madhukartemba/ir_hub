@@ -9778,7 +9778,7 @@
 				)
 			)
 		)
-		(property "Value" "68"
+		(property "Value" "43"
 			(at 165.1 137.16 90)
 			(effects
 				(font
@@ -9786,7 +9786,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+		(property "Footprint" "Resistor_SMD:R_1210_3225Metric_Pad1.30x2.65mm_HandSolder"
 			(at 165.1 142.748 90)
 			(effects
 				(font
@@ -10100,7 +10100,7 @@
 				)
 			)
 		)
-		(property "Value" "68"
+		(property "Value" "43"
 			(at 165.1 121.92 90)
 			(effects
 				(font
@@ -10108,7 +10108,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+		(property "Footprint" "Resistor_SMD:R_1210_3225Metric_Pad1.30x2.65mm_HandSolder"
 			(at 165.1 127.508 90)
 			(effects
 				(font
@@ -10446,7 +10446,7 @@
 				)
 			)
 		)
-		(property "Value" "68"
+		(property "Value" "43"
 			(at 165.1 144.78 90)
 			(effects
 				(font
@@ -10454,7 +10454,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+		(property "Footprint" "Resistor_SMD:R_1210_3225Metric_Pad1.30x2.65mm_HandSolder"
 			(at 165.1 150.368 90)
 			(effects
 				(font
@@ -11150,7 +11150,7 @@
 				)
 			)
 		)
-		(property "Value" "68"
+		(property "Value" "43"
 			(at 165.1 106.68 90)
 			(effects
 				(font
@@ -11158,7 +11158,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+		(property "Footprint" "Resistor_SMD:R_1210_3225Metric_Pad1.30x2.65mm_HandSolder"
 			(at 165.1 112.268 90)
 			(effects
 				(font
@@ -12050,7 +12050,7 @@
 				)
 			)
 		)
-		(property "Value" "68"
+		(property "Value" "43"
 			(at 165.1 152.4 90)
 			(effects
 				(font
@@ -12058,7 +12058,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+		(property "Footprint" "Resistor_SMD:R_1210_3225Metric_Pad1.30x2.65mm_HandSolder"
 			(at 165.1 157.988 90)
 			(effects
 				(font
@@ -13111,7 +13111,7 @@
 				)
 			)
 		)
-		(property "Value" "68"
+		(property "Value" "43"
 			(at 165.1 129.54 90)
 			(effects
 				(font
@@ -13119,7 +13119,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+		(property "Footprint" "Resistor_SMD:R_1210_3225Metric_Pad1.30x2.65mm_HandSolder"
 			(at 165.1 135.128 90)
 			(effects
 				(font
@@ -14197,7 +14197,7 @@
 				)
 			)
 		)
-		(property "Value" "68"
+		(property "Value" "43"
 			(at 165.1 114.3 90)
 			(effects
 				(font
@@ -14205,7 +14205,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+		(property "Footprint" "Resistor_SMD:R_1210_3225Metric_Pad1.30x2.65mm_HandSolder"
 			(at 165.1 119.888 90)
 			(effects
 				(font
@@ -15467,7 +15467,7 @@
 				)
 			)
 		)
-		(property "Value" "68"
+		(property "Value" "43"
 			(at 165.1 160.02 90)
 			(effects
 				(font
@@ -15475,7 +15475,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder"
+		(property "Footprint" "Resistor_SMD:R_1210_3225Metric_Pad1.30x2.65mm_HandSolder"
 			(at 165.1 165.608 90)
 			(effects
 				(font
