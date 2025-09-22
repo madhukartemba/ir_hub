@@ -507,7 +507,7 @@
       "plot": "gerbers/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "IRHub_V3_Model.stl",
       "svg": "",
       "vrml": ""
     },
