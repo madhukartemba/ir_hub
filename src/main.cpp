@@ -1,9 +1,16 @@
+#include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <LittleFS.h>
 #include "config.h"
 #include "global/Global.h"
 #include "preferences.h"
 #include "ui/HomeScreen.h"
+
+Adafruit_NeoPixel strip(NUM_LEDS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+
+unsigned long lastRainbowUpdate = 0;
+const unsigned long rainbowInterval = 20;  // ms between updates
+uint16_t rainbowOffset = 0;
 
 void setup() {
     Serial.begin(115200);
@@ -103,22 +110,12 @@ void setup() {
 
     // Initialize LED ring
     LOG_DEBUG("Starting LED ring setup");
-    if (!ring.begin(NEOPIXEL_PIN, NUM_LEDS, CENTER_LED)) {
-        LOG_ERROR("Failed to initialize LED ring");
-        display.clear();
-        display.printCentered("ERROR", 10);
-        display.printCentered("LED Ring failed", 25);
-        display.printCentered("Check LED pin", 40);
-        display.update();
-        while (1) {
-            delay(100);
-        }
-    }
+    strip.begin();
+    strip.show();  // Initialize all pixels to 'off'
     LOG_DEBUG("LED ring initialized on pin");
 
     // Successful core initialization now setup wireless connection
-    ring.solid(COLOR_WIFI_INIT, 255);
-    ring.finishTransition();
+
     speaker.playStartupSound();
 
     // Initialize WiFi Manager
@@ -130,10 +127,8 @@ void setup() {
     alexaConnector.setOnStateChangeCallback([](const Device& device, bool state) {
         LOG_DEBUG("Alexa state change: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
-            ring.pulse(5, SEND_ON_COMMAND_COLOR, 1);
             speaker.beep();
         } else {
-            ring.pulse(5, SEND_OFF_COMMAND_COLOR, 1);
             speaker.beep();
         }
     });
@@ -163,10 +158,25 @@ void setup() {
     LOG_INFO("IR Hub: System Ready");
 }
 
+void showRainbow(uint16_t offset) {
+    for (uint16_t i = 0; i < NUM_LEDS; i++) {
+        uint16_t hue = (offset + (i * 65536L / NUM_LEDS)) % 65536;
+        strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
+    }
+    strip.show();
+}
+
 void loop() {
-    wifiManager.update();  // Handle WiFi and OTA updates
-    router.update();       // Main app logic now handled by router
+    wifiManager.update();
+    router.update();
     button.update();
-    ring.update();
     alexaConnector.update();
+
+    // Non-blocking rainbow animation
+    unsigned long now = millis();
+    if (now - lastRainbowUpdate >= rainbowInterval) {
+        lastRainbowUpdate = now;
+        rainbowOffset += 256;  // Adjust speed here
+        showRainbow(rainbowOffset);
+    }
 }
