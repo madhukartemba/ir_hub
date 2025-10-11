@@ -10,6 +10,8 @@ class Animation {
     std::vector<uint32_t> buffer;
 
    public:
+    float speed = 1.0f;
+
     virtual ~Animation() = default;
 
     virtual void update() = 0;
