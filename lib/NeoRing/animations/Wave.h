@@ -5,14 +5,21 @@
 
 class Wave : public Animation {
    private:
-    float phase = 0.0f;  // current wave phase
-    float wavelength;    // number of LEDs per wave cycle
-    float amplitude;     // intensity multiplier (0 to 1)
+    float phase = 0.0f;         // current wave phase
+    float wavelength;           // number of LEDs per wave cycle
+    float amplitude;            // intensity multiplier (0 to 1)
+    uint32_t color = 0x0000FF;  // default wave color (blue)
 
    public:
     // Constructor: optional wavelength & amplitude
-    Wave(float wavelength_ = 10.0f, float amplitude_ = 1.0f)
-        : wavelength(wavelength_), amplitude(amplitude_) {}
+    Wave(float wavelength_ = 10.0f, float amplitude_ = 1.0f, uint8_t r = 0, uint8_t g = 0,
+         uint8_t b = 255)
+        : wavelength(wavelength_), amplitude(amplitude_) {
+        color = Adafruit_NeoPixel::Color(r, g, b);
+    }
+
+    Wave(float wavelength_, float amplitude_, uint32_t packedColor)
+        : wavelength(wavelength_), amplitude(amplitude_), color(packedColor) {}
 
     void update() override {
         if (ledCount == 0) return;

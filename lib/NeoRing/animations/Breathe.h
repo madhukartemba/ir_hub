@@ -12,6 +12,8 @@ class Breathe : public Animation {
     // Constructor: optional initial color
     Breathe(uint8_t r = 255, uint8_t g = 255, uint8_t b = 255) { setColor(r, g, b); }
 
+    Breathe(uint32_t packedColor) : color(packedColor) {}
+
     void setColor(uint8_t r, uint8_t g, uint8_t b) { color = Adafruit_NeoPixel::Color(r, g, b); }
 
     void update() override {

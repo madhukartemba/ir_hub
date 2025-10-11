@@ -11,6 +11,8 @@ class SolidColor : public Animation {
     // Constructor to set initial color
     SolidColor(uint8_t r = 255, uint8_t g = 255, uint8_t b = 255) { setColor(r, g, b); }
 
+    SolidColor(uint32_t packedColor) : color(packedColor) {}
+
     // Set/change the color dynamically
     void setColor(uint8_t r, uint8_t g, uint8_t b) { color = Adafruit_NeoPixel::Color(r, g, b); }
 
