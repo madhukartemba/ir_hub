@@ -1,6 +1,6 @@
 #pragma once
 #include <Adafruit_NeoPixel.h>
-#include <math.h>  // for sinf
+#include <cmath>  // for sinf
 #include "Animation.h"
 
 class Breathe : public Animation {
@@ -9,13 +9,18 @@ class Breathe : public Animation {
     uint32_t color = 0xFFFFFFFF;  // default color (white)
 
    public:
-    // Constructor: optional initial color
-    Breathe(uint8_t r = 255, uint8_t g = 255, uint8_t b = 255) {
+    // Constructor: pass ledCount and optional initial color
+    Breathe(size_t ledCount_, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255) {
+        ledCount = ledCount_;  // set ledCount first
         setColor(r, g, b);
         buffer.resize(ledCount, color);
     }
 
-    Breathe(uint32_t packedColor) : color(packedColor) { buffer.resize(ledCount, color); }
+    Breathe(size_t ledCount_, uint32_t packedColor) {
+        ledCount = ledCount_;
+        color = packedColor;
+        buffer.resize(ledCount, color);
+    }
 
     void setColor(uint8_t r, uint8_t g, uint8_t b) { color = Adafruit_NeoPixel::Color(r, g, b); }
 
@@ -30,9 +35,9 @@ class Breathe : public Animation {
         float brightness = (sinf(phase - 3.14159265f / 2) * 0.5f + 0.5f);
 
         // Apply brightness to each LED
-        uint8_t r = ((color >> 16) & 0xFF) * brightness;
-        uint8_t g = ((color >> 8) & 0xFF) * brightness;
-        uint8_t b = (color & 0xFF) * brightness;
+        uint8_t r = static_cast<uint8_t>(((color >> 16) & 0xFF) * brightness);
+        uint8_t g = static_cast<uint8_t>(((color >> 8) & 0xFF) * brightness);
+        uint8_t b = static_cast<uint8_t>((color & 0xFF) * brightness);
 
         for (size_t i = 0; i < ledCount; ++i) {
             buffer[i] = Adafruit_NeoPixel::Color(r, g, b);

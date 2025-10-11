@@ -1,6 +1,6 @@
 #pragma once
 #include <Adafruit_NeoPixel.h>
-#include <math.h>  // for sinf
+#include <cmath>  // for sinf
 #include "Animation.h"
 
 class Wave : public Animation {
@@ -11,16 +11,18 @@ class Wave : public Animation {
     uint32_t color = 0x0000FF;  // default wave color (blue)
 
    public:
-    // Constructor: optional wavelength & amplitude
-    Wave(float wavelength_ = 10.0f, float amplitude_ = 1.0f, uint8_t r = 0, uint8_t g = 0,
-         uint8_t b = 255)
+    // Constructor: pass ledCount, optional wavelength & amplitude & color
+    Wave(size_t ledCount_, float wavelength_ = 10.0f, float amplitude_ = 1.0f, uint8_t r = 0,
+         uint8_t g = 0, uint8_t b = 255)
         : wavelength(wavelength_), amplitude(amplitude_) {
+        ledCount = ledCount_;  // set ledCount first
         color = Adafruit_NeoPixel::Color(r, g, b);
-        buffer.resize(ledCount, 0);
+        buffer.resize(ledCount, 0);  // resize buffer safely
     }
 
-    Wave(float wavelength_, float amplitude_, uint32_t packedColor)
+    Wave(size_t ledCount_, float wavelength_, float amplitude_, uint32_t packedColor)
         : wavelength(wavelength_), amplitude(amplitude_), color(packedColor) {
+        ledCount = ledCount_;
         buffer.resize(ledCount, 0);
     }
 
@@ -32,10 +34,10 @@ class Wave : public Animation {
             // Compute sine wave value
             float value = (sinf((i / wavelength) + phase) * 0.5f + 0.5f) * amplitude;
 
-            // Map value to color (e.g., blue wave)
-            uint8_t r = 0;
-            uint8_t g = 0;
-            uint8_t b = static_cast<uint8_t>(value * 255);
+            // Map value to color
+            uint8_t r = (uint8_t)((color >> 16 & 0xFF) * value);
+            uint8_t g = (uint8_t)((color >> 8 & 0xFF) * value);
+            uint8_t b = (uint8_t)((color & 0xFF) * value);
 
             buffer[i] = Adafruit_NeoPixel::Color(r, g, b);
         }
