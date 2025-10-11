@@ -67,6 +67,10 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "*.tcc": "cpp",
+        "csignal": "cpp",
+        "unordered_set": "cpp",
+        "fstream": "cpp"
     }
 }

@@ -170,7 +170,7 @@ void loop() {
         lastAnimSwitch = now;
 
         // Cycle through animations
-        currentAnim = (currentAnim + 1) % 4;
+        currentAnim = (currentAnim + 1) % 5;
 
         switch (currentAnim) {
             case 0:
@@ -184,6 +184,9 @@ void loop() {
                 break;
             case 3:
                 ledRing.wave(1.0f, Color::Green);
+                break;
+            case 4:
+                ledRing.spinner(15, Color::Cyan, 0.5f);
                 break;
         }
     }

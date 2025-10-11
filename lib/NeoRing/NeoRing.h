@@ -7,6 +7,7 @@
 #include "animations/Breathe.h"
 #include "animations/Rainbow.h"
 #include "animations/SolidColor.h"
+#include "animations/Spinner.h"
 #include "animations/Wave.h"
 #include "drivers/FastLEDDriver.h"
 #include "drivers/NeopixelDriver.h"
@@ -65,6 +66,12 @@ class NeoRing {
 
     void wave(float speed = 1.0f, uint32_t color = 0x0000FF) {
         engine->addAnimation(std::make_unique<Wave>(ledCount, speed, 1.0f, color));
+    }
+
+    void spinner(size_t trailLength = 5, uint32_t color = 0x0096FF, float speed = 1.0f) {
+        auto anim = std::make_unique<Spinner>(ledCount, trailLength, color);
+        anim->speed = speed;
+        engine->addAnimation(std::move(anim));
     }
 
     void blank() { engine->addAnimation(std::make_unique<SolidColor>(ledCount, Color::Black)); }
