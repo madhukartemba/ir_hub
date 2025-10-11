@@ -26,7 +26,7 @@ class NeoRing {
     NeoRing(size_t ledCount_, uint8_t pin)
         : ledCount(ledCount_),
           frameInterval(1000.0f / fps),
-          engine(std::make_unique<FastLEDDriver>(ledCount_, pin)) {}
+          engine(std::make_unique<NeoPixelDriver>(ledCount_, pin)) {}
 
     // Initialize hardware
     void begin() { lastUpdate = millis(); }
