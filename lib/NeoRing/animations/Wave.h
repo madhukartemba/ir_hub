@@ -16,10 +16,13 @@ class Wave : public Animation {
          uint8_t b = 255)
         : wavelength(wavelength_), amplitude(amplitude_) {
         color = Adafruit_NeoPixel::Color(r, g, b);
+        buffer.resize(ledCount, 0);
     }
 
     Wave(float wavelength_, float amplitude_, uint32_t packedColor)
-        : wavelength(wavelength_), amplitude(amplitude_), color(packedColor) {}
+        : wavelength(wavelength_), amplitude(amplitude_), color(packedColor) {
+        buffer.resize(ledCount, 0);
+    }
 
     void update() override {
         if (ledCount == 0) return;

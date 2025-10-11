@@ -1,12 +1,20 @@
 #pragma once
-#include <Adafruit_NeoPixel.h>  // for Adafruit_NeoPixel::ColorHSV
+#include <Adafruit_NeoPixel.h>
 #include <cstdint>
 #include "Animation.h"
 
 class Rainbow : public Animation {
    private:
     uint16_t hueOffset = 0;  // current hue position
+
    public:
+    // Constructor
+    Rainbow(size_t ledCount_, float speed_ = 1.0f) {
+        ledCount = ledCount_;
+        speed = speed_;
+        buffer.resize(ledCount, 0);
+    }
+
     void update() override {
         if (ledCount == 0) return;
 

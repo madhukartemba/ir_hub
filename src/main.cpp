@@ -1,6 +1,6 @@
-#include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <LittleFS.h>
+#include "NeoRing.h"
 #include "config.h"
 #include "global/Global.h"
 #include "preferences.h"
@@ -11,6 +11,13 @@ Adafruit_NeoPixel strip(NUM_LEDS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 unsigned long lastRainbowUpdate = 0;
 const unsigned long rainbowInterval = 20;  // ms between updates
 uint16_t rainbowOffset = 0;
+
+NeoRing neoRing(NUM_LEDS, NEOPIXEL_PIN);
+
+unsigned long lastAnimSwitch = 0;
+const unsigned long animSwitchInterval = 5000;  // 5 seconds
+
+int currentAnim = 0;  // index to track which animation is active
 
 void setup() {
     Serial.begin(115200);
@@ -24,6 +31,11 @@ void setup() {
     display.printCentered("IR Hub", 20);
     display.printCentered("Initializing...", 40);
     display.update();
+
+    // Initialize NeoRing
+    LOG_DEBUG("Starting LED ring setup");
+    neoRing.begin();
+    LOG_DEBUG("LED ring initialized on pin");
 
     // Initialize LittleFS
     if (!LittleFS.begin()) {
@@ -158,25 +170,36 @@ void setup() {
     LOG_INFO("IR Hub: System Ready");
 }
 
-void showRainbow(uint16_t offset) {
-    for (uint16_t i = 0; i < NUM_LEDS; i++) {
-        uint16_t hue = (offset + (i * 65536L / NUM_LEDS)) % 65536;
-        strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(hue)));
-    }
-    strip.show();
-}
-
 void loop() {
     wifiManager.update();
     router.update();
     button.update();
     alexaConnector.update();
 
-    // Non-blocking rainbow animation
+    // Update NeoRing animations
+    neoRing.update();
+
+    // Switch test animations every 5 seconds
     unsigned long now = millis();
-    if (now - lastRainbowUpdate >= rainbowInterval) {
-        lastRainbowUpdate = now;
-        rainbowOffset += 256;  // Adjust speed here
-        showRainbow(rainbowOffset);
+    if (now - lastAnimSwitch >= animSwitchInterval) {
+        lastAnimSwitch = now;
+
+        // Cycle through animations
+        currentAnim = (currentAnim + 1) % 4;
+
+        switch (currentAnim) {
+            case 0:
+                neoRing.solid(Color::Red);
+                break;
+            case 1:
+                neoRing.rainbow(0.5f);
+                break;
+            case 2:
+                neoRing.breathe(Color::Blue, 1.0f);
+                break;
+            case 3:
+                neoRing.wave(1.0f);
+                break;
+        }
     }
 }

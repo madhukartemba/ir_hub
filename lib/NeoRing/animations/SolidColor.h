@@ -9,7 +9,10 @@ class SolidColor : public Animation {
 
    public:
     // Constructor to set initial color
-    SolidColor(uint8_t r = 255, uint8_t g = 255, uint8_t b = 255) { setColor(r, g, b); }
+    SolidColor(uint8_t r = 255, uint8_t g = 255, uint8_t b = 255) {
+        setColor(r, g, b);
+        buffer.resize(ledCount, color);
+    }
 
     SolidColor(uint32_t packedColor) : color(packedColor) {}
 
