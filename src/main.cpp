@@ -183,7 +183,7 @@ void loop() {
                 ledRing.breathe(Color::Blue, 1.0f);
                 break;
             case 3:
-                ledRing.wave(1.0f, Color::Green);
+                ledRing.wave(10.0f, Color::Green);
                 break;
             case 4:
                 ledRing.spinner(15, Color::Cyan, 0.5f);

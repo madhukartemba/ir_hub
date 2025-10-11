@@ -64,8 +64,8 @@ class NeoRing {
         engine->addAnimation(std::make_unique<Breathe>(ledCount, color));
     }
 
-    void wave(float speed = 1.0f, uint32_t color = 0x0000FF) {
-        engine->addAnimation(std::make_unique<Wave>(ledCount, speed, 1.0f, color));
+    void wave(float wavelength = 10.0f, uint32_t color = 0x0000FF) {
+        engine->addAnimation(std::make_unique<Wave>(ledCount, wavelength, 1.0f, color));
     }
 
     void spinner(size_t trailLength = 5, uint32_t color = 0x0096FF, float speed = 1.0f) {
