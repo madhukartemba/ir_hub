@@ -14,22 +14,29 @@
 class NeoRing {
    private:
     size_t ledCount;
+    uint8_t pin;
 
     unsigned long lastUpdate = 0;  // last update timestamp in ms
     float fps = 60.0f;             // default frames per second
     float frameInterval;           // ms per frame, initialized in constructor
 
-    AnimationEngine engine;
+    std::unique_ptr<AnimationEngine> engine;
 
    public:
+    // Empty constructor
+    NeoRing() : ledCount(0), pin(0), frameInterval(1000.0f / fps) {}
+
     // Constructor: takes number of LEDs and pin
-    NeoRing(size_t ledCount_, uint8_t pin)
-        : ledCount(ledCount_),
-          frameInterval(1000.0f / fps),
-          engine(std::make_unique<NeoPixelDriver>(ledCount_, pin)) {}
+    NeoRing(size_t ledCount_, uint8_t pin_)
+        : ledCount(ledCount_), pin(pin_), frameInterval(1000.0f / fps) {}
 
     // Initialize hardware
-    void begin() { lastUpdate = millis(); }
+    void begin(size_t ledCount_ = 0, uint8_t pin_ = 0) {
+        if (ledCount_ != 0) ledCount = ledCount_;
+        if (pin_ != 0) pin = pin_;
+        engine = std::make_unique<AnimationEngine>(std::make_unique<NeoPixelDriver>(ledCount, pin));
+        lastUpdate = millis();
+    }
 
     // Update loop (call frequently in Arduino loop)
     void update() {
@@ -39,29 +46,31 @@ class NeoRing {
         float deltaTime = (now - lastUpdate) / 1000.0f;  // convert ms to seconds
         lastUpdate = now;
 
-        engine.update(deltaTime);
+        engine->update(deltaTime);
     }
 
     // ---------------- User-friendly methods ----------------
 
     void solid(uint32_t color) {
-        engine.addAnimation(std::make_unique<SolidColor>(ledCount, color));
+        engine->addAnimation(std::make_unique<SolidColor>(ledCount, color));
     }
 
     void rainbow(float speed = 1.0f) {
-        engine.addAnimation(std::make_unique<Rainbow>(ledCount, speed));
+        engine->addAnimation(std::make_unique<Rainbow>(ledCount, speed));
     }
 
     void breathe(uint32_t color, float speed = 1.0f) {
-        engine.addAnimation(std::make_unique<Breathe>(ledCount, color));
+        engine->addAnimation(std::make_unique<Breathe>(ledCount, color));
     }
 
-    void wave(float speed = 1.0f) { engine.addAnimation(std::make_unique<Wave>(ledCount, speed)); }
+    void wave(float speed = 1.0f, uint32_t color = 0x0000FF) {
+        engine->addAnimation(std::make_unique<Wave>(ledCount, speed, 1.0f, color));
+    }
 
-    void blank() { engine.addAnimation(std::make_unique<SolidColor>(ledCount, Color::Black)); }
+    void blank() { engine->addAnimation(std::make_unique<SolidColor>(ledCount, Color::Black)); }
 
     // Optional: push custom animation directly
-    void addAnimation(std::unique_ptr<Animation> anim) { engine.addAnimation(std::move(anim)); }
+    void addAnimation(std::unique_ptr<Animation> anim) { engine->addAnimation(std::move(anim)); }
 
     // Optional: allow changing FPS at runtime
     void setFPS(float newFps) {

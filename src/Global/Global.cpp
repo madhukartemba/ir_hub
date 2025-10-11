@@ -5,6 +5,7 @@ Button button;
 Router router;
 Speaker speaker;
 LedRing ring;
+NeoRing ledRing;
 Display display;
 IdGen idGen;
 IRManager irManager;

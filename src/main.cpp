@@ -6,14 +6,6 @@
 #include "preferences.h"
 #include "ui/HomeScreen.h"
 
-Adafruit_NeoPixel strip(NUM_LEDS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
-
-unsigned long lastRainbowUpdate = 0;
-const unsigned long rainbowInterval = 20;  // ms between updates
-uint16_t rainbowOffset = 0;
-
-NeoRing neoRing(NUM_LEDS, NEOPIXEL_PIN);
-
 unsigned long lastAnimSwitch = 0;
 const unsigned long animSwitchInterval = 5000;  // 5 seconds
 
@@ -34,7 +26,7 @@ void setup() {
 
     // Initialize NeoRing
     LOG_DEBUG("Starting LED ring setup");
-    neoRing.begin();
+    ledRing.begin(NUM_LEDS, NEOPIXEL_PIN);
     LOG_DEBUG("LED ring initialized on pin");
 
     // Initialize LittleFS
@@ -120,14 +112,7 @@ void setup() {
     button.setSpeaker(speaker);
     LOG_DEBUG("Button initialized on pin");
 
-    // Initialize LED ring
-    LOG_DEBUG("Starting LED ring setup");
-    strip.begin();
-    strip.show();  // Initialize all pixels to 'off'
-    LOG_DEBUG("LED ring initialized on pin");
-
     // Successful core initialization now setup wireless connection
-
     speaker.playStartupSound();
 
     // Initialize WiFi Manager
@@ -177,7 +162,7 @@ void loop() {
     alexaConnector.update();
 
     // Update NeoRing animations
-    neoRing.update();
+    ledRing.update();
 
     // Switch test animations every 5 seconds
     unsigned long now = millis();
@@ -189,16 +174,16 @@ void loop() {
 
         switch (currentAnim) {
             case 0:
-                neoRing.solid(Color::Red);
+                ledRing.solid(Color::Red);
                 break;
             case 1:
-                neoRing.rainbow(0.5f);
+                ledRing.rainbow(0.5f);
                 break;
             case 2:
-                neoRing.breathe(Color::Blue, 1.0f);
+                ledRing.breathe(Color::Blue, 1.0f);
                 break;
             case 3:
-                neoRing.wave(1.0f);
+                ledRing.wave(1.0f, Color::Green);
                 break;
         }
     }
