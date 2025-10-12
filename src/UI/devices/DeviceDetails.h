@@ -194,7 +194,6 @@ class DeviceDetails : public Screen {
 
     void onExit() override {
         LOG_DEBUG("DeviceDetails onExit");
-        ledRing.blank();
         selectedDescriptionItem = 0;
         descriptionItems.clear();
     }

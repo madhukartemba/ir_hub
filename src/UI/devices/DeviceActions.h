@@ -113,6 +113,5 @@ class DeviceActions : public Screen {
 
     void onExit() override {
         LOG_DEBUG("DeviceActions onExit");
-        ledRing.blank();
     }
 };

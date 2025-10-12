@@ -89,7 +89,6 @@ class Settings : public Screen {
 
     void onExit() override {
         LOG_DEBUG("Settings onExit");
-        ledRing.blank();
     }
 
     void drawMenu() {

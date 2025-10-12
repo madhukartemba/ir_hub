@@ -52,7 +52,6 @@ class MainMenu : public Screen {
 
     void onExit() override {
         LOG_DEBUG("MainMenu onExit");
-        ledRing.blank();
         // Make sure display is turned on when exiting
         display.turnOn();
     }

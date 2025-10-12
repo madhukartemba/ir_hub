@@ -44,7 +44,6 @@ class ClearDataConfirmation : public Screen {
 
     void onExit() override {
         LOG_DEBUG("ClearDataConfirmation onExit");
-        ledRing.blank();
     }
 
    private:

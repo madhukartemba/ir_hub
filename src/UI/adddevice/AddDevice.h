@@ -129,7 +129,6 @@ class AddDevice : public Screen {
 
     void onExit() override {
         LOG_DEBUG("AddDevice onExit");
-        ledRing.blank();
         // Clean up any recording resources if needed
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
             irManager.stopCapture();

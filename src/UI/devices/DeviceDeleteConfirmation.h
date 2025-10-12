@@ -75,6 +75,5 @@ class DeviceDeleteConfirmation : public Screen {
 
     void onExit() override {
         LOG_DEBUG("DeviceDeleteConfirmation onExit");
-        ledRing.blank();
     }
 };

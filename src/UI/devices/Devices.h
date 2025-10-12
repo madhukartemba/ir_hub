@@ -84,6 +84,5 @@ class Devices : public Screen {
 
     void onExit() override {
         LOG_DEBUG("Devices onExit");
-        ledRing.blank();
     }
 };
