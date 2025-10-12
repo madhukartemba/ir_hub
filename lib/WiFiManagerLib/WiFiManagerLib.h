@@ -138,7 +138,7 @@ class WiFiManagerLib {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
-            ledRing.wave(this->otaColor);
+            ledRing.spinner(this->otaColor);
             display.clear();
             display.printCentered("OTA Update", 10);
             display.printCentered("Starting...", 30);
@@ -161,6 +161,7 @@ class WiFiManagerLib {
         ArduinoOTA.onEnd([this]() {
             LOG_INFO("OTA Update Complete");
             ledRing.solid(this->otaSuccessColor);
+            ledRing.finishTransition();
             display.clear();
             display.printCentered("OTA Complete", 20);
             display.printCentered("Restarting...", 40);
@@ -172,6 +173,7 @@ class WiFiManagerLib {
                 display.turnOn();
             }
             ledRing.solid(this->otaErrorColor);
+            ledRing.finishTransition();
             LOG_ERROR("OTA Error: " + String(error));
             display.clear();
             display.printCentered("OTA Error", 10);
