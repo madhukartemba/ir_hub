@@ -83,7 +83,7 @@ def main():
 Examples:
   # Upload to multiple devices (builds once, uploads in parallel)
   python upload_ota.py -e ir_hub_version_0 -i 192.168.1.100 192.168.1.101
-  python upload_ota.py -e ir_hub_version_1 -i 192.168.1.102
+  python upload_ota.py -e ir_hub_version_1 -i 192.168.0.183 192.168.0.110 192.168.0.25 192.168.0.161
   python upload_ota.py -e ir_hub_version_0 -i 192.168.1.100,192.168.1.101,192.168.1.102
   
   # Control parallel upload workers
