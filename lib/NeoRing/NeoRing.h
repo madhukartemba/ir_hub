@@ -68,8 +68,8 @@ class NeoRing {
         engine->addAnimation(std::make_unique<Rainbow>(ledCount, speed));
     }
 
-    void breathe(uint32_t color, float speed = 1.0f) {
-        engine->addAnimation(std::make_unique<Breathe>(ledCount, color));
+    void breathe(uint32_t color, float minBrightness = 0.5f, float speed = 1.0f) {
+        engine->addAnimation(std::make_unique<Breathe>(ledCount, color, minBrightness));
     }
 
     void wave(uint32_t color, float wavelength = 10.0f) {

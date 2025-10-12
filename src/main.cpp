@@ -27,7 +27,7 @@ void setup() {
     // Initialize NeoRing
     LOG_DEBUG("Starting LED ring setup");
     ledRing.begin(NUM_LEDS, NEOPIXEL_PIN);
-    ledRing.solid(COLOR_INFO_ROYAL);
+    ledRing.solid(Color::RoyalBlue);
     ledRing.finishTransition();
     LOG_DEBUG("LED ring initialized on pin");
 
