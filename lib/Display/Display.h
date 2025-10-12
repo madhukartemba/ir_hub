@@ -61,6 +61,7 @@ class Display {
             display->setDisplayRotation(U8G2_R2);
         }
 
+        resetFPS();
         clear();
         displayOn = true;  // Display is on after successful initialization
         return true;
@@ -414,8 +415,8 @@ class Display {
     DisplayType displayType;
 
     // FPS limiting
-    uint8_t fps = 5;               // Target FPS
-    uint8_t defaultFPS = 5;        // Default FPS
+    uint8_t fps = 15;              // Target FPS
+    uint8_t defaultFPS = 15;       // Default FPS
     unsigned long lastUpdateTime;  // Last time display was updated
 
     // Helper methods
