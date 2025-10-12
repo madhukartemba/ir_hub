@@ -28,16 +28,22 @@ class Wave : public Animation {
     }
 
     void setColor(uint8_t r, uint8_t g, uint8_t b) { color = Adafruit_NeoPixel::Color(r, g, b); }
-
     void update() override {
         if (ledCount == 0) return;
 
         phase += speed * 0.1f;  // move the wave forward
-        for (size_t i = 0; i < ledCount; ++i) {
-            // Compute sine wave value
-            float value = (sinf((i / wavelength) + phase) * 0.5f + 0.5f) * amplitude;
 
-            // Map value to color
+        // Use total circumference so that wavelength is relative to LED count
+        const float twoPi = 2.0f * M_PI;
+
+        for (size_t i = 0; i < ledCount; ++i) {
+            // Map LED index to an angle around the ring
+            float angle = (twoPi * i) / ledCount;
+
+            // Apply wave function using angle + phase
+            float value = (sinf((angle * ledCount / wavelength) + phase) * 0.5f + 0.5f) * amplitude;
+
+            // Compute RGB based on intensity
             uint8_t r = (uint8_t)((color >> 16 & 0xFF) * value);
             uint8_t g = (uint8_t)((color >> 8 & 0xFF) * value);
             uint8_t b = (uint8_t)((color & 0xFF) * value);
