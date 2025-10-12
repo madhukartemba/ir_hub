@@ -54,7 +54,6 @@ class NeoRing {
     void finishTransition() {
         while (engine && engine->isFading()) {
             update();
-            delay(1);  // Small delay to prevent tight loop
         }
     }
 

@@ -94,6 +94,5 @@ class AnimationEngine {
         if (frameChanged && driver) driver->show(frame);
     }
 
-    // Check if a transition/fade is currently in progress
-    bool isFading() const { return !fader.isComplete(); }
+    bool isFading() const { return (nextAnimation != nullptr) || !fader.isComplete(); }
 };
