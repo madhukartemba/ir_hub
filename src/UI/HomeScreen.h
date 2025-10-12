@@ -97,9 +97,9 @@ class HomeScreen : public Screen {
    private:
     void ringColor() {
         if (wifiManager.isConnected()) {
-            ledRing.wave(10.0f, COLOR_HOME_SCREEN_WIFI_CONNECTED);
+            ledRing.wave(COLOR_HOME_SCREEN_WIFI_CONNECTED);
         } else {
-            ledRing.wave(10.0f, COLOR_HOME_SCREEN_WIFI_DISCONNECTED);
+            ledRing.wave(COLOR_HOME_SCREEN_WIFI_DISCONNECTED);
         }
     }
 

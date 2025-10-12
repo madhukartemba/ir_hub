@@ -138,7 +138,7 @@ class WiFiManagerLib {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
-            ledRing.wave(10.0f, this->otaColor);
+            ledRing.wave(this->otaColor);
             display.clear();
             display.printCentered("OTA Update", 10);
             display.printCentered("Starting...", 30);
