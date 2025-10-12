@@ -12,7 +12,7 @@ class DeviceDeleteConfirmation : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDeleteConfirmation onEnter for device %d", device.id);
-        ring.breathe(5, COLOR_ERROR_DARK);
+        ledRing.breathe(COLOR_ERROR_DARK, 1.0f);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -75,6 +75,6 @@ class DeviceDeleteConfirmation : public Screen {
 
     void onExit() override {
         LOG_DEBUG("DeviceDeleteConfirmation onExit");
-        ring.off();
+        ledRing.blank();
     }
 };

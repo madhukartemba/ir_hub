@@ -15,7 +15,7 @@ class DeviceDetails : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDetails onEnter for device %d", device.id);
-        ring.breathe(5, COLOR_SUCCESS_DARK);
+        ledRing.breathe(COLOR_SUCCESS_DARK, 1.0f);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -194,7 +194,7 @@ class DeviceDetails : public Screen {
 
     void onExit() override {
         LOG_DEBUG("DeviceDetails onExit");
-        ring.off();
+        ledRing.blank();
         selectedDescriptionItem = 0;
         descriptionItems.clear();
     }

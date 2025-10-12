@@ -16,7 +16,7 @@ class Devices : public Screen {
         selectedIndex = 0;
         loadDevices();
 
-        ring.breathe(5, COLOR_INFO_LIGHT);
+        ledRing.breathe(COLOR_INFO_LIGHT, 1.0f);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -84,6 +84,6 @@ class Devices : public Screen {
 
     void onExit() override {
         LOG_DEBUG("Devices onExit");
-        ring.off();
+        ledRing.blank();
     }
 };

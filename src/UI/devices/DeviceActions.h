@@ -20,7 +20,7 @@ class DeviceActions : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceActions onEnter for device %d", device.id);
-        ring.breathe(5, COLOR_INFO_DARK);
+        ledRing.breathe(COLOR_INFO_DARK, 1.0f);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -81,7 +81,7 @@ class DeviceActions : public Screen {
                     LOG_INFO("Sending ON command for device %d", device.id);
                     irManager.sendProtocol(device.onCommand);
                     // Visual feedback for ON command
-                    ring.pulse(5, SEND_ON_COMMAND_COLOR, 1);
+                    ledRing.breathe(SEND_ON_COMMAND_COLOR, 1.0f);
                 } else {
                     LOG_ERROR("Invalid ON command for device %d", device.id);
                     display.clear();
@@ -96,7 +96,7 @@ class DeviceActions : public Screen {
                     LOG_INFO("Sending OFF command for device %d", device.id);
                     irManager.sendProtocol(device.offCommand);
                     // Visual feedback for OFF command
-                    ring.pulse(5, SEND_OFF_COMMAND_COLOR, 1);
+                    ledRing.breathe(SEND_OFF_COMMAND_COLOR, 1.0f);
                 } else {
                     LOG_ERROR("Invalid OFF command for device %d", device.id);
                     display.clear();
@@ -113,6 +113,6 @@ class DeviceActions : public Screen {
 
     void onExit() override {
         LOG_DEBUG("DeviceActions onExit");
-        ring.off();
+        ledRing.blank();
     }
 };

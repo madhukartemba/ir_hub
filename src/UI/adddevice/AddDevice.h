@@ -33,7 +33,7 @@ class AddDevice : public Screen {
         isTimeoutError = false;
         firstCode = IRCode();
         secondCode = IRCode();
-        ring.breathe(5, COLOR_INFO_ROYAL);
+        ledRing.breathe(COLOR_INFO_ROYAL, 1.0f);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("AddDevice onButtonClick");
@@ -129,7 +129,7 @@ class AddDevice : public Screen {
 
     void onExit() override {
         LOG_DEBUG("AddDevice onExit");
-        ring.off();
+        ledRing.blank();
         // Clean up any recording resources if needed
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
             irManager.stopCapture();
@@ -140,27 +140,27 @@ class AddDevice : public Screen {
     // LED Ring Methods for different states
     void setLedRingRecording() {
         // Breathing blue pattern during recording
-        ring.wave(5, COLOR_INFO_ROYAL, 32);
+        ledRing.wave(10.0f, COLOR_INFO_ROYAL);
     }
 
     void setLedRingSuccess() {
         // Green pulse for success
-        ring.rainbow(5);
+        ledRing.rainbow(1.0f);
     }
 
     void setLedRingError() {
         // Red pulse for errors
-        ring.pulse(5, COLOR_ERROR, 3);
+        ledRing.breathe(COLOR_ERROR, 1.0f);
     }
 
     void setLedRingFirstCodeSuccess() {
         // Green pulse for first code success
-        ring.pulse(5, COLOR_SUCCESS, 2);
+        ledRing.breathe(COLOR_SUCCESS, 1.0f);
     }
 
     void setLedRingSecondCodeSuccess() {
         // Green pulse with more pulses for second code success
-        ring.pulse(3, COLOR_SUCCESS, 3);
+        ledRing.breathe(COLOR_SUCCESS, 1.0f);
     }
 
     void startRecordingFirst() {

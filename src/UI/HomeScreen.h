@@ -65,7 +65,7 @@ class HomeScreen : public Screen {
         if (!isBlanked && (millis() - lastActivityTime) > STATUS_BLANK_TIMEOUT) {
             isBlanked = true;
             display.turnOff();
-            ring.off();
+            ledRing.blank();
             LOG_DEBUG("Screen blanked due to inactivity on status screen");
             return;  // Don't update display when blanked
         }
@@ -89,7 +89,7 @@ class HomeScreen : public Screen {
 
     void onExit() override {
         LOG_DEBUG("HomeScreen onExit");
-        ring.off();
+        ledRing.blank();
         // Make sure display is turned on when exiting
         display.turnOn();
     }
@@ -97,9 +97,9 @@ class HomeScreen : public Screen {
    private:
     void ringColor() {
         if (wifiManager.isConnected()) {
-            ring.wave(1, COLOR_HOME_SCREEN_WIFI_CONNECTED);
+            ledRing.wave(10.0f, COLOR_HOME_SCREEN_WIFI_CONNECTED);
         } else {
-            ring.wave(1, COLOR_HOME_SCREEN_WIFI_DISCONNECTED);
+            ledRing.wave(10.0f, COLOR_HOME_SCREEN_WIFI_DISCONNECTED);
         }
     }
 

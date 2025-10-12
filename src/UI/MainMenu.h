@@ -20,7 +20,7 @@ class MainMenu : public Screen {
         LOG_DEBUG("MainMenu onEnter");
         currentState = State::DEVICES;
         selectedIndex = 0;
-        ring.breathe(5, COLOR_INFO_DARK);
+        ledRing.breathe(COLOR_INFO_DARK, 1.0f);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -52,7 +52,7 @@ class MainMenu : public Screen {
 
     void onExit() override {
         LOG_DEBUG("MainMenu onExit");
-        ring.off();
+        ledRing.blank();
         // Make sure display is turned on when exiting
         display.turnOn();
     }

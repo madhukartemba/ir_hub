@@ -1,42 +1,42 @@
 #ifndef PREFERENCES_H
 #define PREFERENCES_H
 
-#include <FastLED.h>
+#include <Color.h>
 
 // IR Code Colors
-#define SEND_ON_COMMAND_COLOR CRGB::Green
-#define SEND_OFF_COMMAND_COLOR CRGB::OrangeRed
+#define SEND_ON_COMMAND_COLOR Color::Green
+#define SEND_OFF_COMMAND_COLOR Color::OrangeRed
 
 // Success/Positive States
-#define COLOR_SUCCESS CRGB::Green
-#define COLOR_SUCCESS_ALT CRGB::LightGreen
-#define COLOR_SUCCESS_DARK CRGB::DarkGreen
+#define COLOR_SUCCESS Color::Green
+#define COLOR_SUCCESS_ALT Color::LightGreen
+#define COLOR_SUCCESS_DARK Color::DarkGreen
 
 // Warning/Neutral States
-#define COLOR_WARNING CRGB::Orange
-#define COLOR_WARNING_DARK CRGB::DarkOrange
-#define COLOR_SETTINGS CRGB::Yellow
+#define COLOR_WARNING Color::Orange
+#define COLOR_WARNING_DARK Color::DarkOrange
+#define COLOR_SETTINGS Color::Yellow
 
 // Error/Danger States
-#define COLOR_ERROR CRGB::Red
-#define COLOR_ERROR_DARK CRGB::DarkRed
+#define COLOR_ERROR Color::Red
+#define COLOR_ERROR_DARK Color::DarkRed
 
 // Home Screen Colors
-#define COLOR_HOME_SCREEN_WIFI_CONNECTED CRGB::White
-#define COLOR_HOME_SCREEN_WIFI_DISCONNECTED CRGB::Red
+#define COLOR_HOME_SCREEN_WIFI_CONNECTED Color::White
+#define COLOR_HOME_SCREEN_WIFI_DISCONNECTED Color::Red
 
 // Wi-Fi
-#define COLOR_WIFI_INIT CRGB::Blue
+#define COLOR_WIFI_INIT Color::Blue
 
 // Information/Status States
-#define COLOR_INFO CRGB::Blue
-#define COLOR_INFO_DARK CRGB::DarkBlue
-#define COLOR_INFO_LIGHT CRGB::CornflowerBlue
-#define COLOR_INFO_ROYAL CRGB::RoyalBlue
+#define COLOR_INFO Color::Blue
+#define COLOR_INFO_DARK Color::DarkBlue
+#define COLOR_INFO_LIGHT Color::CornflowerBlue
+#define COLOR_INFO_ROYAL Color::RoyalBlue
 
 // Default/Neutral States
-#define COLOR_DEFAULT CRGB::White
-#define COLOR_OFF CRGB::Black
+#define COLOR_DEFAULT Color::White
+#define COLOR_OFF Color::Black
 
 // Legacy definitions for backward compatibility
 #define ON_COMMAND_LED_COLOR COLOR_SUCCESS

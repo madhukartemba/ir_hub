@@ -4,11 +4,10 @@
 Button button;
 Router router;
 Speaker speaker;
-LedRing ring;
 NeoRing ledRing;
 Display display;
 IdGen idGen;
 IRManager irManager;
 DeviceManager deviceManager(idGen);
 AlexaConnector alexaConnector(deviceManager, irManager);
-WiFiManagerLib wifiManager(display, ring, speaker);
+WiFiManagerLib wifiManager(display, ledRing, speaker);

@@ -160,34 +160,5 @@ void loop() {
     router.update();
     button.update();
     alexaConnector.update();
-
-    // Update NeoRing animations
     ledRing.update();
-
-    // Switch test animations every 5 seconds
-    unsigned long now = millis();
-    if (now - lastAnimSwitch >= animSwitchInterval) {
-        lastAnimSwitch = now;
-
-        // Cycle through animations
-        currentAnim = (currentAnim + 1) % 5;
-
-        switch (currentAnim) {
-            case 0:
-                ledRing.solid(Color::Red);
-                break;
-            case 1:
-                ledRing.rainbow(0.5f);
-                break;
-            case 2:
-                ledRing.breathe(Color::Blue, 1.0f);
-                break;
-            case 3:
-                ledRing.wave(10.0f, Color::Green);
-                break;
-            case 4:
-                ledRing.spinner(15, Color::Cyan, 0.5f);
-                break;
-        }
-    }
 }

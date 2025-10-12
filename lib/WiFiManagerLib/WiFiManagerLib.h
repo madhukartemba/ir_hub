@@ -7,19 +7,20 @@
 #include <WiFiManager.h>
 #include "Display.h"
 #include "Log.h"
+#include "NeoRing.h"
 #include "Speaker.h"
 
 class WiFiManagerLib {
    private:
     WiFiManager wifiManager;
     Display& display;
-    LedRing& ring;
+    NeoRing& ledRing;
     Speaker& speaker;
     bool wifiConnected;
     bool isOtaSetup = false;
-    CRGB otaColor = CRGB::Blue;
-    CRGB otaSuccessColor = CRGB::Green;
-    CRGB otaErrorColor = CRGB::Red;
+    uint32_t otaColor = 0x0000FF;
+    uint32_t otaSuccessColor = 0x00FF00;
+    uint32_t otaErrorColor = 0xFF0000;
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
         // Configure timeout (in seconds)
@@ -64,8 +65,8 @@ class WiFiManagerLib {
     }
 
    public:
-    WiFiManagerLib(Display& display, LedRing& ring, Speaker& speaker)
-        : display(display), ring(ring), speaker(speaker), wifiConnected(false) {}
+    WiFiManagerLib(Display& display, NeoRing& ledRing, Speaker& speaker)
+        : display(display), ledRing(ledRing), speaker(speaker), wifiConnected(false) {}
 
     bool begin(const char* apName = "IRHub Setup", int apTimeout = 180, int connectTimeout = 60) {
         setupWiFiManager(apName, apTimeout, connectTimeout);
@@ -117,8 +118,8 @@ class WiFiManagerLib {
         return wifiConnected;
     }
 
-    void setupOTA(CRGB otaColor = CRGB::Blue, CRGB otaSuccessColor = CRGB::Green,
-                  CRGB otaErrorColor = CRGB::Red) {
+    void setupOTA(uint32_t otaColor = 0x0000FF, uint32_t otaSuccessColor = 0x00FF00,
+                  uint32_t otaErrorColor = 0xFF0000) {
         this->otaColor = otaColor;
         this->otaSuccessColor = otaSuccessColor;
         this->otaErrorColor = otaErrorColor;
@@ -137,7 +138,7 @@ class WiFiManagerLib {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
-            ring.wave(3, this->otaColor, 128);
+            ledRing.wave(10.0f, this->otaColor);
             display.clear();
             display.printCentered("OTA Update", 10);
             display.printCentered("Starting...", 30);
@@ -148,7 +149,7 @@ class WiFiManagerLib {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
-            ring.update();
+            ledRing.update();
             display.clear();
             display.printCentered("OTA Update", 10);
 
@@ -159,8 +160,7 @@ class WiFiManagerLib {
 
         ArduinoOTA.onEnd([this]() {
             LOG_INFO("OTA Update Complete");
-            ring.solid(this->otaSuccessColor);
-            ring.finishTransition();
+            ledRing.solid(this->otaSuccessColor);
             display.clear();
             display.printCentered("OTA Complete", 20);
             display.printCentered("Restarting...", 40);
@@ -171,8 +171,7 @@ class WiFiManagerLib {
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
-            ring.solid(this->otaErrorColor);
-            ring.finishTransition();
+            ledRing.solid(this->otaErrorColor);
             LOG_ERROR("OTA Error: " + String(error));
             display.clear();
             display.printCentered("OTA Error", 10);
