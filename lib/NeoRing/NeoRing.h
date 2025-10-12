@@ -64,8 +64,10 @@ class NeoRing {
 
     // Blocking update that waits until any active transition completes
     void finishTransition() {
+        lastUpdate = millis();
         while (engine && engine->isFading()) {
             update();
+            delay(1);
         }
     }
 
