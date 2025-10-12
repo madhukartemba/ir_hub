@@ -27,6 +27,8 @@ void setup() {
     // Initialize NeoRing
     LOG_DEBUG("Starting LED ring setup");
     ledRing.begin(NUM_LEDS, NEOPIXEL_PIN);
+    ledRing.solid(COLOR_INFO_ROYAL);
+    ledRing.finishTransition();
     LOG_DEBUG("LED ring initialized on pin");
 
     // Initialize LittleFS
@@ -137,9 +139,13 @@ void setup() {
     if (wifiConnected) {
         display.printCentered("Ready!", 40);
         speaker.successBeep();
+        ledRing.solid(COLOR_SUCCESS);
+        ledRing.finishTransition();
     } else {
         display.printCentered("Ready! (Offline)", 40);
         speaker.errorBeep();
+        ledRing.solid(COLOR_ERROR);
+        ledRing.finishTransition();
     }
     display.update();
     delay(500);

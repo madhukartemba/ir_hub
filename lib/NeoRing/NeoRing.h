@@ -50,6 +50,14 @@ class NeoRing {
         engine->update(deltaTime);
     }
 
+    // Blocking update that waits until any active transition completes
+    void finishTransition() {
+        while (engine && engine->isFading()) {
+            update();
+            delay(1);  // Small delay to prevent tight loop
+        }
+    }
+
     // ---------------- User-friendly methods ----------------
 
     void solid(uint32_t color) {

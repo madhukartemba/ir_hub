@@ -93,4 +93,7 @@ class AnimationEngine {
         // Only send to driver if frame changed
         if (frameChanged && driver) driver->show(frame);
     }
+
+    // Check if a transition/fade is currently in progress
+    bool isFading() const { return !fader.isComplete(); }
 };
