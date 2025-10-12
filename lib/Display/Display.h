@@ -415,8 +415,8 @@ class Display {
     DisplayType displayType;
 
     // FPS limiting
-    uint8_t fps = 15;              // Target FPS
-    uint8_t defaultFPS = 15;       // Default FPS
+    uint8_t fps = 10;              // Target FPS
+    uint8_t defaultFPS = 10;       // Default FPS
     unsigned long lastUpdateTime;  // Last time display was updated
 
     // Helper methods
