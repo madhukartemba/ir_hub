@@ -140,6 +140,7 @@ class AddDevice : public Screen {
     void setLedRingRecording() {
         // Solid blue color during recording
         ledRing.solid(COLOR_INFO_ROYAL);
+        ledRing.finishTransition();
     }
 
     void setLedRingSuccess() {
