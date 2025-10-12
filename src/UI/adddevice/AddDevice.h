@@ -33,7 +33,7 @@ class AddDevice : public Screen {
         isTimeoutError = false;
         firstCode = IRCode();
         secondCode = IRCode();
-        ledRing.breathe(COLOR_INFO_ROYAL, 1.0f);
+        ledRing.breathe(COLOR_INFO_ROYAL);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("AddDevice onButtonClick");
@@ -145,22 +145,22 @@ class AddDevice : public Screen {
 
     void setLedRingSuccess() {
         // Green pulse for success
-        ledRing.rainbow(1.0f);
+        ledRing.rainbow();
     }
 
     void setLedRingError() {
         // Red pulse for errors
-        ledRing.breathe(COLOR_ERROR, 1.0f);
+        ledRing.breathe(COLOR_ERROR);
     }
 
     void setLedRingFirstCodeSuccess() {
         // Green pulse for first code success
-        ledRing.breathe(COLOR_SUCCESS, 1.0f);
+        ledRing.breathe(COLOR_SUCCESS);
     }
 
     void setLedRingSecondCodeSuccess() {
         // Green pulse with more pulses for second code success
-        ledRing.breathe(COLOR_SUCCESS, 1.0f);
+        ledRing.breathe(COLOR_SUCCESS);
     }
 
     void startRecordingFirst() {

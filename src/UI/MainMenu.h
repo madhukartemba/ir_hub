@@ -20,7 +20,7 @@ class MainMenu : public Screen {
         LOG_DEBUG("MainMenu onEnter");
         currentState = State::DEVICES;
         selectedIndex = 0;
-        ledRing.breathe(COLOR_INFO_DARK, 1.0f);
+        ledRing.breathe(COLOR_INFO_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {

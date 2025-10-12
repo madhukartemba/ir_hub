@@ -24,7 +24,7 @@ class Settings : public Screen {
         currentState = State::RESTART;
         selectedIndex = 0;
 
-        ledRing.breathe(COLOR_SETTINGS, 1.0f);
+        ledRing.breathe(COLOR_SETTINGS);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");

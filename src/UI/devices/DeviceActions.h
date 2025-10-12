@@ -20,7 +20,7 @@ class DeviceActions : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceActions onEnter for device %d", device.id);
-        ledRing.breathe(COLOR_INFO_DARK, 1.0f);
+        ledRing.breathe(COLOR_INFO_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {
@@ -81,7 +81,7 @@ class DeviceActions : public Screen {
                     LOG_INFO("Sending ON command for device %d", device.id);
                     irManager.sendProtocol(device.onCommand);
                     // Visual feedback for ON command
-                    ledRing.breathe(SEND_ON_COMMAND_COLOR, 1.0f);
+                    ledRing.breathe(SEND_ON_COMMAND_COLOR);
                 } else {
                     LOG_ERROR("Invalid ON command for device %d", device.id);
                     display.clear();
@@ -96,7 +96,7 @@ class DeviceActions : public Screen {
                     LOG_INFO("Sending OFF command for device %d", device.id);
                     irManager.sendProtocol(device.offCommand);
                     // Visual feedback for OFF command
-                    ledRing.breathe(SEND_OFF_COMMAND_COLOR, 1.0f);
+                    ledRing.breathe(SEND_OFF_COMMAND_COLOR);
                 } else {
                     LOG_ERROR("Invalid OFF command for device %d", device.id);
                     display.clear();

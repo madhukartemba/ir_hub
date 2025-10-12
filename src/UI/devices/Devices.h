@@ -16,7 +16,7 @@ class Devices : public Screen {
         selectedIndex = 0;
         loadDevices();
 
-        ledRing.breathe(COLOR_INFO_LIGHT, 1.0f);
+        ledRing.breathe(COLOR_INFO_LIGHT);
 
         // Change button behavior
         button.setClickCallback([this]() {

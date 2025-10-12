@@ -5,7 +5,7 @@ class ClearDataConfirmation : public Screen {
    public:
     void onEnter() override {
         LOG_DEBUG("ClearDataConfirmation onEnter");
-        ledRing.breathe(COLOR_ERROR, 1.0f);
+        ledRing.breathe(COLOR_ERROR);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("ClearDataConfirmation onButtonClick - Exit");

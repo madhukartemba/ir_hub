@@ -15,7 +15,7 @@ class DeviceDetails : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDetails onEnter for device %d", device.id);
-        ledRing.breathe(COLOR_SUCCESS_DARK, 1.0f);
+        ledRing.breathe(COLOR_SUCCESS_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {

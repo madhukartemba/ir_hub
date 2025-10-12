@@ -12,7 +12,7 @@ class DeviceDeleteConfirmation : public Screen {
 
     void onEnter() override {
         LOG_DEBUG("DeviceDeleteConfirmation onEnter for device %d", device.id);
-        ledRing.breathe(COLOR_ERROR_DARK, 1.0f);
+        ledRing.breathe(COLOR_ERROR_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {
