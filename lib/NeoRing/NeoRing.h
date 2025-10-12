@@ -1,5 +1,5 @@
 #pragma once
-#include <Arduino.h>  // for millis()
+#include <Arduino.h>
 #include <cstdint>
 #include <memory>
 #include "AnimationEngine.h"
@@ -11,6 +11,8 @@
 #include "animations/Wave.h"
 #include "drivers/FastLEDDriver.h"
 #include "drivers/NeopixelDriver.h"
+
+enum class DisplayDriver { NEOPIXEL, FASTLED };
 
 class NeoRing {
    private:
@@ -32,10 +34,20 @@ class NeoRing {
         : ledCount(ledCount_), pin(pin_), frameInterval(1000.0f / fps) {}
 
     // Initialize hardware
-    void begin(size_t ledCount_ = 0, uint8_t pin_ = 0) {
+    void begin(size_t ledCount_ = 0, uint8_t pin_ = 0,
+               DisplayDriver driver = DisplayDriver::NEOPIXEL) {
         if (ledCount_ != 0) ledCount = ledCount_;
         if (pin_ != 0) pin = pin_;
-        engine = std::make_unique<AnimationEngine>(std::make_unique<NeoPixelDriver>(ledCount, pin));
+
+        // Create the appropriate driver based on the enum selection
+        if (driver == DisplayDriver::NEOPIXEL) {
+            engine =
+                std::make_unique<AnimationEngine>(std::make_unique<NeoPixelDriver>(ledCount, pin));
+        } else {
+            engine =
+                std::make_unique<AnimationEngine>(std::make_unique<FastLEDDriver>(ledCount, pin));
+        }
+
         lastUpdate = millis();
     }
 
