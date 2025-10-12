@@ -27,7 +27,7 @@ class Color {
     static constexpr uint32_t Maroon = 0x800000;
     static constexpr uint32_t OrangeRed = 0xFF4500;
     static constexpr uint32_t DarkGreen = 0x006400;
-    static constexpr uint32_t DarkOrange = 0xFF8C00;
+    static constexpr uint32_t DarkOrange = 0xCC7000;
     static constexpr uint32_t DarkRed = 0x8B0000;
     static constexpr uint32_t DarkBlue = 0x00008B;
     static constexpr uint32_t CornflowerBlue = 0x6495ED;
