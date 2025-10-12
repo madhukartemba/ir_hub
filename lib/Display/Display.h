@@ -91,7 +91,17 @@ class Display {
         fps = targetFPS;
     }
 
+    void resetFPS() { fps = defaultFPS; }  // Default to 5 FPS
+
     uint8_t getFPS() const { return fps; }
+
+    uint8_t getDefaultFps() const { return defaultFPS; }
+
+    uint8_t setDefaultFps(uint8_t targetFPS) {
+        if (targetFPS == 0) targetFPS = 1;  // Avoid division by zero
+        defaultFPS = targetFPS;
+        return defaultFPS;
+    }
 
     void turnOn() {
         if (display) {
@@ -400,7 +410,8 @@ class Display {
     DisplayType displayType;
 
     // FPS limiting
-    uint8_t fps = 15;              // Target FPS
+    uint8_t fps = 5;               // Target FPS
+    uint8_t defaultFPS = 5;        // Default FPS
     unsigned long lastUpdateTime;  // Last time display was updated
 
     // Helper methods

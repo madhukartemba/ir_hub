@@ -22,6 +22,9 @@ class HomeScreen : public Screen {
         animationFrame = 0;
         ringColor();
 
+        // Change refresh rate to 1 FPS for status screen
+        display.setFPS(1);
+
         // Change button behavior
         button.setClickCallback([this]() {
             // Reset activity timer
@@ -90,6 +93,8 @@ class HomeScreen : public Screen {
     void onExit() override {
         LOG_DEBUG("HomeScreen onExit");
         ledRing.blank();
+        // Restore display FPS to default
+        display.resetFPS();
         // Make sure display is turned on when exiting
         display.turnOn();
     }
