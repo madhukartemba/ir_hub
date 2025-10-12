@@ -39,8 +39,8 @@
 #define COLOR_OFF Color::Black
 
 // Legacy definitions for backward compatibility
-#define ON_COMMAND_LED_COLOR COLOR_SUCCESS
-#define OFF_COMMAND_LED_COLOR COLOR_WARNING_DARK
+#define ON_COMMAND_LED_COLOR Color::Green
+#define OFF_COMMAND_LED_COLOR Color::Orange
 
 // Timeout duration
 #define TIMEOUT_DURATION 20000
