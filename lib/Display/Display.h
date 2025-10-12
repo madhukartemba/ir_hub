@@ -72,11 +72,27 @@ class Display {
             display->clearBuffer();
         }
     }
+
     void update() {
-        if (display) {
+        if (!display) return;
+
+        unsigned long currentTime = millis();
+        unsigned long frameDelay = 1000 / fps;  // ms per frame
+
+        if (currentTime - lastUpdateTime >= frameDelay) {
             display->sendBuffer();
+            lastUpdateTime = currentTime;
         }
     }
+
+    // Setter for FPS
+    void setFPS(uint8_t targetFPS) {
+        if (targetFPS == 0) targetFPS = 1;  // Avoid division by zero
+        fps = targetFPS;
+    }
+
+    uint8_t getFPS() const { return fps; }
+
     void turnOn() {
         if (display) {
             display->setPowerSave(0);
@@ -382,6 +398,10 @@ class Display {
     bool displayFlipped;
     bool displayOn;
     DisplayType displayType;
+
+    // FPS limiting
+    uint8_t fps = 15;              // Target FPS
+    unsigned long lastUpdateTime;  // Last time display was updated
 
     // Helper methods
     void wrapText(const String& text, int x, int y, int maxWidth, TextAlign align = ALIGN_LEFT) {
