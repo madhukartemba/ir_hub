@@ -139,8 +139,8 @@ class AddDevice : public Screen {
    private:
     // LED Ring Methods for different states
     void setLedRingRecording() {
-        // Breathing blue pattern during recording
-        ledRing.wave(COLOR_INFO_ROYAL);
+        // Solid blue color during recording
+        ledRing.solid(COLOR_INFO_ROYAL);
     }
 
     void setLedRingSuccess() {
