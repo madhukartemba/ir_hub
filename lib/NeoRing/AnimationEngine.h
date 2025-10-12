@@ -20,6 +20,9 @@ class AnimationEngine {
     Fader fader;        // Handles fade between current and next
     Combiner combiner;  // Handles blending frames
 
+    bool currentAnimationUpdated = false;  // Track if static animation has been updated
+    bool nextAnimationUpdated = false;     // Track if static animation has been updated
+
    public:
     AnimationEngine(std::unique_ptr<LEDDriver> driver_)
         : driver(std::move(driver_)), currentAnimation(nullptr), nextAnimation(nullptr) {
@@ -34,7 +37,8 @@ class AnimationEngine {
 
         if (!nextAnimation) {
             nextAnimation = std::move(anim);
-            fader.start(0.0f);  // start fade from 0 → 1
+            nextAnimationUpdated = false;  // Reset flag for new animation
+            fader.start(0.0f);             // start fade from 0 → 1
         } else {
             animationQueue.push(std::move(anim));
         }
@@ -42,12 +46,25 @@ class AnimationEngine {
 
     // Called every frame with deltaTime in seconds
     void update(float deltaTime) {
-        if (currentAnimation) currentAnimation->update();
-        if (nextAnimation) nextAnimation->update();
+        bool frameChanged = false;
+
+        // Only update if animation is not static or hasn't been updated yet
+        if (currentAnimation && (!currentAnimation->isStatic() || !currentAnimationUpdated)) {
+            currentAnimation->update();
+            currentAnimationUpdated = true;
+            frameChanged = true;
+        }
+        if (nextAnimation && (!nextAnimation->isStatic() || !nextAnimationUpdated)) {
+            nextAnimation->update();
+            nextAnimationUpdated = true;
+            frameChanged = true;
+        }
 
         std::vector<uint32_t> frame;
 
         if (nextAnimation) {
+            // Fading is always dynamic, so we need to update
+            frameChanged = true;
             fader.update(deltaTime);
             frame =
                 combiner.blend(currentAnimation ? currentAnimation->getFrame()
@@ -57,12 +74,15 @@ class AnimationEngine {
             // Fade complete
             if (fader.isComplete()) {
                 currentAnimation = std::move(nextAnimation);
+                currentAnimationUpdated = nextAnimationUpdated;  // Transfer the update state
                 nextAnimation.reset();
+                nextAnimationUpdated = false;
 
                 // Start next animation if queued
                 if (!animationQueue.empty()) {
                     nextAnimation = std::move(animationQueue.front());
                     animationQueue.pop();
+                    nextAnimationUpdated = false;  // Reset flag for new animation
                     fader.start(0.0f);
                 }
             }
@@ -70,7 +90,7 @@ class AnimationEngine {
             frame = currentAnimation->getFrame();
         }
 
-        // Send final frame to driver
-        if (driver) driver->show(frame);
+        // Only send to driver if frame changed
+        if (frameChanged && driver) driver->show(frame);
     }
 };
