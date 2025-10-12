@@ -127,8 +127,10 @@ void setup() {
         LOG_DEBUG("Alexa state change: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
             speaker.beep();
+            ledRing.blink(ON_COMMAND_LED_COLOR, 1);
         } else {
             speaker.beep();
+            ledRing.blink(OFF_COMMAND_LED_COLOR, 1);
         }
     });
 

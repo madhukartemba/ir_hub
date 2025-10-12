@@ -93,6 +93,13 @@ class NeoRing {
         engine->addAnimation(std::move(anim));
     }
 
+    void blink(uint32_t color, uint8_t times = 1) {
+        for (uint8_t i = 0; i < times; ++i) {
+            engine->addAnimation(std::make_unique<SolidColor>(ledCount, color));
+            engine->addAnimation(std::make_unique<SolidColor>(ledCount, Color::Black));
+        }
+    }
+
     void blank() { engine->addAnimation(std::make_unique<SolidColor>(ledCount, Color::Black)); }
 
     // Optional: push custom animation directly
