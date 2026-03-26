@@ -7,6 +7,7 @@
 #include <WiFiManager.h>
 #include "Display.h"
 #include "Log.h"
+#include "MqttCredentials.h"
 #include "NeoRing.h"
 #include "Speaker.h"
 
@@ -22,7 +23,10 @@ class WiFiManagerLib {
     uint32_t otaSuccessColor = 0x00FF00;
     uint32_t otaErrorColor = 0xFF0000;
 
-    void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
+    static constexpr int kMqttFieldMax = 64;
+
+    void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout,
+                          WiFiManagerParameter& mqttUser, WiFiManagerParameter& mqttPass) {
         // Configure timeout (in seconds)
         wifiManager.setConfigPortalTimeout(apTimeout);
         wifiManager.setConnectTimeout(connectTimeout);
@@ -46,7 +50,10 @@ class WiFiManagerLib {
             display.update();
         });
 
-        wifiManager.setSaveConfigCallback([this]() {
+        wifiManager.setSaveConfigCallback([this, &mqttUser, &mqttPass]() {
+            if (!mqttCredentialsSave(mqttUser.getValue(), mqttPass.getValue())) {
+                LOG_WARN("MQTT credentials not saved; check LittleFS");
+            }
             display.clear();
             display.printCentered("WiFi Saved!", 20);
             display.printCentered("Connecting...", 40);
@@ -62,6 +69,8 @@ class WiFiManagerLib {
             "<p style='text-align:center;color:white;font-size:16px;margin:20px 0;'>"
             "IR Hub Wi-Fi Setup</p>");
         wifiManager.addParameter(&custom_text);
+        wifiManager.addParameter(&mqttUser);
+        wifiManager.addParameter(&mqttPass);
     }
 
    public:
@@ -69,7 +78,21 @@ class WiFiManagerLib {
         : display(display), ledRing(ledRing), speaker(speaker), wifiConnected(false) {}
 
     bool begin(const char* apName = "IRHub Setup", int apTimeout = 180, int connectTimeout = 60) {
-        setupWiFiManager(apName, apTimeout, connectTimeout);
+        mqttCredentialsLoad();
+
+        static char mqttUserBuf[kMqttFieldMax];
+        static char mqttPassBuf[kMqttFieldMax];
+        memset(mqttUserBuf, 0, sizeof(mqttUserBuf));
+        memset(mqttPassBuf, 0, sizeof(mqttPassBuf));
+        strncpy(mqttUserBuf, mqttCredentialsUser(), sizeof(mqttUserBuf) - 1);
+        strncpy(mqttPassBuf, mqttCredentialsPass(), sizeof(mqttPassBuf) - 1);
+
+        WiFiManagerParameter mqttUserParam("mqtt_user", "MQTT username", mqttUserBuf,
+                                           kMqttFieldMax - 1);
+        WiFiManagerParameter mqttPassParam("mqtt_pass", "MQTT password", mqttPassBuf,
+                                           kMqttFieldMax - 1, "type=\"password\" autocomplete=\"off\"");
+
+        setupWiFiManager(apName, apTimeout, connectTimeout, mqttUserParam, mqttPassParam);
 
         // Check if WiFi credentials exist using WiFiManager
         bool hasCredentials = wifiManager.getWiFiIsSaved();

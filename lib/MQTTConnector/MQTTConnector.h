@@ -8,6 +8,7 @@
 #include "DeviceManager.h"
 #include "IRManager.h"
 #include "Log.h"
+#include "MqttCredentials.h"
 #include "secrets.h"
 
 class MQTTConnector {
@@ -167,7 +168,7 @@ class MQTTConnector {
 
     bool connectBroker() {
         String clientId = String("ir_hub_") + hubMacHex;
-        if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASSWORD)) {
+        if (mqttClient.connect(clientId.c_str(), mqttCredentialsUser(), mqttCredentialsPass())) {
             LOG_INFO("[MQTT] Connected to broker");
             subscribeCommands();
             for (Device& d : deviceManager.getDevices()) {
@@ -220,6 +221,7 @@ class MQTTConnector {
 
     void begin() {
         instance = this;
+        mqttCredentialsLoad();
         mqttClient.setServer(MQTT_HOST, MQTT_PORT);
         mqttClient.setCallback(staticCallback);
 
