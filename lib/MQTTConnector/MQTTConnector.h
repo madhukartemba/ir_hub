@@ -19,6 +19,8 @@ class MQTTConnector {
     WiFiClient wifiClient;
     PubSubClient mqttClient;
     bool wifiEnabled;
+    /// Lowercase 12-char hex STA MAC — used in MQTT topics so multiple hubs do not collide.
+    String hubMacHex;
     unsigned long lastReconnectAttempt;
     static constexpr unsigned long kReconnectIntervalMs = 5000;
 
@@ -30,16 +32,26 @@ class MQTTConnector {
         }
     }
 
+    static String buildStaMacHex() {
+        uint8_t mac[6];
+        WiFi.macAddress(mac);
+        char buf[13];
+        snprintf(buf, sizeof(buf), "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4],
+                 mac[5]);
+        return String(buf);
+    }
+
     String discoveryTopicForId(int deviceId) const {
-        return String("homeassistant/switch/ir_hub_device_") + String(deviceId) + "/config";
+        return String("homeassistant/switch/ir_hub_") + hubMacHex + "_device_" + String(deviceId) +
+               "/config";
     }
 
     String commandTopicForId(int deviceId) const {
-        return String("ir_hub/device/") + String(deviceId) + "/set";
+        return String("ir_hub/") + hubMacHex + "/device/" + String(deviceId) + "/set";
     }
 
     String stateTopicForId(int deviceId) const {
-        return String("ir_hub/device/") + String(deviceId) + "/state";
+        return String("ir_hub/") + hubMacHex + "/device/" + String(deviceId) + "/state";
     }
 
     bool publishDiscovery(const Device& device) {
@@ -47,14 +59,14 @@ class MQTTConnector {
         doc["name"] = device.name;
         doc["command_topic"] = commandTopicForId(device.id);
         doc["state_topic"] = stateTopicForId(device.id);
-        doc["unique_id"] = String("ir_hub_") + String(device.id);
+        doc["unique_id"] = String("ir_hub_") + hubMacHex + "_" + String(device.id);
         doc["payload_on"] = "ON";
         doc["payload_off"] = "OFF";
         doc["optimistic"] = false;
 
         JsonObject dev = doc["device"].to<JsonObject>();
         JsonArray ids = dev["identifiers"].to<JsonArray>();
-        ids.add("ir_hub");
+        ids.add(String("ir_hub_") + hubMacHex);
         dev["name"] = "IR Hub";
         dev["model"] = "ESP8266 IR Hub";
         dev["manufacturer"] = "IR Hub";
@@ -85,7 +97,8 @@ class MQTTConnector {
     }
 
     bool subscribeCommands() {
-        bool ok = mqttClient.subscribe("ir_hub/device/+/set");
+        const String sub = String("ir_hub/") + hubMacHex + "/device/+/set";
+        bool ok = mqttClient.subscribe(sub.c_str());
         if (!ok) {
             LOG_ERROR("[MQTT] Failed to subscribe to command topics");
         }
@@ -116,18 +129,19 @@ class MQTTConnector {
 
     void handleIncomingMessage(char* topic, byte* payload, unsigned int length) {
         String t(topic);
-        if (!t.startsWith("ir_hub/device/")) {
+        const String prefix = String("ir_hub/") + hubMacHex + "/device/";
+        if (!t.startsWith(prefix) || !t.endsWith("/set")) {
             return;
         }
 
-        int firstSlash = t.indexOf('/', 14);
-        if (firstSlash < 0) {
+        String rest = t.substring(prefix.length());
+        int slash = rest.indexOf('/');
+        if (slash <= 0) {
             return;
         }
 
-        String idStr = t.substring(14, firstSlash);
-        int deviceId = idStr.toInt();
-        if (deviceId < 0 || !t.endsWith("/set")) {
+        int deviceId = rest.substring(0, slash).toInt();
+        if (deviceId < 0) {
             return;
         }
 
@@ -152,7 +166,7 @@ class MQTTConnector {
     }
 
     bool connectBroker() {
-        String clientId = String("ir_hub_") + String(ESP.getChipId(), HEX);
+        String clientId = String("ir_hub_") + hubMacHex;
         if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASSWORD)) {
             LOG_INFO("[MQTT] Connected to broker");
             subscribeCommands();
@@ -216,6 +230,9 @@ class MQTTConnector {
         }
 
         wifiEnabled = true;
+
+        hubMacHex = buildStaMacHex();
+        LOG_INFO("[MQTT] Topic namespace ir_hub/%s/device/...", hubMacHex.c_str());
 
         // Add/remove callbacks are set in main.cpp so Alexa and MQTT both receive updates.
 
