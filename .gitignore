@@ -6,3 +6,6 @@
 
 .DS_Store
 **/.DS_Store
+
+# Local MQTT credentials (copy from include/secrets.h.example)
+include/secrets.h

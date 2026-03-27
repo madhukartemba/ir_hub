@@ -55,21 +55,10 @@ class AlexaConnector {
         wifiEnabled = true;
         WiFi.mode(WIFI_STA);
 
-        // Register all existing devices
+        // Register all existing devices (add/remove callbacks are set in main.cpp)
         for (Device& device : deviceManager.getDevices()) {
             registerDevice(device);
         }
-
-        // Set up device callbacks
-        deviceManager.setOnDeviceAdded([this](const Device& device) {
-            LOG_DEBUG("[Alexa] Device added: %s (ID: %d)", device.name.c_str(), device.id);
-            registerDevice(device);
-        });
-
-        deviceManager.setOnDeviceRemoved([this](const Device& device) {
-            LOG_DEBUG("[Alexa] Device removed: %s (ID: %d)", device.name.c_str(), device.id);
-            unregisterDevice(device);
-        });
 
         espalexa.begin();
         LOG_INFO("[Alexa] Alexa functionality enabled");

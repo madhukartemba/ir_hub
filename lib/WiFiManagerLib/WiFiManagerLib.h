@@ -5,8 +5,10 @@
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 #include <WiFiManager.h>
+#include <cstring>
 #include "Display.h"
 #include "Log.h"
+#include "MqttCredentials.h"
 #include "NeoRing.h"
 #include "Speaker.h"
 
@@ -21,6 +23,18 @@ class WiFiManagerLib {
     uint32_t otaColor = 0x0000FF;
     uint32_t otaSuccessColor = 0x00FF00;
     uint32_t otaErrorColor = 0xFF0000;
+
+    static constexpr int kMqttFieldMax = 64;
+
+    // WiFiManager keeps pointers to these for the lifetime of `wifiManager`; they must not be
+    // stack locals in setupWiFiManager/begin.
+    char mqttUserBuf_[kMqttFieldMax]{};
+    char mqttPassBuf_[kMqttFieldMax]{};
+    WiFiManagerParameter customHtml_;
+    WiFiManagerParameter mqttUserParam_;
+    WiFiManagerParameter mqttPassParam_;
+    /// Custom HTML only (no id): toggles visibility of the `mqtt_pass` input.
+    WiFiManagerParameter mqttPassToggle_;
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
         // Configure timeout (in seconds)
@@ -47,6 +61,9 @@ class WiFiManagerLib {
         });
 
         wifiManager.setSaveConfigCallback([this]() {
+            if (!mqttCredentialsSave(mqttUserParam_.getValue(), mqttPassParam_.getValue())) {
+                LOG_WARN("MQTT credentials not saved; check LittleFS");
+            }
             display.clear();
             display.printCentered("WiFi Saved!", 20);
             display.printCentered("Connecting...", 40);
@@ -57,18 +74,43 @@ class WiFiManagerLib {
         std::vector<const char*> menu = {"wifi", "info"};
         wifiManager.setMenu(menu);
 
-        // Add custom parameters for better user experience
-        WiFiManagerParameter custom_text(
-            "<p style='text-align:center;color:white;font-size:16px;margin:20px 0;'>"
-            "IR Hub Wi-Fi Setup</p>");
-        wifiManager.addParameter(&custom_text);
+        wifiManager.addParameter(&customHtml_);
+        wifiManager.addParameter(&mqttUserParam_);
+        wifiManager.addParameter(&mqttPassParam_);
+        wifiManager.addParameter(&mqttPassToggle_);
     }
 
    public:
     WiFiManagerLib(Display& display, NeoRing& ledRing, Speaker& speaker)
-        : display(display), ledRing(ledRing), speaker(speaker), wifiConnected(false) {}
+        : display(display),
+          ledRing(ledRing),
+          speaker(speaker),
+          wifiConnected(false),
+          customHtml_(
+              "<p style='text-align:center;color:white;font-size:16px;margin:20px 0;'>"
+              "IR Hub Wi-Fi Setup</p>"),
+          mqttUserParam_("mqtt_user", "MQTT username", mqttUserBuf_, kMqttFieldMax - 1),
+          mqttPassParam_("mqtt_pass", "MQTT password", mqttPassBuf_, kMqttFieldMax - 1,
+                         "type=\"password\" autocomplete=\"off\""),
+          mqttPassToggle_(
+              "<p style=\"text-align:center;margin:4px 0 12px 0;\">"
+              "<button type=\"button\" onclick=\""
+              "var e=document.getElementById('mqtt_pass');"
+              "if(e){e.type=e.type==='password'?'text':'password';}"
+              "\">Show / hide MQTT password</button></p>") {}
 
     bool begin(const char* apName = "IRHub Setup", int apTimeout = 180, int connectTimeout = 60) {
+        mqttCredentialsLoad();
+
+        memset(mqttUserBuf_, 0, sizeof(mqttUserBuf_));
+        memset(mqttPassBuf_, 0, sizeof(mqttPassBuf_));
+        strncpy(mqttUserBuf_, mqttCredentialsUser(), sizeof(mqttUserBuf_) - 1);
+        strncpy(mqttPassBuf_, mqttCredentialsPass(), sizeof(mqttPassBuf_) - 1);
+        // Second arg is max field length (HTML maxlength), not strlen — using strlen would
+        // shrink the input to the current value length (e.g. ~6 chars).
+        mqttUserParam_.setValue(mqttUserBuf_, kMqttFieldMax - 1);
+        mqttPassParam_.setValue(mqttPassBuf_, kMqttFieldMax - 1);
+
         setupWiFiManager(apName, apTimeout, connectTimeout);
 
         // Check if WiFi credentials exist using WiFiManager

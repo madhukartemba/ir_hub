@@ -2,6 +2,7 @@
 
 #include <NeoRing.h>
 #include "AlexaConnector.h"
+#include "MQTTConnector.h"
 #include "Button.h"
 #include "DeviceManager.h"
 #include "Display.h"
@@ -23,4 +24,5 @@ extern IdGen idGen;
 extern IRManager irManager;
 extern DeviceManager deviceManager;
 extern AlexaConnector alexaConnector;
+extern MQTTConnector mqttConnector;
 extern WiFiManagerLib wifiManager;

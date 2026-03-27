@@ -121,10 +121,25 @@ void setup() {
     bool wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
     wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
 
+    // Device add/remove: both Alexa and MQTT must stay in sync (single callback on DeviceManager)
+    deviceManager.setOnDeviceAdded([](const Device& device) {
+        LOG_DEBUG("[Hub] Device added: %s (ID: %d)", device.name.c_str(), device.id);
+        alexaConnector.registerDevice(device);
+        mqttConnector.registerDevice(device);
+    });
+    deviceManager.setOnDeviceRemoved([](const Device& device) {
+        LOG_DEBUG("[Hub] Device removed: %s (ID: %d)", device.name.c_str(), device.id);
+        alexaConnector.unregisterDevice(device);
+        mqttConnector.unregisterDevice(device);
+    });
+
     // Initialize AlexaConnector (will handle WiFi status internally)
     alexaConnector.begin();
-    alexaConnector.setOnStateChangeCallback([](const Device& device, bool state) {
-        LOG_DEBUG("Alexa state change: %s %s", device.name.c_str(), state ? "ON" : "OFF");
+    // Initialize MQTT (Home Assistant discovery + commands)
+    mqttConnector.begin();
+
+    auto onIrRemoteStateChange = [](const Device& device, bool state) {
+        LOG_DEBUG("Remote state: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
             speaker.beep();
             ledRing.blink(ON_COMMAND_LED_COLOR, 1);
@@ -132,7 +147,9 @@ void setup() {
             speaker.beep();
             ledRing.blink(OFF_COMMAND_LED_COLOR, 1);
         }
-    });
+    };
+    alexaConnector.setOnStateChangeCallback(onIrRemoteStateChange);
+    mqttConnector.setOnStateChangeCallback(onIrRemoteStateChange);
 
     // Show ready message on display
     delay(1000);
@@ -168,5 +185,6 @@ void loop() {
     router.update();
     button.update();
     alexaConnector.update();
+    mqttConnector.update();
     ledRing.update();
 }
