@@ -12,7 +12,7 @@ class HomeScreen : public Screen {
     /// Re-send black while blanked: NeoRing only pushes pixels to the strip when the frame
     /// changes; static black stops updating after the first frame, so flaky LEDs can stay lit.
     /// Interval must exceed the library fade duration (~1s) so we do not queue many animations.
-    const unsigned long LED_BLANK_REFRESH_INTERVAL_MS = 1500;
+    const unsigned long LED_BLANK_REFRESH_INTERVAL_MS = 600000;
     bool isBlanked = false;
     unsigned long lastLedBlankRefresh = 0;
     unsigned long animationTimer = 0;
