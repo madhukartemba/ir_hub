@@ -32,23 +32,38 @@ class Haptics {
     static constexpr uint8_t EFFECT_STRONG_CLICK_100 = 1;
     static constexpr uint8_t EFFECT_STRONG_CLICK_60 = 2;
     static constexpr uint8_t EFFECT_SHARP_TICK = 4;
+    static constexpr uint8_t EFFECT_SHARP_TICK_2 = 5;
 
     uint8_t addr;
     bool initialized = false;
 
-    void writeReg(uint8_t reg, uint8_t val) {
+    /** True if a device ACKs this 7-bit address (same probe as an I2C scan). */
+    static bool i2cAddressAck(uint8_t address7) {
+        Wire.beginTransmission(address7);
+        return Wire.endTransmission() == 0;
+    }
+
+    bool writeReg(uint8_t reg, uint8_t val) {
         Wire.beginTransmission(addr);
         Wire.write(reg);
         Wire.write(val);
-        Wire.endTransmission();
+        return Wire.endTransmission() == 0;
     }
 
-    uint8_t readReg(uint8_t reg) {
+    bool readReg(uint8_t reg, uint8_t* out) {
         Wire.beginTransmission(addr);
         Wire.write(reg);
-        Wire.endTransmission(false);
-        Wire.requestFrom(static_cast<int>(addr), 1);
-        return Wire.available() ? static_cast<uint8_t>(Wire.read()) : 0;
+        if (Wire.endTransmission(false) != 0) {
+            return false;
+        }
+        if (Wire.requestFrom(static_cast<int>(addr), 1) != 1) {
+            return false;
+        }
+        if (!Wire.available()) {
+            return false;
+        }
+        *out = static_cast<uint8_t>(Wire.read());
+        return true;
     }
 
     void triggerEffect(uint8_t effect) {
@@ -59,42 +74,58 @@ class Haptics {
 
     bool waitGoClear(unsigned long timeoutMs) {
         unsigned long start = millis();
-        while ((readReg(REG_GO) & 0x01) != 0) {
+        for (;;) {
+            uint8_t go = 0;
+            if (!readReg(REG_GO, &go)) {
+                return false;
+            }
+            if ((go & 0x01) == 0) {
+                return true;
+            }
             if (millis() - start > timeoutMs) {
                 return false;
             }
             yield();
         }
-        return true;
     }
 
    public:
     explicit Haptics(uint8_t i2cAddr = kDefaultAddr) : addr(i2cAddr) {}
 
     bool begin() {
+        initialized = false;
         // Wire.begin() expected to have been called (e.g. by display).
-        writeReg(REG_FEEDBACK, 0x80);  // LRA mode
-        writeReg(REG_LIBRARY, LIB_LRA);
-        writeReg(REG_CONTROL3, 0xA3);
-        writeReg(REG_RATED_V, 0x50);
-        writeReg(REG_OD_CLAMP, 0x89);
-
-        writeReg(REG_MODE, MODE_CALIB);
-        writeReg(REG_GO, 1);
-        if (!waitGoClear(2000)) {
-            LOG_ERROR("[Haptics] Calibration timeout");
-            initialized = false;
+        if (!i2cAddressAck(addr)) {
+            return false;
+        }
+        if (!writeReg(REG_FEEDBACK, 0x80)) {
+            return false;
+        }
+        if (!writeReg(REG_LIBRARY, LIB_LRA) || !writeReg(REG_CONTROL3, 0xA3) || !writeReg(REG_RATED_V, 0x50) ||
+            !writeReg(REG_OD_CLAMP, 0x89)) {
             return false;
         }
 
-        uint8_t status = readReg(REG_STATUS);
+        if (!writeReg(REG_MODE, MODE_CALIB) || !writeReg(REG_GO, 1)) {
+            return false;
+        }
+        if (!waitGoClear(2000)) {
+            LOG_ERROR("[Haptics] Calibration timeout or bus error");
+            return false;
+        }
+
+        uint8_t status = 0;
+        if (!readReg(REG_STATUS, &status)) {
+            return false;
+        }
         if (status & 0x08) {
             LOG_ERROR("[Haptics] Calibration failed (status 0x%02X)", status);
-            initialized = false;
             return false;
         }
 
-        writeReg(REG_MODE, MODE_INTTRIG);
+        if (!writeReg(REG_MODE, MODE_INTTRIG)) {
+            return false;
+        }
         initialized = true;
         LOG_DEBUG("[Haptics] DRV2605 ready at 0x%02X", addr);
         return true;
@@ -120,8 +151,11 @@ class Haptics {
         playEffect(EFFECT_STRONG_CLICK_60);
     }
 
-    /** Primary button “tap” on press (Taptic-style, avoids double-hit on release). */
-    void playButtonPress() { playLightImpact(); }
+    /** Down-stroke of a simulated mechanical click (press). */
+    void playButtonPress() { playEffect(EFFECT_SHARP_TICK); }
+
+    /** Up-stroke of a simulated mechanical click (release). Slightly different ROM slot so down/up feel distinct. */
+    void playButtonRelease() { playEffect(EFFECT_SHARP_TICK_2); }
 
     /** Stronger tap — e.g. long-ack (paired with long-press action). */
     void playLongPressAck() {

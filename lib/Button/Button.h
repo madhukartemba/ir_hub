@@ -70,7 +70,7 @@ class Button {
             buttonPressed = true;
             longPressTriggered = false;
             lastInteractionTime = currentTime;  // Update interaction time on press
-            // Taptic-style: light impact on touch-down (same moment as iOS impact generators)
+            // Simulated mechanical click: down-stroke
             if (hapticsEnabled && haptics != nullptr && haptics->isReady()) {
                 haptics->playButtonPress();
             }
@@ -101,6 +101,10 @@ class Button {
             // Only trigger single click if debounce time has passed and it wasn't a long press
             if (pressDuration >= debounceTime && !longPressTriggered) {
                 lastInteractionTime = currentTime;  // Update interaction time on release
+                // Simulated mechanical click: up-stroke (paired with playButtonPress on down)
+                if (hapticsEnabled && haptics != nullptr && haptics->isReady()) {
+                    haptics->playButtonRelease();
+                }
                 if (soundEnabled && speaker != nullptr) {
                     speaker->shortBeep();
                 }
