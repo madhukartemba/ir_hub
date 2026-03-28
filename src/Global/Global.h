@@ -4,6 +4,7 @@
 #include "AlexaConnector.h"
 #include "MQTTConnector.h"
 #include "Button.h"
+#include "Haptics.h"
 #include "DeviceManager.h"
 #include "Display.h"
 #include "IRCode.h"
@@ -18,6 +19,7 @@
 extern Button button;
 extern Router router;
 extern Speaker speaker;
+extern Haptics haptics;
 extern NeoRing ledRing;
 extern Display display;
 extern IdGen idGen;

@@ -2,6 +2,7 @@
 
 // Instantiate the global objects
 Button button;
+Haptics haptics;
 Router router;
 Speaker speaker;
 NeoRing ledRing;

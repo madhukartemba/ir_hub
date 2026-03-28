@@ -24,6 +24,10 @@ void setup() {
     display.printCentered("Initializing...", 40);
     display.update();
 
+    if (!haptics.begin()) {
+        LOG_WARN("DRV2605 haptics not found — tactile feedback disabled");
+    }
+
     // Initialize NeoRing
     LOG_DEBUG("Starting LED ring setup");
     ledRing.begin(NUM_LEDS, NEOPIXEL_PIN, DISPLAY_DRIVER);
@@ -112,6 +116,7 @@ void setup() {
         }
     }
     button.setSpeaker(speaker);
+    button.setHaptics(haptics);
     LOG_DEBUG("Button initialized on pin");
 
     // Successful core initialization now setup wireless connection

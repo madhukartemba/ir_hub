@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <functional>
+#include "Haptics.h"
 #include "Log.h"
 #include "Speaker.h"
 
@@ -21,6 +22,9 @@ class Button {
     Speaker* speaker;
     bool soundEnabled = true;
 
+    Haptics* haptics = nullptr;
+    bool hapticsEnabled = true;
+
    public:
     Button() {}
     ~Button() {}
@@ -34,7 +38,11 @@ class Button {
 
     void setSpeaker(Speaker& speakerRef) { this->speaker = &speakerRef; }
 
+    void setHaptics(Haptics& hapticsRef) { this->haptics = &hapticsRef; }
+
     void setSoundEnabled(bool enabled) { soundEnabled = enabled; }
+
+    void setHapticsEnabled(bool enabled) { hapticsEnabled = enabled; }
 
     void setClickCallback(std::function<void()> callback) { singleClickCallback = callback; }
 
@@ -62,6 +70,10 @@ class Button {
             buttonPressed = true;
             longPressTriggered = false;
             lastInteractionTime = currentTime;  // Update interaction time on press
+            // Taptic-style: light impact on touch-down (same moment as iOS impact generators)
+            if (hapticsEnabled && haptics != nullptr && haptics->isReady()) {
+                haptics->playButtonPress();
+            }
         }
 
         // Button is currently pressed
@@ -70,6 +82,9 @@ class Button {
             if (!longPressTriggered && (currentTime - pressStartTime) >= longPressTime) {
                 longPressTriggered = true;
                 lastInteractionTime = currentTime;  // Update interaction time on long press
+                if (hapticsEnabled && haptics != nullptr && haptics->isReady()) {
+                    haptics->playLongPressAck();
+                }
                 if (soundEnabled && speaker != nullptr) {
                     speaker->doubleBeep();
                 }
