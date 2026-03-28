@@ -9,7 +9,12 @@ class HomeScreen : public Screen {
     unsigned long lastActivityTime;
     const unsigned long INACTIVITY_TIMEOUT = 30000;    // 30 seconds to show status
     const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
+    /// Re-send black while blanked: NeoRing only pushes pixels to the strip when the frame
+    /// changes; static black stops updating after the first frame, so flaky LEDs can stay lit.
+    /// Interval must exceed the library fade duration (~1s) so we do not queue many animations.
+    const unsigned long LED_BLANK_REFRESH_INTERVAL_MS = 1500;
     bool isBlanked = false;
+    unsigned long lastLedBlankRefresh = 0;
     unsigned long animationTimer = 0;
     int animationFrame = 0;
 
@@ -69,12 +74,17 @@ class HomeScreen : public Screen {
             isBlanked = true;
             display.turnOff();
             ledRing.blank();
+            lastLedBlankRefresh = millis();
             LOG_DEBUG("Screen blanked due to inactivity on status screen");
             return;  // Don't update display when blanked
         }
 
-        // Don't update display when blanked
+        // Don't update display when blanked; keep re-driving the strip with black for bad pixels
         if (isBlanked) {
+            if (millis() - lastLedBlankRefresh >= LED_BLANK_REFRESH_INTERVAL_MS) {
+                lastLedBlankRefresh = millis();
+                ledRing.blank();
+            }
             return;
         }
 
