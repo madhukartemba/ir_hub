@@ -4,6 +4,7 @@
 #include <IRrecv.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
+#include <IRutils.h>
 #include "IRCode.h"
 class IRManager {
    private:
@@ -101,9 +102,21 @@ class IRManager {
             LOG_ERROR("[IRManager] Attempted to send invalid code");
             return;
         }
-        LOG_DEBUG("[IRManager] Sending: protocol=%d, value=0x%llX, bits=%u",
-                  (int)code.getProtocol(), code.getValue(), code.getBits());
-        irsend->send(code.getProtocol(), code.getValue(), code.getBits());
+        // State-based AC protocols (HITACHI_AC1, DAIKIN, etc.) carry payloads
+        // bigger than 64 bits, so they must go through the byte-array
+        // overload of IRsend::send. The simple uint64_t overload doesn't
+        // even have switch cases for them and would silently emit nothing.
+        if (hasACState(code.getProtocol())) {
+            const auto &state = code.getState();
+            LOG_DEBUG("[IRManager] Sending: protocol=%d, state_bytes=%u, bits=%u",
+                      (int)code.getProtocol(), (unsigned)state.size(), code.getBits());
+            irsend->send(code.getProtocol(), state.data(),
+                         static_cast<uint16_t>(state.size()));
+        } else {
+            LOG_DEBUG("[IRManager] Sending: protocol=%d, value=0x%llX, bits=%u",
+                      (int)code.getProtocol(), code.getValue(), code.getBits());
+            irsend->send(code.getProtocol(), code.getValue(), code.getBits());
+        }
     }
 
     void saveLastCodeToJson(JsonDocument &doc) { lastCode.toJson(doc); }
