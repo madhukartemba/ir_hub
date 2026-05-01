@@ -3,6 +3,7 @@
 #include "NeoRing.h"
 #include "config.h"
 #include "global/Global.h"
+#include "led/ClickSweepOnceAnimation.h"
 #include "preferences.h"
 #include "ui/HomeScreen.h"
 
@@ -147,10 +148,12 @@ void setup() {
         LOG_DEBUG("Remote state: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
             speaker.beep();
-            ledRing.blink(ON_COMMAND_LED_COLOR, 1);
+            ledRing.addAnimation(std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS,
+                                                                           ON_COMMAND_LED_COLOR));
         } else {
             speaker.beep();
-            ledRing.blink(OFF_COMMAND_LED_COLOR, 1);
+            ledRing.addAnimation(std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS,
+                                                                           OFF_COMMAND_LED_COLOR));
         }
     };
     alexaConnector.setOnStateChangeCallback(onIrRemoteStateChange);
