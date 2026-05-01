@@ -38,10 +38,6 @@
 #define COLOR_DEFAULT Color::White
 #define COLOR_OFF Color::Black
 
-// Legacy definitions for backward compatibility
-#define ON_COMMAND_LED_COLOR Color::Green
-#define OFF_COMMAND_LED_COLOR Color::Orange
-
 // Timeout duration
 #define TIMEOUT_DURATION 20000
 

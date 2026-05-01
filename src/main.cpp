@@ -148,12 +148,12 @@ void setup() {
         LOG_DEBUG("Remote state: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
             speaker.beep();
-            ledRing.addAnimation(std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS,
-                                                                           ON_COMMAND_LED_COLOR));
+            ledRing.addAnimation(
+                std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS, SEND_ON_COMMAND_COLOR));
         } else {
             speaker.beep();
-            ledRing.addAnimation(std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS,
-                                                                           OFF_COMMAND_LED_COLOR));
+            ledRing.addAnimation(
+                std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS, SEND_OFF_COMMAND_COLOR));
         }
     };
     alexaConnector.setOnStateChangeCallback(onIrRemoteStateChange);
