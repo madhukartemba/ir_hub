@@ -1,5 +1,7 @@
 #include <Arduino.h>
+#include "../../config.h"
 #include "../../global/Global.h"
+#include "../../led/ClickSweepOnceAnimation.h"
 #include "../../preferences.h"
 #include "../../utils/MenuUtils.h"
 #include "DeviceDeleteConfirmation.h"
@@ -80,8 +82,8 @@ class DeviceActions : public Screen {
                 if (device.onCommand.isValid()) {
                     LOG_INFO("Sending ON command for device %d", device.id);
                     irManager.sendProtocol(device.onCommand);
-                    // Visual feedback for ON command
-                    ledRing.blink(SEND_ON_COMMAND_COLOR);
+                    ledRing.addAnimation(
+                        std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS, SEND_ON_COMMAND_COLOR));
                 } else {
                     LOG_ERROR("Invalid ON command for device %d", device.id);
                     display.clear();
@@ -95,8 +97,8 @@ class DeviceActions : public Screen {
                 if (device.offCommand.isValid()) {
                     LOG_INFO("Sending OFF command for device %d", device.id);
                     irManager.sendProtocol(device.offCommand);
-                    // Visual feedback for OFF command
-                    ledRing.blink(SEND_OFF_COMMAND_COLOR);
+                    ledRing.addAnimation(std::make_unique<ClickSweepOnceAnimation>(
+                        NUM_LEDS, SEND_OFF_COMMAND_COLOR));
                 } else {
                     LOG_ERROR("Invalid OFF command for device %d", device.id);
                     display.clear();

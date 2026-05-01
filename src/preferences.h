@@ -5,7 +5,7 @@
 
 // IR Code Colors
 #define SEND_ON_COMMAND_COLOR Color::Green
-#define SEND_OFF_COMMAND_COLOR Color::OrangeRed
+#define SEND_OFF_COMMAND_COLOR Color::Red
 
 // Success/Positive States
 #define COLOR_SUCCESS Color::Green
