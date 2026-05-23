@@ -1,10 +1,12 @@
 # Releasing a new firmware version
 
 `scripts/release.py` is the single command that ships an OTA-deliverable
-firmware. It bumps the version, builds the binaries, uploads them to a GitHub
-Release, updates `ota/manifest.json`, and pushes — in the right order so that
-no device can ever see a manifest pointing at a binary that doesn't exist
-yet.
+firmware. It bumps the version, builds the binaries, attaches them to a
+GitHub Release (for human visibility), drops a versioned copy under
+`binaries/` (which is what the device actually downloads via jsDelivr's
+MFLN-friendly TLS edge), updates `ota/manifest.json`, commits + pushes,
+and purges the jsDelivr CDN cache — in the right order so that no device
+can ever see a manifest pointing at a binary that doesn't exist yet.
 
 For the underlying OTA mechanism (manifest schema, security model, what the
 device does on the wire), see [`OTA_RELEASES.md`](OTA_RELEASES.md). This
@@ -86,21 +88,25 @@ scripts/release.py 1.0.1 --dry-run
 2. **Bumps `custom_firmware_version`** in `platformio.ini` so the next build
    compiles in the new `FIRMWARE_VERSION` macro.
 3. **Builds** each env in `--envs` via `pio run -e <env>`.
-4. **Stages binaries** as `release/firmware_<variant>.bin` (e.g.
-   `release/firmware_v3.bin`). The variant is derived from the env name
-   (`ir_hub_version_3` → `v3`) so it matches the device's `OTA_HW_VARIANT`.
-   The `release/` directory is gitignored.
+4. **Stages binaries** in two places:
+   - `release/firmware_<variant>.bin` — gitignored, used only as the asset
+     uploaded to the GitHub Release for human visibility.
+   - `binaries/firmware_<variant>_v<version>.bin` — committed to git. This
+     is the file the device actually downloads, via jsDelivr's CDN.
+   The variant is derived from the env name (`ir_hub_version_3` → `v3`) so
+   it matches the device's `OTA_HW_VARIANT`.
 5. **Creates the GitHub Release** with `gh release create vX.Y.Z firmware_*.bin
    --title vX.Y.Z`. If the tag already exists from a partial previous run,
    falls back to `gh release upload --clobber` so re-runs are idempotent.
-6. **Updates `ota/manifest.json`** with the new version and per-variant URLs:
+6. **Updates `ota/manifest.json`** with the new version and per-variant URLs
+   pointing at jsDelivr:
 
    ```json
    {
      "variants": {
        "v3": {
          "version": "1.0.1",
-         "url": "https://github.com/<you>/<repo>/releases/download/v1.0.1/firmware_v3.bin"
+         "url": "https://cdn.jsdelivr.net/gh/<you>/<repo>@main/binaries/firmware_v3_v1.0.1.bin"
        }
      }
    }
@@ -108,8 +114,13 @@ scripts/release.py 1.0.1 --dry-run
 
    Repo slug auto-detected from `git remote origin`. Existing variants you
    didn't build are left untouched.
-7. **Commits and pushes** `platformio.ini` + `ota/manifest.json` with the
-   message `chore(release): vX.Y.Z`.
+7. **Commits and pushes** `platformio.ini` + `ota/manifest.json` +
+   `binaries/firmware_<variant>_v<version>.bin` with the message
+   `chore(release): vX.Y.Z`.
+8. **Purges the jsDelivr cache** for the manifest path so devices see the
+   new version immediately rather than waiting up to ~12 h for jsDelivr's
+   default TTL. The binary path is fresh (new filename) so doesn't need
+   purging.
 
 The release goes live in step 5 *before* the manifest is published in
 step 7 — a device polling between those two steps either sees the old
@@ -142,8 +153,10 @@ The script is designed to be re-run safely. Common scenarios:
   `gh release upload --clobber` to push the binaries to the already-created
   release.
 - **Release uploaded but `git push` failed.** Push manually:
-  `git push`. Devices will pick up the manifest as soon as it's reachable on
-  `raw.githubusercontent.com`.
+  `git push`. Devices will pick up the manifest as soon as jsDelivr's edge
+  has it (purge with
+  `curl https://purge.jsdelivr.net/gh/<you>/<repo>@main/ota/manifest.json`
+  if you don't want to wait the default ~12 h TTL).
 
 If you need to abandon a release entirely:
 

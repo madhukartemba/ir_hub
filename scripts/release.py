@@ -42,7 +42,12 @@ from typing import Iterable, List, Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLATFORMIO_INI = REPO_ROOT / "platformio.ini"
 MANIFEST_PATH = REPO_ROOT / "ota" / "manifest.json"
+# Where we stage binaries for the GitHub Release upload (gitignored).
 RELEASE_DIR = REPO_ROOT / "release"
+# Where we commit binaries that the device pulls via jsDelivr. Versioned
+# filenames so jsDelivr's CDN sees each one as a brand-new URL (no cache
+# coherency issues even across the global edge network).
+BINARIES_DIR = REPO_ROOT / "binaries"
 
 DEFAULT_ENVS = ["ir_hub_version_3"]
 
@@ -168,6 +173,7 @@ def build_env(env_name: str, dry_run: bool) -> Path:
 
 
 def stage_binary(env_name: str, source: Path, dry_run: bool) -> Path:
+    """Copy build artifact to the gitignored upload-staging dir for `gh release`."""
     variant = env_to_variant(env_name)
     dst = RELEASE_DIR / f"firmware_{variant}.bin"
     if dry_run:
@@ -177,6 +183,24 @@ def stage_binary(env_name: str, source: Path, dry_run: bool) -> Path:
     shutil.copy2(source, dst)
     size_kb = dst.stat().st_size / 1024
     print(f"Staged {dst.relative_to(REPO_ROOT)} ({size_kb:.1f} KB)")
+    return dst
+
+
+def commit_binary_for_cdn(env_name: str, version: str, source: Path,
+                          dry_run: bool) -> Path:
+    """Copy build artifact into the git-tracked `binaries/` dir so jsDelivr
+    can serve it via its MFLN-friendly TLS edge (which is what the device
+    actually downloads). Versioned filename so the CDN treats each release
+    as a unique URL with no cache invalidation needed."""
+    variant = env_to_variant(env_name)
+    dst = BINARIES_DIR / f"firmware_{variant}_v{version}.bin"
+    if dry_run:
+        print(f"[dry-run] cp {source} -> {dst}")
+        return dst
+    BINARIES_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, dst)
+    size_kb = dst.stat().st_size / 1024
+    print(f"Committed {dst.relative_to(REPO_ROOT)} ({size_kb:.1f} KB) for jsDelivr")
     return dst
 
 
@@ -190,9 +214,13 @@ def update_manifest(version: str, envs: Iterable[str], repo_slug: str,
 
     for env_name in envs:
         variant = env_to_variant(env_name)
+        # jsDelivr URL pointing at the binary we committed under binaries/.
+        # The device's TLS budget can't handle a full-size record from
+        # objects.githubusercontent.com (where GitHub Release downloads
+        # land), so we deliberately route via jsDelivr's MFLN-friendly edge.
         url = (
-            f"https://github.com/{repo_slug}/releases/download/"
-            f"v{version}/firmware_{variant}.bin"
+            f"https://cdn.jsdelivr.net/gh/{repo_slug}@main/"
+            f"binaries/firmware_{variant}_v{version}.bin"
         )
         manifest["variants"][variant] = {"version": version, "url": url}
 
@@ -269,16 +297,16 @@ def purge_jsdelivr(repo_slug: str, dry_run: bool) -> None:
 
 def commit_and_push(version: str, do_push: bool, dry_run: bool) -> None:
     if dry_run:
-        print(f"[dry-run] git add platformio.ini ota/manifest.json")
+        print(f"[dry-run] git add platformio.ini ota/manifest.json binaries/")
         print(f"[dry-run] git commit -m 'chore(release): v{version}'")
         if do_push:
             print(f"[dry-run] git push")
         return
 
-    run(["git", "add", "platformio.ini", "ota/manifest.json"])
+    run(["git", "add", "platformio.ini", "ota/manifest.json", "binaries/"])
     diff = run_quiet(["git", "diff", "--cached", "--quiet"])
     if diff.returncode == 0:
-        print("Nothing to commit (platformio.ini + manifest already up to date).")
+        print("Nothing to commit (platformio.ini + manifest + binaries already up to date).")
     else:
         run(["git", "commit", "-m", f"chore(release): v{version}"])
 
@@ -342,6 +370,10 @@ def main() -> None:
     for env_name in args.envs:
         src = build_env(env_name, args.dry_run)
         binaries.append(stage_binary(env_name, src, args.dry_run))
+        # Also drop a versioned copy under binaries/ so jsDelivr can serve
+        # it. This is the URL the device actually downloads from — the
+        # gh-release asset is just for human visibility.
+        commit_binary_for_cdn(env_name, args.version, src, args.dry_run)
 
     # Create the Release first so the manifest URL is live before any device
     # has a chance to read the bumped manifest.

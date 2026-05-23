@@ -2,8 +2,13 @@
 
 The device polls a JSON manifest in this repo every 6 hours (and once shortly
 after boot). When the manifest version is newer than what the device is
-running, it downloads `firmware_<variant>.bin` from a GitHub Release and
-self-flashes. No physical access required.
+running, it downloads `firmware_<variant>_v<version>.bin` via jsDelivr
+(serving the file from this repo's `binaries/` folder) and self-flashes.
+No physical access required.
+
+The binary is *also* attached to a GitHub Release for human visibility, but
+the device deliberately does not download from there — see the TLS note
+below.
 
 ## One-time setup
 
@@ -21,22 +26,29 @@ Edit `include/secrets.h` before flashing:
 - `OTA_MANIFEST_URL` is what the device polls. Empty disables HTTP-pull OTA
   entirely.
 
-**Use jsDelivr, not `raw.githubusercontent.com`.** jsDelivr is a free CDN
-that mirrors public GitHub repos and — crucially — supports the TLS MFLN
-extension (RFC 6066). The ESP8266 has only ~18-20 KB free heap available
-for a TLS handshake, which is too tight to receive full-size 16 KB TLS
-records. MFLN lets the client negotiate smaller records so a 1 KB receive
-buffer is sufficient. `raw.githubusercontent.com` is fronted by Fastly,
-whose MFLN support is inconsistent — it works for some clients/networks
-and crashes the SYS task (Exception 29) for others.
+**Use jsDelivr for both manifest and binary, not `raw.githubusercontent.com`
+or GitHub Releases.** jsDelivr is a free CDN that mirrors public GitHub repos
+and — crucially — supports the TLS MFLN extension (RFC 6066). The ESP8266
+has only ~18-20 KB free heap available for a TLS handshake, which is too
+tight to receive full-size 16 KB TLS records. MFLN lets the client negotiate
+smaller records so a 1 KB receive buffer is sufficient.
 
-Both URLs serve the same file from the same commit; jsDelivr just plays
-nicer with constrained TLS clients.
+Fastly (`raw.githubusercontent.com`) and the GitHub Releases edge
+(`objects.githubusercontent.com`) both negotiate MFLN inconsistently. They
+work from a laptop but crash the ESP8266 mid-handshake with
+`Unhandled C++ exception: OOM` (the binary fetch is heavier than the
+manifest fetch, so it tends to fail even when manifest fetches succeed).
 
-The actual **firmware binary** stays on GitHub Releases (linked from inside
-the manifest). By the time the device downloads it, MQTT has been shut down
-to free heap, so the larger TLS buffer needed for the GitHub Releases edge
-(objects.githubusercontent.com) usually fits.
+That's why every release commits the firmware binary into this repo's
+`binaries/` folder (e.g. `binaries/firmware_v3_v1.0.3.bin`) and the
+manifest URL points at jsDelivr:
+
+```
+https://cdn.jsdelivr.net/gh/<you>/<repo>@main/binaries/firmware_v3_v1.0.3.bin
+```
+
+The GitHub Release still gets the binary as an attached asset for easy
+manual download, but the device never touches that URL.
 
 ### 2. Commit the manifest skeleton
 
@@ -47,7 +59,7 @@ Create `ota/manifest.json` in this repo:
   "variants": {
     "v0": { "version": "0.0.0", "url": "" },
     "v1": { "version": "0.0.0", "url": "" },
-    "v3": { "version": "1.0.0", "url": "https://github.com/<you>/<repo>/releases/download/v1.0.0/firmware_v3.bin" }
+    "v3": { "version": "1.0.0", "url": "https://cdn.jsdelivr.net/gh/<you>/<repo>@main/binaries/firmware_v3_v1.0.0.bin" }
   }
 }
 ```
@@ -66,6 +78,9 @@ The Home screen header will now read `IR Hub v1.0.0`.
 
 ## Cutting a new release
 
+Use `scripts/release.py` — it does all of the below in one command. See
+`docs/RELEASE.md`. If you want to do it manually:
+
 1. **Bump the version** in `platformio.ini`:
 
    ```ini
@@ -77,36 +92,40 @@ The Home screen header will now read `IR Hub v1.0.0`.
 
    ```bash
    pio run -e ir_hub_version_3
-   cp .pio/build/ir_hub_version_3/firmware.bin firmware_v3.bin
    ```
 
-3. **Create a GitHub Release** named `v1.0.1`:
+3. **Commit the binary into `binaries/`** so jsDelivr can serve it:
 
    ```bash
-   gh release create v1.0.1 firmware_v3.bin \
+   mkdir -p binaries
+   cp .pio/build/ir_hub_version_3/firmware.bin binaries/firmware_v3_v1.0.1.bin
+   ```
+
+4. **(Optional) Create a GitHub Release** named `v1.0.1` for human visibility:
+
+   ```bash
+   gh release create v1.0.1 binaries/firmware_v3_v1.0.1.bin \
      --title "v1.0.1" \
      --notes "Fix XYZ, improve ABC"
    ```
 
-   The asset will be reachable at the stable URL
-   `https://github.com/<you>/<repo>/releases/download/v1.0.1/firmware_v3.bin`.
-
-4. **Update `ota/manifest.json`** in the repo:
+5. **Update `ota/manifest.json`** to point at the jsDelivr URL:
 
    ```json
    {
      "variants": {
        "v3": {
          "version": "1.0.1",
-         "url": "https://github.com/<you>/<repo>/releases/download/v1.0.1/firmware_v3.bin"
+         "url": "https://cdn.jsdelivr.net/gh/<you>/<repo>@main/binaries/firmware_v3_v1.0.1.bin"
        }
      }
    }
    ```
 
-   Commit and push to `main`. The device will pick it up on its next poll.
+6. **Commit and push** `platformio.ini`, `binaries/`, and `ota/manifest.json`
+   to `main`. The device will pick it up on its next poll.
 
-5. **(Optional) Trigger an immediate update** instead of waiting 6 hours.
+7. **(Optional) Trigger an immediate update** instead of waiting 6 hours.
    If the device has MQTT configured, publish an empty message to its OTA
    topic:
 
