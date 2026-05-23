@@ -241,8 +241,8 @@ class WiFiManagerLib {
         ArduinoOTA.setHostname("ir-hub");
 
         ArduinoOTA.onStart([this]() {
-            String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
-            LOG_INFO("Start updating " + type);
+            const char* type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
+            LOG_INFO("Start updating %s", type);
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
@@ -282,7 +282,7 @@ class WiFiManagerLib {
             }
             ledRing.solid(this->otaErrorColor);
             ledRing.finishTransition();
-            LOG_ERROR("OTA Error: " + String(error));
+            LOG_ERROR("OTA Error: %u", (unsigned)error);
             display.clear();
             display.printCentered("OTA Error", 10);
             display.printCentered("Error: " + String(error), 30);

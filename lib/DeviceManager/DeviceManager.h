@@ -31,6 +31,7 @@ class DeviceManager {
     const char* storageDir = "/devices";
     std::map<String, Device> deviceCacheByName;
     std::map<int, Device> deviceCacheById;
+    bool cacheLoaded = false;
     IdGen& idGen;
     DeviceCallback onDeviceAdded;
     DeviceCallback onDeviceRemoved;
@@ -147,17 +148,23 @@ class DeviceManager {
     }
 
     bool removeDevice(const Device& device) {
-        String filename = String(device.id) + ".json";
+        // Copy locally before mutating the caches: the `device` reference is
+        // very often a pointer into `deviceCacheById`, and erasing that entry
+        // would otherwise leave us with a dangling reference to feed into
+        // `onDeviceRemoved` (whose first thing is to read `device.name`).
+        Device snapshot = device;
+
+        String filename = String(snapshot.id) + ".json";
         bool success = LittleFS.remove(String(storageDir) + "/" + filename);
         if (success) {
             LOG_INFO("Device removed from %s", filename.c_str());
-            deviceCacheByName.erase(device.name);
-            deviceCacheById.erase(device.id);
+            deviceCacheByName.erase(snapshot.name);
+            deviceCacheById.erase(snapshot.id);
 
             if (onDeviceRemoved) {
                 LOG_DEBUG("[DeviceManager] Triggering onDeviceRemoved callback for device %d",
-                          device.id);
-                onDeviceRemoved(device);
+                          snapshot.id);
+                onDeviceRemoved(snapshot);
             }
         } else {
             LOG_ERROR("Failed to remove device from %s", filename.c_str());
@@ -227,26 +234,58 @@ class DeviceManager {
     }
 
     std::vector<Device> getDevices() {
+        loadAll();
         std::vector<Device> devices;
+        devices.reserve(deviceCacheById.size());
+        for (const auto& kv : deviceCacheById) {
+            devices.push_back(kv.second);
+        }
+        LOG_INFO("Loaded %d devices", devices.size());
+        return devices;
+    }
+
+    /// Iterate every device without allocating a vector copy. Use this from
+    /// hot paths (MQTT reconnect, Alexa register-all on Wi-Fi up).
+    template <typename Fn>
+    void forEachDevice(Fn fn) {
+        loadAll();
+        for (auto& kv : deviceCacheById) {
+            fn(kv.second);
+        }
+    }
+
+    /// Number of known devices (cheap; uses the cache).
+    size_t deviceCount() {
+        loadAll();
+        return deviceCacheById.size();
+    }
+
+   private:
+    /// Scan LittleFS once to populate the cache. Subsequent calls are a no-op
+    /// because saveDevice/removeDevice keep the cache in sync.
+    void loadAll() {
+        if (cacheLoaded) {
+            return;
+        }
+        cacheLoaded = true;  // set first so any failure isn't retried each call
 
         Dir dir = LittleFS.openDir(storageDir);
         while (dir.next()) {
-            if (dir.isFile() && String(dir.fileName()).endsWith(".json")) {
-                // Extract device ID from filename (remove .json extension)
-                String filename = String(dir.fileName());
-                String idStr = filename.substring(0, filename.lastIndexOf('.'));
-                int id = idStr.toInt();
-
-                Device* device = getDeviceById(id);
-                if (device) {
-                    devices.push_back(*device);
-                } else {
-                    LOG_ERROR("Failed to load device from %s", dir.fileName());
-                }
+            if (!dir.isFile()) {
+                continue;
+            }
+            String filename = String(dir.fileName());
+            if (!filename.endsWith(".json")) {
+                continue;
+            }
+            int id = filename.substring(0, filename.lastIndexOf('.')).toInt();
+            // getDeviceById will read+parse the file and insert into the cache
+            // (skips disk if already cached).
+            if (!getDeviceById(id)) {
+                LOG_ERROR("Failed to load device from %s", filename.c_str());
             }
         }
-
-        LOG_INFO("Loaded %d devices", devices.size());
-        return devices;
+        LOG_INFO("[DeviceManager] Cache primed with %u devices",
+                 (unsigned)deviceCacheById.size());
     }
 };

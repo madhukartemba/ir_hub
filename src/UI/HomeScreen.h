@@ -184,37 +184,28 @@ class HomeScreen : public Screen {
         display.setTextColor(0);  // Black text on filled tab
         display.print("IP", cardX + 10, cardY - tabHeight);
 
+        display.setTextSize(1);
+        display.setTextColor(1);
+
+        // Format directly into a stack buffer to avoid the per-frame `String`
+        // heap allocations that `WiFi.localIP().toString()` would cause.
+        char body[20];
         if (WiFi.status() == WL_CONNECTED) {
-            String ip = WiFi.localIP().toString();
-
-            // Draw IP address perfectly centered within the card (both horizontally and vertically)
-            display.setTextSize(1);
-            display.setTextColor(1);  // White text on card
-            int textWidth = display.getTextWidth(ip);
-            int textHeight = display.getTextHeight();
-            int textX = cardX + (cardWidth - textWidth) / 2;
-            int textY = cardY + (cardHeight - textHeight) / 2 + 1;
-            display.print(ip, textX, textY);
-
+            IPAddress ip = WiFi.localIP();
+            snprintf(body, sizeof(body), "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
         } else {
-            // Show disconnected message perfectly centered within the card (both horizontally and
-            // vertically)
-            display.setTextSize(1);
-            display.setTextColor(1);
-            String message = "Not Connected";
-            int textWidth = display.getTextWidth(message);
-            int textHeight = display.getTextHeight();
-            int textX = cardX + (cardWidth - textWidth) / 2;
-            int textY = cardY + (cardHeight - textHeight) / 2;
-            display.print(message, textX, textY);
+            strncpy(body, "Not Connected", sizeof(body));
+            body[sizeof(body) - 1] = '\0';
         }
+
+        int textWidth = display.getTextWidth(body);
+        int textHeight = display.getTextHeight();
+        int textX = cardX + (cardWidth - textWidth) / 2;
+        int textY = cardY + (cardHeight - textHeight) / 2 + 1;
+        display.print(body, textX, textY);
     }
 
     void drawUptime() {
-        // Draw uptime at bottom
-        String uptimeStr = getFormattedUptime();
-        String fullText = "Uptime " + uptimeStr;
-
         int startX = 22;
         // Position at the very bottom (64 - 16 = 48 for text baseline, 50 for icon center)
         int iconY = 58;  // Bottom area for icon
@@ -240,18 +231,17 @@ class HomeScreen : public Screen {
                 break;
         }
 
-        // Draw uptime text
-        display.setTextSize(1);
-        display.print(fullText, startX + 12, textY);
-    }
-
-    String getFormattedUptime() {
-        unsigned long uptime = millis() / 1000;  // Convert to seconds
+        // Format the uptime directly into a fixed stack buffer to avoid the
+        // ~7 `String` heap allocations the previous implementation made every
+        // second. Over days that was a large source of heap fragmentation.
+        char buf[24];
+        unsigned long uptime = millis() / 1000;
         unsigned long hours = uptime / 3600;
         unsigned long minutes = (uptime % 3600) / 60;
         unsigned long seconds = uptime % 60;
+        snprintf(buf, sizeof(buf), "Uptime %lu:%02lu:%02lu", hours, minutes, seconds);
 
-        return String(hours) + ":" + (minutes < 10 ? "0" : "") + String(minutes) + ":" +
-               (seconds < 10 ? "0" : "") + String(seconds);
+        display.setTextSize(1);
+        display.print(buf, startX + 12, textY);
     }
 };

@@ -1,7 +1,26 @@
 #pragma once
 
+#include <Arduino.h>
+
+// ---------------------------------------------------------------------------
+// Logging
+//
+// Two design goals:
+//   1. Zero heap allocations per log line. The previous implementation built
+//      the line via `String("[DEBUG] ") + fmt + "\n"`, which performed three
+//      heap allocs + frees per call. On a device that logs continuously, that
+//      fragments the ESP8266 heap within hours.
+//   2. Compile-out everything below MIN_LOG_LEVEL so unused log statements
+//      cost zero flash/RAM.
+//
+// To override the level, define MIN_LOG_LEVEL before including this header
+// (or pass `-DMIN_LOG_LEVEL=LOG_LEVEL_DEBUG` from build flags).
+// ---------------------------------------------------------------------------
+
 // Set to 0 to disable all logs globally
-#define LOGGING_ENABLED 1
+#ifndef LOGGING_ENABLED
+#  define LOGGING_ENABLED 1
+#endif
 
 // Log levels - set the minimum level to display
 // DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3
@@ -10,48 +29,76 @@
 #define LOG_LEVEL_WARN  2
 #define LOG_LEVEL_ERROR 3
 
-// Set the minimum log level to display (change this to filter logs)
-#define MIN_LOG_LEVEL LOG_LEVEL_DEBUG
+// Default minimum level. INFO keeps the most useful operational logs while
+// dropping the per-frame DEBUG spam that fragments the heap.
+#ifndef MIN_LOG_LEVEL
+#  define MIN_LOG_LEVEL LOG_LEVEL_INFO
+#endif
 
 #if LOGGING_ENABLED
-  // Debug level logging
-  #if MIN_LOG_LEVEL <= LOG_LEVEL_DEBUG
-    #define LOG_DEBUG(fmt, ...) Serial.printf((String("[DEBUG] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
-  #else
-    #define LOG_DEBUG(msg)
-  #endif
 
-  // Info level logging
-  #if MIN_LOG_LEVEL <= LOG_LEVEL_INFO
-    #define LOG_INFO(fmt, ...) Serial.printf((String("[INFO] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
-  #else
-    #define LOG_INFO(msg)
-  #endif
+namespace ir_hub_log {
 
-  // Warning level logging
-  #if MIN_LOG_LEVEL <= LOG_LEVEL_WARN
-    #define LOG_WARN(fmt, ...) Serial.printf((String("[WARN] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
-  #else
-    #define LOG_WARN(msg)
-  #endif
+// Stack-only formatter. Falls back gracefully if a single line exceeds the
+// buffer (truncates rather than allocating). 192 bytes covers our longest
+// real-world lines (MQTT topics + state).
+inline void emit(const char* level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 
-  // Error level logging
-  #if MIN_LOG_LEVEL <= LOG_LEVEL_ERROR
-    #define LOG_ERROR(fmt, ...) Serial.printf((String("[ERROR] ") + fmt + "\n").c_str(), ##__VA_ARGS__)
-  #else
-    #define LOG_ERROR(msg)
-  #endif
+inline void emit(const char* level, const char* fmt, ...) {
+    char buf[192];
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    Serial.print(level);
+    if (n < 0) {
+        Serial.println(F("<log fmt error>"));
+        return;
+    }
+    Serial.write(reinterpret_cast<const uint8_t*>(buf),
+                 (size_t)n < sizeof(buf) - 1 ? (size_t)n : sizeof(buf) - 1);
+    Serial.print('\n');
+}
 
-  // Legacy macros for backward compatibility
-  #define LOG(msg) LOG_INFO(msg)
-  #define LOGF(fmt, ...) LOG_INFO(fmt, ##__VA_ARGS__)
-  #define LOG_LINE() Serial.println(F("-------------"))
-#else
-  // When logging is disabled, all macros do nothing
-  #define LOG_DEBUG(msg)
-  #define LOG_INFO(msg)
-  #define LOG_WARN(msg)
-  #define LOG_ERROR(msg)
-  #define LOG(msg)
-  #define LOG_LINE()
-#endif
+}  // namespace ir_hub_log
+
+#  if MIN_LOG_LEVEL <= LOG_LEVEL_DEBUG
+#    define LOG_DEBUG(fmt, ...) ::ir_hub_log::emit("[DEBUG] ", fmt, ##__VA_ARGS__)
+#  else
+#    define LOG_DEBUG(...) ((void)0)
+#  endif
+
+#  if MIN_LOG_LEVEL <= LOG_LEVEL_INFO
+#    define LOG_INFO(fmt, ...)  ::ir_hub_log::emit("[INFO] ",  fmt, ##__VA_ARGS__)
+#  else
+#    define LOG_INFO(...) ((void)0)
+#  endif
+
+#  if MIN_LOG_LEVEL <= LOG_LEVEL_WARN
+#    define LOG_WARN(fmt, ...)  ::ir_hub_log::emit("[WARN] ",  fmt, ##__VA_ARGS__)
+#  else
+#    define LOG_WARN(...) ((void)0)
+#  endif
+
+#  if MIN_LOG_LEVEL <= LOG_LEVEL_ERROR
+#    define LOG_ERROR(fmt, ...) ::ir_hub_log::emit("[ERROR] ", fmt, ##__VA_ARGS__)
+#  else
+#    define LOG_ERROR(...) ((void)0)
+#  endif
+
+// Legacy macros for backward compatibility
+#  define LOG(msg) LOG_INFO(msg)
+#  define LOGF(fmt, ...) LOG_INFO(fmt, ##__VA_ARGS__)
+#  define LOG_LINE() Serial.println(F("-------------"))
+
+#else  // LOGGING_ENABLED == 0
+
+#  define LOG_DEBUG(...) ((void)0)
+#  define LOG_INFO(...)  ((void)0)
+#  define LOG_WARN(...)  ((void)0)
+#  define LOG_ERROR(...) ((void)0)
+#  define LOG(msg)       ((void)0)
+#  define LOGF(...)      ((void)0)
+#  define LOG_LINE()     ((void)0)
+
+#endif  // LOGGING_ENABLED

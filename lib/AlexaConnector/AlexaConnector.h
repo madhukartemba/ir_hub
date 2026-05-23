@@ -25,7 +25,9 @@ class AlexaConnector {
         // Look up the device from device manager
         Device* device = deviceManager.getDeviceByName(deviceName);
         if (device) {
-            onStateChangeCallback(*device, state);
+            if (onStateChangeCallback) {
+                onStateChangeCallback(*device, state);
+            }
             if (state) {
                 irManager.sendProtocol(device->onCommand);
                 LOG_INFO("[Alexa] Turning ON device %s", deviceName.c_str());
@@ -56,9 +58,7 @@ class AlexaConnector {
         WiFi.mode(WIFI_STA);
 
         // Register all existing devices (add/remove callbacks are set in main.cpp)
-        for (Device& device : deviceManager.getDevices()) {
-            registerDevice(device);
-        }
+        deviceManager.forEachDevice([this](Device& device) { registerDevice(device); });
 
         espalexa.begin();
         LOG_INFO("[Alexa] Alexa functionality enabled");

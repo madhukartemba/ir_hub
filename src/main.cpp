@@ -12,6 +12,46 @@ const unsigned long animSwitchInterval = 5000;  // 5 seconds
 
 int currentAnim = 0;  // index to track which animation is active
 
+// Heap supervision -----------------------------------------------------------
+//
+// On ESP8266 we have ~30 KB usable heap. Long-running firmware tends to slowly
+// fragment that heap, so even when "free heap" looks healthy the largest
+// contiguous block shrinks and eventually an allocation (MQTT, OTA, WiFi)
+// fails and we crash. We:
+//   * log free heap + fragmentation + largest block once a minute, so the
+//     trend is visible over a multi-day run.
+//   * proactively restart if we drop below safe thresholds. A clean restart
+//     is much less disruptive than a heap-exhaustion crash mid-OTA or
+//     mid-MQTT publish, and HA reconnects within seconds.
+static constexpr unsigned long kHeapLogIntervalMs = 60UL * 1000UL;     // 1 min
+static constexpr uint32_t kHeapFreePanicBytes = 4096;                  // 4 KB
+static constexpr uint16_t kHeapBlockPanicBytes = 2048;                 // 2 KB
+static constexpr uint8_t kHeapFragPanicPct = 80;                        // %
+static unsigned long lastHeapLog = 0;
+
+static void superviseHeap() {
+    unsigned long now = millis();
+    if (now - lastHeapLog < kHeapLogIntervalMs) {
+        return;
+    }
+    lastHeapLog = now;
+
+    uint32_t freeHeap = ESP.getFreeHeap();
+    uint16_t maxBlock = ESP.getMaxFreeBlockSize();
+    uint8_t frag = ESP.getHeapFragmentation();
+    LOG_INFO("[Heap] free=%u max_block=%u frag=%u%%", (unsigned)freeHeap,
+             (unsigned)maxBlock, (unsigned)frag);
+
+    if (freeHeap < kHeapFreePanicBytes || maxBlock < kHeapBlockPanicBytes ||
+        frag > kHeapFragPanicPct) {
+        LOG_ERROR("[Heap] Below safe limits (free=%u, max_block=%u, frag=%u%%) — restarting",
+                  (unsigned)freeHeap, (unsigned)maxBlock, (unsigned)frag);
+        // Best-effort: give Serial a moment to flush the log line.
+        delay(50);
+        ESP.restart();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
 
@@ -186,6 +226,10 @@ void setup() {
     router.setActivityCallback([]() -> unsigned long { return button.getLastInteractionTime(); });
 
     LOG_INFO("IR Hub: System Ready");
+    LOG_INFO("[Heap] startup free=%u max_block=%u frag=%u%%",
+             (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxFreeBlockSize(),
+             (unsigned)ESP.getHeapFragmentation());
+    lastHeapLog = millis();
 }
 
 void loop() {
@@ -195,4 +239,5 @@ void loop() {
     alexaConnector.update();
     mqttConnector.update();
     ledRing.update();
+    superviseHeap();
 }

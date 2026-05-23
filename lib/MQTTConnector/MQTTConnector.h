@@ -130,38 +130,65 @@ class MQTTConnector {
     }
 
     void handleIncomingMessage(char* topic, byte* payload, unsigned int length) {
-        String t(topic);
-        const String prefix = String("ir_hub/") + hubMacHex + "/device/";
-        if (!t.startsWith(prefix) || !t.endsWith("/set")) {
+        // Topic shape is `ir_hub/<macHex>/device/<id>/set`. We parse it with
+        // pointer arithmetic so an incoming MQTT message costs zero heap.
+        const size_t macLen = hubMacHex.length();
+        const size_t kPrefixFixed = sizeof("ir_hub/") - 1;        // 7
+        const size_t kMid = sizeof("/device/") - 1;               // 8
+        const size_t kSuffix = sizeof("/set") - 1;                // 4
+
+        const size_t topicLen = strlen(topic);
+        if (topicLen < kPrefixFixed + macLen + kMid + 1 + kSuffix) {
+            return;
+        }
+        if (memcmp(topic, "ir_hub/", kPrefixFixed) != 0) {
+            return;
+        }
+        if (memcmp(topic + kPrefixFixed, hubMacHex.c_str(), macLen) != 0) {
+            return;
+        }
+        if (memcmp(topic + kPrefixFixed + macLen, "/device/", kMid) != 0) {
+            return;
+        }
+        if (memcmp(topic + topicLen - kSuffix, "/set", kSuffix) != 0) {
             return;
         }
 
-        String rest = t.substring(prefix.length());
-        int slash = rest.indexOf('/');
-        if (slash <= 0) {
+        const char* idStart = topic + kPrefixFixed + macLen + kMid;
+        const char* idEnd = topic + topicLen - kSuffix;
+        if (idEnd <= idStart) {
             return;
         }
 
-        int deviceId = rest.substring(0, slash).toInt();
-        if (deviceId < 0) {
+        char idBuf[12];
+        size_t idLen = (size_t)(idEnd - idStart);
+        if (idLen >= sizeof(idBuf)) {
+            return;
+        }
+        memcpy(idBuf, idStart, idLen);
+        idBuf[idLen] = '\0';
+
+        char* endp = nullptr;
+        long deviceId = strtol(idBuf, &endp, 10);
+        if (!endp || *endp != '\0' || deviceId < 0 || deviceId > INT32_MAX) {
             return;
         }
 
-        char cmd[12];
+        char cmd[8];
         if (length >= sizeof(cmd)) {
             length = sizeof(cmd) - 1;
         }
-        memcpy(cmd, payload, length);
+        for (unsigned int i = 0; i < length; i++) {
+            char ch = (char)payload[i];
+            if (ch >= 'a' && ch <= 'z') ch = (char)(ch - 'a' + 'A');
+            cmd[i] = ch;
+        }
         cmd[length] = '\0';
 
-        String c(cmd);
-        c.trim();
-        c.toUpperCase();
-
-        if (c == "ON") {
-            applyCommandForDevice(deviceId, true);
-        } else if (c == "OFF") {
-            applyCommandForDevice(deviceId, false);
+        if (strcmp(cmd, "ON") == 0) {
+            applyCommandForDevice((int)deviceId, true);
+        } else if (strcmp(cmd, "OFF") == 0) {
+            applyCommandForDevice((int)deviceId, false);
         } else {
             LOG_WARN("[MQTT] Unknown payload for %s: %s", topic, cmd);
         }
@@ -178,10 +205,10 @@ class MQTTConnector {
         if (mqttClient.connect(clientId.c_str(), userArg, passArg)) {
             LOG_INFO("[MQTT] Connected to broker");
             subscribeCommands();
-            for (Device& d : deviceManager.getDevices()) {
+            deviceManager.forEachDevice([this](Device& d) {
                 publishDiscovery(d);
                 publishState(d.id, false);
-            }
+            });
             return true;
         }
 
