@@ -126,7 +126,7 @@ def assert_tag_unused(version: str) -> None:
     res = run_quiet(["git", "rev-parse", "--verify", f"v{version}"])
     if res.returncode == 0:
         sys.exit(f"ERROR: git tag v{version} already exists locally. "
-                 "Pick a new version or delete the tag with `git tag -d v{version}`.")
+                 f"Pick a new version or delete the tag with `git tag -d v{version}`.")
 
 
 # ---------------------------------------------------------------------------
