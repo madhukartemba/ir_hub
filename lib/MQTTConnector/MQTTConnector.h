@@ -9,7 +9,6 @@
 #include "IRManager.h"
 #include "Log.h"
 #include "MqttCredentials.h"
-#include "secrets.h"
 
 class MQTTConnector {
    private:
@@ -19,7 +18,9 @@ class MQTTConnector {
     IRManager& irManager;
     WiFiClient wifiClient;
     PubSubClient mqttClient;
-    bool wifiEnabled;
+    /// True when MQTT is permitted to run: Wi-Fi is up *and* a broker host
+    /// has been configured (either in secrets.h or via the captive portal).
+    bool enabled;
     /// Lowercase 12-char hex STA MAC — used in MQTT topics so multiple hubs do not collide.
     String hubMacHex;
     unsigned long lastReconnectAttempt;
@@ -168,7 +169,13 @@ class MQTTConnector {
 
     bool connectBroker() {
         String clientId = String("ir_hub_") + hubMacHex;
-        if (mqttClient.connect(clientId.c_str(), mqttCredentialsUser(), mqttCredentialsPass())) {
+        // Pass nullptr for empty credentials so PubSubClient connects
+        // anonymously instead of sending empty username/password frames.
+        const char* user = mqttCredentialsUser();
+        const char* pass = mqttCredentialsPass();
+        const char* userArg = (user && *user) ? user : nullptr;
+        const char* passArg = (pass && *pass) ? pass : nullptr;
+        if (mqttClient.connect(clientId.c_str(), userArg, passArg)) {
             LOG_INFO("[MQTT] Connected to broker");
             subscribeCommands();
             for (Device& d : deviceManager.getDevices()) {
@@ -204,7 +211,7 @@ class MQTTConnector {
         : deviceManager(deviceManager),
           irManager(irManager),
           mqttClient(wifiClient),
-          wifiEnabled(false),
+          enabled(false),
           lastReconnectAttempt(0) {
         mqttClient.setBufferSize(1024);
     }
@@ -222,19 +229,28 @@ class MQTTConnector {
     void begin() {
         instance = this;
         mqttCredentialsLoad();
-        mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-        mqttClient.setCallback(staticCallback);
 
         if (WiFi.status() != WL_CONNECTED) {
             LOG_INFO("[MQTT] WiFi not connected, MQTT disabled");
-            wifiEnabled = false;
+            enabled = false;
             return;
         }
 
-        wifiEnabled = true;
+        if (!mqttCredentialsConfigured()) {
+            LOG_INFO("[MQTT] No broker configured; MQTT disabled. "
+                     "Set host via the Wi-Fi captive portal to enable.");
+            enabled = false;
+            return;
+        }
+
+        mqttClient.setServer(mqttCredentialsHost(), mqttCredentialsPort());
+        mqttClient.setCallback(staticCallback);
+        enabled = true;
 
         hubMacHex = buildStaMacHex();
-        LOG_INFO("[MQTT] Topic namespace ir_hub/%s/device/...", hubMacHex.c_str());
+        LOG_INFO("[MQTT] Broker %s:%u, topic ns ir_hub/%s/device/...",
+                 mqttCredentialsHost(), (unsigned)mqttCredentialsPort(),
+                 hubMacHex.c_str());
 
         // Add/remove callbacks are set in main.cpp so Alexa and MQTT both receive updates.
 
@@ -246,7 +262,7 @@ class MQTTConnector {
     }
 
     void registerDevice(const Device& device) {
-        if (!wifiEnabled) {
+        if (!enabled) {
             return;
         }
         if (mqttClient.connected()) {
@@ -256,7 +272,7 @@ class MQTTConnector {
     }
 
     void unregisterDevice(const Device& device) {
-        if (!wifiEnabled) {
+        if (!enabled) {
             return;
         }
         if (mqttClient.connected()) {
@@ -265,7 +281,7 @@ class MQTTConnector {
     }
 
     void update() {
-        if (!wifiEnabled) {
+        if (!enabled) {
             return;
         }
         if (!mqttClient.connected()) {
@@ -275,5 +291,5 @@ class MQTTConnector {
         mqttClient.loop();
     }
 
-    bool isEnabled() const { return wifiEnabled; }
+    bool isEnabled() const { return enabled; }
 };

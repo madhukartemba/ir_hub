@@ -24,17 +24,28 @@ class WiFiManagerLib {
     uint32_t otaSuccessColor = 0x00FF00;
     uint32_t otaErrorColor = 0xFF0000;
 
+    static constexpr int kMqttHostMax = 96;
+    static constexpr int kMqttPortMax = 6;
     static constexpr int kMqttFieldMax = 64;
 
     // WiFiManager keeps pointers to these for the lifetime of `wifiManager`; they must not be
     // stack locals in setupWiFiManager/begin.
+    char mqttHostBuf_[kMqttHostMax]{};
+    char mqttPortBuf_[kMqttPortMax]{};
     char mqttUserBuf_[kMqttFieldMax]{};
     char mqttPassBuf_[kMqttFieldMax]{};
-    WiFiManagerParameter customHtml_;
+    /// Page-wide CSS + intro card at the top of the captive portal form.
+    WiFiManagerParameter portalHeader_;
+    /// Visual section divider that introduces the MQTT block.
+    WiFiManagerParameter mqttSectionHeader_;
+    WiFiManagerParameter mqttHostParam_;
+    WiFiManagerParameter mqttPortParam_;
     WiFiManagerParameter mqttUserParam_;
     WiFiManagerParameter mqttPassParam_;
     /// Custom HTML only (no id): toggles visibility of the `mqtt_pass` input.
     WiFiManagerParameter mqttPassToggle_;
+    /// Final hint paragraph below the MQTT block.
+    WiFiManagerParameter mqttFooterHint_;
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
         // Configure timeout (in seconds)
@@ -61,7 +72,17 @@ class WiFiManagerLib {
         });
 
         wifiManager.setSaveConfigCallback([this]() {
-            if (!mqttCredentialsSave(mqttUserParam_.getValue(), mqttPassParam_.getValue())) {
+            const char* host = mqttHostParam_.getValue();
+            const char* portStr = mqttPortParam_.getValue();
+            uint16_t port = 0;
+            if (portStr && *portStr) {
+                long parsed = strtol(portStr, nullptr, 10);
+                if (parsed > 0 && parsed <= 65535) {
+                    port = (uint16_t)parsed;
+                }
+            }
+            if (!mqttCredentialsSave(host, port, mqttUserParam_.getValue(),
+                                     mqttPassParam_.getValue())) {
                 LOG_WARN("MQTT credentials not saved; check LittleFS");
             }
             display.clear();
@@ -74,10 +95,14 @@ class WiFiManagerLib {
         std::vector<const char*> menu = {"wifi", "info"};
         wifiManager.setMenu(menu);
 
-        wifiManager.addParameter(&customHtml_);
+        wifiManager.addParameter(&portalHeader_);
+        wifiManager.addParameter(&mqttSectionHeader_);
+        wifiManager.addParameter(&mqttHostParam_);
+        wifiManager.addParameter(&mqttPortParam_);
         wifiManager.addParameter(&mqttUserParam_);
         wifiManager.addParameter(&mqttPassParam_);
         wifiManager.addParameter(&mqttPassToggle_);
+        wifiManager.addParameter(&mqttFooterHint_);
     }
 
    public:
@@ -86,28 +111,69 @@ class WiFiManagerLib {
           ledRing(ledRing),
           speaker(speaker),
           wifiConnected(false),
-          customHtml_(
-              "<p style='text-align:center;color:white;font-size:16px;margin:20px 0;'>"
-              "IR Hub Wi-Fi Setup</p>"),
-          mqttUserParam_("mqtt_user", "MQTT username", mqttUserBuf_, kMqttFieldMax - 1),
+          portalHeader_(
+              // Page CSS + intro card. Kept compact to fit ESP8266 RAM.
+              "<style>"
+              "body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;}"
+              ".irhub-card{background:#0f172a;color:#f1f5f9;border-radius:10px;"
+              "padding:14px 16px;margin:10px 0 16px;border:1px solid #1e293b;}"
+              ".irhub-card h2{margin:0 0 6px;font-size:18px;}"
+              ".irhub-card p{margin:0;font-size:13px;line-height:1.4;opacity:0.85;}"
+              ".irhub-section{margin:18px 0 6px;padding:8px 10px;"
+              "background:#1e293b;color:#f1f5f9;border-radius:8px;"
+              "font-weight:600;font-size:14px;letter-spacing:0.02em;}"
+              ".irhub-section small{display:block;font-weight:400;font-size:12px;"
+              "opacity:0.75;margin-top:2px;}"
+              ".irhub-hint{font-size:12px;color:#475569;margin:6px 2px 14px;}"
+              ".irhub-toggle{display:block;margin:6px 0 14px;padding:6px 10px;"
+              "background:#e2e8f0;border:1px solid #cbd5e1;border-radius:6px;"
+              "color:#0f172a;cursor:pointer;width:100%;}"
+              "</style>"
+              "<div class=\"irhub-card\">"
+              "<h2>IR Hub setup</h2>"
+              "<p>Pick your Wi-Fi network below. Optionally fill in the MQTT "
+              "section to connect this hub to Home Assistant.</p>"
+              "</div>"),
+          mqttSectionHeader_(
+              "<div class=\"irhub-section\">MQTT / Home Assistant "
+              "<small>Optional &mdash; leave the host blank to skip.</small></div>"),
+          mqttHostParam_("mqtt_host", "Broker host (e.g. homeassistant.local)",
+                         mqttHostBuf_, kMqttHostMax - 1,
+                         "placeholder=\"homeassistant.local\" autocomplete=\"off\""),
+          mqttPortParam_("mqtt_port", "Broker port", mqttPortBuf_, kMqttPortMax - 1,
+                         "type=\"number\" min=\"1\" max=\"65535\" "
+                         "placeholder=\"1883\" autocomplete=\"off\""),
+          mqttUserParam_("mqtt_user", "MQTT username", mqttUserBuf_, kMqttFieldMax - 1,
+                         "autocomplete=\"off\""),
           mqttPassParam_("mqtt_pass", "MQTT password", mqttPassBuf_, kMqttFieldMax - 1,
-                         "type=\"password\" autocomplete=\"off\""),
+                         "type=\"password\" autocomplete=\"new-password\""),
           mqttPassToggle_(
-              "<p style=\"text-align:center;margin:4px 0 12px 0;\">"
-              "<button type=\"button\" onclick=\""
+              "<button type=\"button\" class=\"irhub-toggle\" onclick=\""
               "var e=document.getElementById('mqtt_pass');"
-              "if(e){e.type=e.type==='password'?'text':'password';}"
-              "\">Show / hide MQTT password</button></p>") {}
+              "if(e){e.type=e.type==='password'?'text':'password';"
+              "this.textContent=e.type==='password'?'Show MQTT password':'Hide MQTT password';}"
+              "\">Show MQTT password</button>"),
+          mqttFooterHint_(
+              "<p class=\"irhub-hint\">Tip: if you are not using Home Assistant, "
+              "leave all four MQTT fields blank. You can change these later by "
+              "wiping Wi-Fi from the device's Settings menu.</p>") {}
 
     bool begin(const char* apName = "IRHub Setup", int apTimeout = 180, int connectTimeout = 60) {
         mqttCredentialsLoad();
 
+        memset(mqttHostBuf_, 0, sizeof(mqttHostBuf_));
+        memset(mqttPortBuf_, 0, sizeof(mqttPortBuf_));
         memset(mqttUserBuf_, 0, sizeof(mqttUserBuf_));
         memset(mqttPassBuf_, 0, sizeof(mqttPassBuf_));
+        strncpy(mqttHostBuf_, mqttCredentialsHost(), sizeof(mqttHostBuf_) - 1);
+        snprintf(mqttPortBuf_, sizeof(mqttPortBuf_), "%u",
+                 (unsigned)mqttCredentialsPort());
         strncpy(mqttUserBuf_, mqttCredentialsUser(), sizeof(mqttUserBuf_) - 1);
         strncpy(mqttPassBuf_, mqttCredentialsPass(), sizeof(mqttPassBuf_) - 1);
         // Second arg is max field length (HTML maxlength), not strlen — using strlen would
         // shrink the input to the current value length (e.g. ~6 chars).
+        mqttHostParam_.setValue(mqttHostBuf_, kMqttHostMax - 1);
+        mqttPortParam_.setValue(mqttPortBuf_, kMqttPortMax - 1);
         mqttUserParam_.setValue(mqttUserBuf_, kMqttFieldMax - 1);
         mqttPassParam_.setValue(mqttPassBuf_, kMqttFieldMax - 1);
 

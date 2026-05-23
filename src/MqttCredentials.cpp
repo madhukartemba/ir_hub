@@ -1,16 +1,21 @@
 #include "MqttCredentials.h"
 
-#include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <LittleFS.h>
 #include "Log.h"
 #include "secrets.h"
 
 static constexpr const char* kMqttCredsPath = "/mqtt.json";
+static constexpr uint16_t kDefaultPort = 1883;
 
+static String g_host;
+static uint16_t g_port = kDefaultPort;
 static String g_user;
 static String g_pass;
 
 void mqttCredentialsLoad() {
+    g_host = MQTT_HOST;
+    g_port = MQTT_PORT ? (uint16_t)MQTT_PORT : kDefaultPort;
     g_user = MQTT_USER;
     g_pass = MQTT_PASSWORD;
 
@@ -32,6 +37,18 @@ void mqttCredentialsLoad() {
         return;
     }
 
+    if (!doc["host"].isNull()) {
+        const char* h = doc["host"].as<const char*>();
+        if (h) {
+            g_host = h;
+        }
+    }
+    if (!doc["port"].isNull()) {
+        long p = doc["port"].as<long>();
+        if (p > 0 && p <= 65535) {
+            g_port = (uint16_t)p;
+        }
+    }
     if (!doc["user"].isNull()) {
         const char* u = doc["user"].as<const char*>();
         if (u) {
@@ -46,12 +63,20 @@ void mqttCredentialsLoad() {
     }
 }
 
+const char* mqttCredentialsHost() { return g_host.c_str(); }
+
+uint16_t mqttCredentialsPort() { return g_port ? g_port : kDefaultPort; }
+
 const char* mqttCredentialsUser() { return g_user.c_str(); }
 
 const char* mqttCredentialsPass() { return g_pass.c_str(); }
 
-bool mqttCredentialsSave(const char* user, const char* pass) {
+bool mqttCredentialsConfigured() { return g_host.length() > 0; }
+
+bool mqttCredentialsSave(const char* host, uint16_t port, const char* user, const char* pass) {
     JsonDocument doc;
+    doc["host"] = host ? host : "";
+    doc["port"] = port ? port : kDefaultPort;
     doc["user"] = user ? user : "";
     doc["pass"] = pass ? pass : "";
 
@@ -69,7 +94,9 @@ bool mqttCredentialsSave(const char* user, const char* pass) {
     f.close();
 
     mqttCredentialsLoad();
-    LOG_INFO("[MQTT] Saved credentials to LittleFS");
+    LOG_INFO("[MQTT] Saved credentials to LittleFS (host=%s, port=%u, user=%s)",
+             mqttCredentialsHost(), (unsigned)mqttCredentialsPort(),
+             mqttCredentialsUser());
     return true;
 }
 
