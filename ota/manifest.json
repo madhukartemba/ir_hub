@@ -1,8 +1,8 @@
 {
   "variants": {
     "v3": {
-      "version": "1.0.5",
-      "url": "https://cdn.jsdelivr.net/gh/madhukartemba/ir_hub@main/binaries/firmware_v3_v1.0.5.bin"
+      "version": "1.0.6",
+      "url": "https://cdn.jsdelivr.net/gh/madhukartemba/ir_hub@main/binaries/firmware_v3_v1.0.6.bin"
     }
   }
 }
