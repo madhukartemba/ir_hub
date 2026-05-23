@@ -34,6 +34,8 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Iterable, List, Optional
 
@@ -241,6 +243,30 @@ def create_release(version: str, notes: Optional[str], notes_file: Optional[Path
         run(upload_cmd)
 
 
+def purge_jsdelivr(repo_slug: str, dry_run: bool) -> None:
+    """Ask jsDelivr to drop its cached copy of the manifest so devices see the
+    new version immediately instead of waiting up to ~12 h for the TTL."""
+    url = (f"https://purge.jsdelivr.net/gh/{repo_slug}@main/ota/manifest.json")
+    if dry_run:
+        print(f"[dry-run] GET {url}")
+        return
+    print(f"$ purge jsDelivr cache for ota/manifest.json")
+    try:
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            data = {}
+            try:
+                data = json.loads(body)
+            except json.JSONDecodeError:
+                pass
+            status = data.get("status", "unknown")
+            print(f"  jsDelivr purge status: {status}")
+    except (urllib.error.URLError, OSError) as exc:
+        # Non-fatal: devices will pick up the new manifest after the natural
+        # TTL expires. Print so the operator knows but don't abort the release.
+        print(f"  WARN: jsDelivr purge failed: {exc}")
+
+
 def commit_and_push(version: str, do_push: bool, dry_run: bool) -> None:
     if dry_run:
         print(f"[dry-run] git add platformio.ini ota/manifest.json")
@@ -329,6 +355,11 @@ def main() -> None:
 
     if not args.no_commit:
         commit_and_push(args.version, do_push=not args.no_push, dry_run=args.dry_run)
+
+    # Purge jsDelivr's CDN cache for the manifest path so devices see the bump
+    # without waiting on the default ~12 h TTL.
+    if not args.no_release:
+        purge_jsdelivr(repo_slug, args.dry_run)
 
     print()
     if args.dry_run:
