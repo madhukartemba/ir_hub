@@ -225,6 +225,9 @@ void setup() {
     if (!haptics.begin()) {
         LOG_WARN("DRV2605 haptics not found — tactile feedback disabled");
     }
+    // Apply user preference. Loaded later from LittleFS in setup(); this call
+    // is harmless before then because the default is "enabled" anyway, and we
+    // re-apply below right after userPrefsLoad().
 
     // Initialize NeoRing
     LOG_DEBUG("Starting LED ring setup");
@@ -242,6 +245,9 @@ void setup() {
     // Load persisted user preferences (sound on/off, etc.) now that
     // LittleFS is mounted but before any subsystem that might react to them.
     userPrefsLoad();
+    // Apply haptics preference now (the driver was begin()'d before LittleFS
+    // came up). Speaker mute is applied later, right after speaker.begin().
+    haptics.setMuted(!userPrefsHapticsEnabled());
 
     // Initialize IdGen
     if (!idGen.begin()) {

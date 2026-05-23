@@ -464,12 +464,14 @@ class AddDevice : public Screen {
         display.drawLine(0, 10, display.getWidth(), 10);
 
         display.setTextSize(1);
-        display.printCentered("ERROR!", 18);
+        display.printCentered("ERROR!", 16);
 
-        // Compact X icon to leave room for a two-line reason underneath.
-        display.drawCircle(64, 34, 6);
-        display.drawLine(61, 31, 67, 37);
-        display.drawLine(61, 37, 67, 31);
+        // Compact X icon. Shrunk + lifted so the two-line reason below has
+        // enough headroom to render its descenders without clipping the
+        // bottom of the 64-pixel display.
+        display.drawCircle(64, 32, 5);
+        display.drawLine(61, 29, 67, 35);
+        display.drawLine(61, 35, 67, 29);
 
         // Pick the right error explanation. There are three distinct cases:
         //   * recording timed out without any IR pulses → "No signal"
@@ -484,19 +486,21 @@ class AddDevice : public Screen {
         bool unknownProtocol = (protocol == "Unknown");
 
         display.setTextSize(1);
+        // Line 1 baseline lands at y~49, Line 2 baseline at y~59 (descenders
+        // ~y=61) — both safely above the y=63 screen edge.
         if (isTimeoutError) {
-            display.printCentered("Timeout", 46);
-            display.printCentered("No signal received", 56);
+            display.printCentered("Timeout", 43);
+            display.printCentered("No signal received", 53);
         } else if (unknownProtocol) {
-            display.printCentered("Unknown protocol", 46);
-            display.printCentered("Try again", 56);
+            display.printCentered("Unknown protocol", 43);
+            display.printCentered("Try again", 53);
         } else {
             // Decoded but invalid for some other reason — surface the protocol
             // so the user (or we) can see what was actually captured.
             char line[24];
             snprintf(line, sizeof(line), "Got: %s", protocol.c_str());
-            display.printCentered(line, 46);
-            display.printCentered("Try again", 56);
+            display.printCentered(line, 43);
+            display.printCentered("Try again", 53);
         }
     }
 };

@@ -10,3 +10,8 @@ void userPrefsLoad();
 /// Whether the speaker should make any sound. Default: true.
 bool userPrefsSoundEnabled();
 void userPrefsSetSoundEnabled(bool enabled);
+
+/// Whether tactile feedback (DRV2605) should fire on button events.
+/// Default: true. Ignored at runtime if the driver isn't present.
+bool userPrefsHapticsEnabled();
+void userPrefsSetHapticsEnabled(bool enabled);

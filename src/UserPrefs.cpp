@@ -9,10 +9,12 @@ static constexpr const char* kPrefsPath = "/prefs.json";
 // Cached state. We deliberately keep this very small (single struct, only
 // POD fields) so the in-memory footprint and the on-disk file stay tiny.
 static bool g_soundEnabled = true;
+static bool g_hapticsEnabled = true;
 
 static void writeBack() {
     JsonDocument doc;
     doc["sound"] = g_soundEnabled;
+    doc["haptics"] = g_hapticsEnabled;
 
     File f = LittleFS.open(kPrefsPath, "w");
     if (!f) {
@@ -27,6 +29,7 @@ static void writeBack() {
 
 void userPrefsLoad() {
     g_soundEnabled = true;  // defaults
+    g_hapticsEnabled = true;
 
     if (!LittleFS.exists(kPrefsPath)) {
         LOG_INFO("[Prefs] No %s yet — using defaults", kPrefsPath);
@@ -50,7 +53,11 @@ void userPrefsLoad() {
     if (!doc["sound"].isNull()) {
         g_soundEnabled = doc["sound"].as<bool>();
     }
-    LOG_INFO("[Prefs] Loaded: sound=%s", g_soundEnabled ? "on" : "off");
+    if (!doc["haptics"].isNull()) {
+        g_hapticsEnabled = doc["haptics"].as<bool>();
+    }
+    LOG_INFO("[Prefs] Loaded: sound=%s haptics=%s", g_soundEnabled ? "on" : "off",
+             g_hapticsEnabled ? "on" : "off");
 }
 
 bool userPrefsSoundEnabled() { return g_soundEnabled; }
@@ -62,4 +69,15 @@ void userPrefsSetSoundEnabled(bool enabled) {
     g_soundEnabled = enabled;
     writeBack();
     LOG_INFO("[Prefs] sound=%s", g_soundEnabled ? "on" : "off");
+}
+
+bool userPrefsHapticsEnabled() { return g_hapticsEnabled; }
+
+void userPrefsSetHapticsEnabled(bool enabled) {
+    if (g_hapticsEnabled == enabled) {
+        return;
+    }
+    g_hapticsEnabled = enabled;
+    writeBack();
+    LOG_INFO("[Prefs] haptics=%s", g_hapticsEnabled ? "on" : "off");
 }

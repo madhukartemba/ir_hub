@@ -36,6 +36,10 @@ class Haptics {
 
     uint8_t addr;
     bool initialized = false;
+    // Runtime mute. Default off so existing behaviour is unchanged; the user
+    // can disable tactile feedback from the Settings menu, persisted across
+    // reboots via UserPrefs.
+    bool muted = false;
 
     /** True if a device ACKs this 7-bit address (same probe as an I2C scan). */
     static bool i2cAddressAck(uint8_t address7) {
@@ -133,9 +137,13 @@ class Haptics {
 
     bool isReady() const { return initialized; }
 
+    /// Suppress (or re-enable) every tactile effect at runtime.
+    void setMuted(bool m) { muted = m; }
+    bool isMuted() const { return muted; }
+
     /** Raw ROM effect (library 6 / LRA). */
     void playEffect(uint8_t effectId) {
-        if (!initialized) {
+        if (!initialized || muted) {
             return;
         }
         triggerEffect(effectId);
