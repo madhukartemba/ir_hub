@@ -1,8 +1,8 @@
 {
   "variants": {
     "v3": {
-      "version": "1.0.2",
-      "url": "https://github.com/madhukartemba/ir_hub/releases/download/v1.0.2/firmware_v3.bin"
+      "version": "1.0.3",
+      "url": "https://github.com/madhukartemba/ir_hub/releases/download/v1.0.3/firmware_v3.bin"
     }
   }
 }
