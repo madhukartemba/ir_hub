@@ -88,21 +88,6 @@ class AddDevice : public Screen {
             speaker.errorBeep();
         }
 
-        // Check for IR code reception during recording.
-        //
-        // IMPORTANT: ignore any decode result while the user is physically
-        // holding the touch button. Pressing the capacitive button radiates
-        // enough EMI (and the user's hand can act as an antenna) for the IR
-        // receiver to see fake pulses that decode as the UNKNOWN protocol.
-        // Without this guard, a user long-pressing to cancel would briefly
-        // see an "Unknown protocol / Try again" error before the long-press
-        // handler fires at the ~500 ms threshold. Real IR remote presses
-        // don't require the user to touch the device, so this gate is safe.
-        //
-        // We still call `decode()` so the IRrecv internal buffer keeps
-        // draining; otherwise EMI buffered during the press would surface
-        // (and likely trip the same false error) the moment the user lets
-        // go. The result is just thrown away.
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
             if (irManager.decode() && !button.isPressed()) {
                 LOG_DEBUG("[AddDevice] IR code received during recording");
