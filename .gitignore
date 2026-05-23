@@ -9,3 +9,6 @@
 
 # Local MQTT credentials (copy from include/secrets.h.example)
 include/secrets.h
+
+# OTA release staging — binaries are uploaded to GitHub Releases, not git
+release/
