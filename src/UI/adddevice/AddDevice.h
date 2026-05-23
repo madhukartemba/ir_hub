@@ -58,12 +58,8 @@ class AddDevice : public Screen {
 
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[AddDevice] onButtonLongPress");
-            // Long press always means "back". If we're mid-recording we just
-            // need to stop the IR capture before navigating away — we
-            // explicitly do NOT drop into the ERROR state, because that would
-            // show a misleading "Unknown protocol / Try again" screen
-            // (firstCode is still the default-constructed UNKNOWN value) when
-            // the user only wanted to abort.
+            // Long press = back. Don't go through ERROR or we'd flash a
+            // misleading "Unknown protocol" screen on an abort.
             if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
                 LOG_DEBUG("[AddDevice] Cancelling recording via long press");
                 irManager.stopCapture();
@@ -88,6 +84,9 @@ class AddDevice : public Screen {
             speaker.errorBeep();
         }
 
+        // Drain the IR buffer every loop, but ignore the result while the
+        // touch button is held — EMI from the press otherwise decodes as a
+        // fake UNKNOWN pulse and trips a false error during long-press abort.
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
             if (irManager.decode() && !button.isPressed()) {
                 LOG_DEBUG("[AddDevice] IR code received during recording");
@@ -468,28 +467,16 @@ class AddDevice : public Screen {
         display.setTextSize(1);
         display.printCentered("ERROR!", 16);
 
-        // Compact X icon. Shrunk + lifted so the two-line reason below has
-        // enough headroom to render its descenders without clipping the
-        // bottom of the 64-pixel display.
+        // X icon (shrunk + lifted to leave room for two text lines).
         display.drawCircle(64, 32, 5);
         display.drawLine(61, 29, 67, 35);
         display.drawLine(61, 35, 67, 29);
 
-        // Pick the right error explanation. There are three distinct cases:
-        //   * recording timed out without any IR pulses → "No signal"
-        //   * IR was received but the IRrecv library returned the UNKNOWN
-        //     protocol → tell the user the *protocol* couldn't be classified,
-        //     not that the receiver didn't see anything (the old message
-        //     misled people into thinking the IR receiver was broken)
-        //   * IR was received and classified, but somehow doesn't pass
-        //     isValid() (e.g. zero bits) → show the protocol so we can debug
         const IRCode& failedCode = hasFirstCode ? secondCode : firstCode;
         String protocol = typeToString(failedCode.getProtocol(), false);
         bool unknownProtocol = (protocol == "Unknown");
 
         display.setTextSize(1);
-        // Line 1 baseline lands at y~49, Line 2 baseline at y~59 (descenders
-        // ~y=61) — both safely above the y=63 screen edge.
         if (isTimeoutError) {
             display.printCentered("Timeout", 43);
             display.printCentered("No signal received", 53);
@@ -497,8 +484,6 @@ class AddDevice : public Screen {
             display.printCentered("Unknown protocol", 43);
             display.printCentered("Try again", 53);
         } else {
-            // Decoded but invalid for some other reason — surface the protocol
-            // so the user (or we) can see what was actually captured.
             char line[24];
             snprintf(line, sizeof(line), "Got: %s", protocol.c_str());
             display.printCentered(line, 43);

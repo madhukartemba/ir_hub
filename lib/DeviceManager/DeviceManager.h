@@ -148,10 +148,8 @@ class DeviceManager {
     }
 
     bool removeDevice(const Device& device) {
-        // Copy locally before mutating the caches: the `device` reference is
-        // very often a pointer into `deviceCacheById`, and erasing that entry
-        // would otherwise leave us with a dangling reference to feed into
-        // `onDeviceRemoved` (whose first thing is to read `device.name`).
+        // Snapshot before mutating: `device` is often a reference into the
+        // cache we're about to erase from.
         Device snapshot = device;
 
         String filename = String(snapshot.id) + ".json";
@@ -244,8 +242,7 @@ class DeviceManager {
         return devices;
     }
 
-    /// Iterate every device without allocating a vector copy. Use this from
-    /// hot paths (MQTT reconnect, Alexa register-all on Wi-Fi up).
+    /// Iterate every device without allocating a vector copy.
     template <typename Fn>
     void forEachDevice(Fn fn) {
         loadAll();
@@ -261,8 +258,7 @@ class DeviceManager {
     }
 
    private:
-    /// Scan LittleFS once to populate the cache. Subsequent calls are a no-op
-    /// because saveDevice/removeDevice keep the cache in sync.
+    /// Lazy one-shot scan; cache stays in sync via saveDevice/removeDevice.
     void loadAll() {
         if (cacheLoaded) {
             return;
@@ -279,8 +275,6 @@ class DeviceManager {
                 continue;
             }
             int id = filename.substring(0, filename.lastIndexOf('.')).toInt();
-            // getDeviceById will read+parse the file and insert into the cache
-            // (skips disk if already cached).
             if (!getDeviceById(id)) {
                 LOG_ERROR("[DeviceManager] Failed to load device from %s", filename.c_str());
             }

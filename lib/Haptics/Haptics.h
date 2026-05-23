@@ -35,16 +35,11 @@ class Haptics {
     static constexpr uint8_t EFFECT_SHARP_TICK_2 = 5;
 
     uint8_t addr;
-    // `present` is "the DRV2605 ACKs on the I²C bus" — cheap detection, no
-    // motor drive. `initialized` is "we've also run auto-calibration and the
-    // chip is in INTTRIG mode ready to fire effects". We split them so that a
-    // user who has muted haptics doesn't have to feel a calibration buzz on
-    // every cold boot — we skip calibration entirely until they re-enable it.
+    // present  = chip ACKs on the bus (cheap probe)
+    // initialized = also auto-calibrated and in INTTRIG mode
+    // The split lets us skip the calibration buzz at boot when haptics are muted.
     bool present = false;
     bool initialized = false;
-    // Runtime mute. Default off so existing behaviour is unchanged; the user
-    // can disable tactile feedback from the Settings menu, persisted across
-    // reboots via UserPrefs.
     bool muted = false;
 
     /** True if a device ACKs this 7-bit address (same probe as an I2C scan). */
@@ -102,9 +97,7 @@ class Haptics {
    public:
     explicit Haptics(uint8_t i2cAddr = kDefaultAddr) : addr(i2cAddr) {}
 
-    /// Cheap, non-invasive bus probe. Returns true if a DRV2605 ACKs at our
-    /// address. Does NOT calibrate, so it doesn't cause any motor movement.
-    /// Safe to call before LittleFS is mounted.
+    /// Bus probe only, no motor drive. Safe before LittleFS is mounted.
     bool probe() {
         present = i2cAddressAck(addr);
         return present;
@@ -112,9 +105,7 @@ class Haptics {
 
     bool isPresent() const { return present; }
 
-    /// Full init + auto-calibration. The calibration step physically drives
-    /// the LRA briefly, so only call this when the user actually wants
-    /// haptics enabled.
+    /// Full init + auto-calibration (briefly drives the LRA).
     bool begin() {
         initialized = false;
         // Wire.begin() expected to have been called (e.g. by display).
@@ -158,7 +149,6 @@ class Haptics {
 
     bool isReady() const { return initialized; }
 
-    /// Suppress (or re-enable) every tactile effect at runtime.
     void setMuted(bool m) { muted = m; }
     bool isMuted() const { return muted; }
 

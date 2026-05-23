@@ -2,20 +2,8 @@
 
 #include <Arduino.h>
 
-// ---------------------------------------------------------------------------
-// Logging
-//
-// Two design goals:
-//   1. Zero heap allocations per log line. The previous implementation built
-//      the line via `String("[DEBUG] ") + fmt + "\n"`, which performed three
-//      heap allocs + frees per call. On a device that logs continuously, that
-//      fragments the ESP8266 heap within hours.
-//   2. Compile-out everything below MIN_LOG_LEVEL so unused log statements
-//      cost zero flash/RAM.
-//
-// To override the level, define MIN_LOG_LEVEL before including this header
-// (or pass `-DMIN_LOG_LEVEL=LOG_LEVEL_DEBUG` from build flags).
-// ---------------------------------------------------------------------------
+// Logging: stack-only formatting (no heap allocs) + compile-time level gate.
+// Override the level with -DMIN_LOG_LEVEL=LOG_LEVEL_DEBUG from build flags.
 
 // Set to 0 to disable all logs globally
 #ifndef LOGGING_ENABLED
@@ -29,8 +17,6 @@
 #define LOG_LEVEL_WARN  2
 #define LOG_LEVEL_ERROR 3
 
-// Default minimum level. INFO keeps the most useful operational logs while
-// dropping the per-frame DEBUG spam that fragments the heap.
 #ifndef MIN_LOG_LEVEL
 #  define MIN_LOG_LEVEL LOG_LEVEL_INFO
 #endif
@@ -39,9 +25,8 @@
 
 namespace ir_hub_log {
 
-// Stack-only formatter. Falls back gracefully if a single line exceeds the
-// buffer (truncates rather than allocating). 192 bytes covers our longest
-// real-world lines (MQTT topics + state).
+// 192 byte stack buffer covers our longest lines (MQTT topics + state).
+// Over-long lines truncate rather than allocating.
 inline void emit(const char* level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 
 inline void emit(const char* level, const char* fmt, ...) {

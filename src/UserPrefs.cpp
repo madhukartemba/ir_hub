@@ -6,8 +6,6 @@
 
 static constexpr const char* kPrefsPath = "/prefs.json";
 
-// Cached state. We deliberately keep this very small (single struct, only
-// POD fields) so the in-memory footprint and the on-disk file stay tiny.
 static bool g_soundEnabled = true;
 static bool g_hapticsEnabled = true;
 

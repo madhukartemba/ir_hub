@@ -33,19 +33,12 @@ class Display {
         displayType = type;
         displayFlipped = flipped;
 
-        // Initialize I2C if pins are specified
         if (sdaPin != -1 && sclPin != -1) {
             Wire.begin(sdaPin, sclPin);
         }
-        // ESP8266's Wire library defaults to 100 kHz, which means a single
-        // 1024-byte OLED frame takes ~82 ms to push over the bus — long
-        // enough that any animation we run alongside the display (LED ring,
-        // recording pulse, etc.) visibly hitches every refresh.
-        //
-        // 400 kHz is "Fast Mode" — the rated max for both the SH1106 OLED
-        // and the DRV2605 haptics driver that share this bus, so it's safe
-        // for the whole I²C peripheral set with no per-device clock juggling
-        // required. Cuts a full-frame transfer to ~23 ms.
+        // 400 kHz "Fast Mode": rated max for both the SH1106 and DRV2605
+        // that share this bus. Default 100 kHz makes a full OLED frame
+        // take ~82 ms, which hitches every animation alongside it.
         Wire.setClock(400000);
 
         // Create display object based on type
@@ -93,15 +86,7 @@ class Display {
         if (currentTime - lastUpdateTime < frameDelay) return;
         lastUpdateTime = currentTime;
 
-        // Dirty-buffer skip: most non-Home screens (Settings menu, device
-        // list, AddDevice "Click to begin" steps) re-draw an identical
-        // 1024-byte buffer every frame. Sending that takes ~12 ms over
-        // I²C, during which the LED ring can't update — that's the dominant
-        // source of perceived animation hitching. Hashing the buffer is
-        // ~30 µs (1024 byte FNV-1a at 160 MHz), and on static frames we
-        // skip the I²C transfer entirely. Animated screens (recording
-        // pulse, progress bar) keep paying the full cost because their
-        // pixels really do change.
+        // Skip the I²C transfer when the pixel buffer hasn't changed.
         uint32_t hash = computeBufferHash();
         if (needsFirstSend || hash != lastBufferHash) {
             display->sendBuffer();
@@ -110,9 +95,7 @@ class Display {
         }
     }
 
-    /// Force the next update() to push the buffer regardless of the dirty
-    /// check. Useful when external code knows the OLED's GDDRAM may have
-    /// been disturbed (e.g. coming back from power save).
+    /// Force the next update() to push the buffer, e.g. after power save.
     void invalidate() { needsFirstSend = true; }
 
     // Setter for FPS
@@ -141,10 +124,7 @@ class Display {
         if (display) {
             display->setPowerSave(0);
             displayOn = true;
-            // Be safe: if GDDRAM survived the sleep we'll re-send the same
-            // pixels (no visible glitch); if it didn't we'd otherwise be
-            // stuck on a blank screen until the next pixel change.
-            needsFirstSend = true;
+            needsFirstSend = true;  // re-push in case GDDRAM was lost
         }
     }
     void turnOff() {
@@ -452,23 +432,20 @@ class Display {
     uint8_t defaultFPS = 10;       // Default FPS
     unsigned long lastUpdateTime;  // Last time display was updated
 
-    // Dirty-buffer skip state. Set `needsFirstSend` true to force a send on
-    // the next update() regardless of hash (used at boot and after wake).
+    // Dirty-buffer skip state.
     uint32_t lastBufferHash = 0;
     bool needsFirstSend = true;
 
-    /// Cheap content hash over the full U8g2 frame buffer. FNV-1a 32-bit is
-    /// a good fit: ~30 µs for 1024 bytes on ESP8266 @ 160 MHz, low
-    /// collision rate, no allocations.
+    // FNV-1a 32-bit over the full frame buffer (~30 µs for 1024 bytes).
     uint32_t computeBufferHash() const {
         if (!display) return 0;
         const uint8_t* buf = display->getBufferPtr();
         size_t size = static_cast<size_t>(display->getBufferTileWidth()) *
                       display->getBufferTileHeight() * 8;
-        uint32_t h = 0x811C9DC5u;  // FNV offset basis
+        uint32_t h = 0x811C9DC5u;
         for (size_t i = 0; i < size; i++) {
             h ^= buf[i];
-            h *= 0x01000193u;  // FNV prime
+            h *= 0x01000193u;
         }
         return h;
     }

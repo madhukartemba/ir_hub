@@ -49,8 +49,6 @@ class ClearDataConfirmation : public Screen {
 
    private:
     void clearAllDataAndRestart() {
-        // Show the user what we're about to do *before* tearing the network
-        // down, so they don't stare at a frozen screen.
         display.clear();
         display.setTextSize(1);
         display.printCentered("Wiping...", 22);
@@ -59,12 +57,12 @@ class ClearDataConfirmation : public Screen {
         ledRing.solid(COLOR_ERROR);
         ledRing.finishTransition();
 
-        // Bring the network sessions down cleanly first. Otherwise PubSubClient
-        // keeps retrying mid-format and we see a noisy log full of "rc=-2".
+        // Close network sessions cleanly so PubSubClient doesn't spam
+        // reconnect attempts during the format.
         LOG_INFO("[ClearData] Disconnecting MQTT + WiFi before format()");
         mqttConnector.shutdown();
         WiFi.disconnect(true);
-        delay(150);  // let the radio quiesce
+        delay(150);
 
         bool ok = LittleFS.format();
         LOG_INFO("[ClearData] LittleFS.format() returned %s", ok ? "true" : "false");

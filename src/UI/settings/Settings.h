@@ -7,10 +7,8 @@
 
 class Settings : public Screen {
    private:
-    // One row per concrete action. RESTARTING is an internal screen state,
-    // not a row. The "HAPTICS" row only appears when the DRV2605 driver was
-    // detected at boot — otherwise toggling it would have no observable
-    // effect and would just confuse the user.
+    // One row per concrete menu action. HAPTICS row only shown when DRV2605
+    // is present (`hasHaptics`).
     enum class Action {
         SOUND,
         HAPTICS,
@@ -34,10 +32,8 @@ class Settings : public Screen {
     void onEnter() override {
         LOG_DEBUG("[Settings] onEnter");
 
-        // Show the Haptics row whenever the DRV2605 is *present* on the bus,
-        // not just when it's been calibrated. The chip may not be initialized
-        // yet (e.g. user had haptics muted at boot, so we skipped cal); we
-        // still want the user to be able to re-enable it from this menu.
+        // Gate on `isPresent`, not `isReady`: the chip may be uncalibrated if
+        // the user had haptics muted at boot — we still need the toggle row.
         hasHaptics = haptics.isPresent();
         buildMenu();
         selectedIndex = 0;
@@ -104,8 +100,7 @@ class Settings : public Screen {
         menuCount++;
     }
 
-    // Re-resolve labels that change at runtime (the toggles). Static labels
-    // are picked up via the same call but are no-ops.
+    // Re-resolve labels that change at runtime (the toggles).
     void refreshDynamicLabels() {
         for (int i = 0; i < menuCount; i++) {
             menuItems[i] = labelFor(menuActions[i]);
@@ -165,10 +160,8 @@ class Settings : public Screen {
         bool newState = !userPrefsSoundEnabled();
         userPrefsSetSoundEnabled(newState);
         speaker.setMuted(!newState);
-        // Audible confirmation only when turning ON, so we don't contradict
-        // the user's "off" choice.
         if (newState) {
-            speaker.shortBeep();
+            speaker.shortBeep();  // confirmation only when turning ON
         }
         LOG_INFO("[Settings] Sound %s", newState ? "ON" : "OFF");
     }
@@ -178,10 +171,8 @@ class Settings : public Screen {
         userPrefsSetHapticsEnabled(newState);
 
         if (newState) {
-            // First re-enable in this boot session also runs auto-calibration
-            // (which makes the LRA buzz briefly — that's expected feedback for
-            // an explicit "turn it on" action). Subsequent toggles just flip
-            // the mute flag since the chip is still calibrated.
+            // Lazy auto-calibration on first re-enable this boot. The LRA
+            // buzzes briefly during cal — that's expected user feedback.
             if (!haptics.isReady() && haptics.isPresent()) {
                 display.clear();
                 display.setTextSize(1);

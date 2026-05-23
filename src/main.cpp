@@ -13,37 +13,15 @@ const unsigned long animSwitchInterval = 5000;  // 5 seconds
 
 int currentAnim = 0;  // index to track which animation is active
 
-// ---------------------------------------------------------------------------
-// Critical-failure handling
-//
-// Previously every peripheral init failure trapped the device in
-// `while(1) delay(100);`. If anything went wrong in the field (e.g. LittleFS
-// corruption after a power glitch) the device became a paperweight that only
-// a reflash could recover. We now:
-//
-//   * try a one-shot recovery for LittleFS via `format()`,
-//   * show the error on the OLED (+ red LED ring + error beep when those
-//     subsystems are up), hold for a few seconds so the user/tester can read
-//     it, then `ESP.restart()`,
-//   * track consecutive failed boots in RTC user memory so a genuinely
-//     broken board doesn't spin in a tight restart loop — after a few
-//     consecutive failures we hold the error on screen for much longer
-//     before retrying, giving the user time to power off and contact us.
-// ---------------------------------------------------------------------------
+// Critical-failure handling: graceful recovery + boot-loop guard so init
+// failures don't brick the device until a reflash.
 
 static bool g_displayReady = false;
 static bool g_ledReady = false;
 static bool g_speakerReady = false;
 
-// RTC user memory survives soft restarts (but not full power loss), which is
-// exactly the semantics we want: a board cycling on a broken peripheral keeps
-// the counter; a user unplugging-and-replugging starts fresh.
-//
-// NOTE: do NOT mark this `packed`. `rtcUserMemoryRead/Write` requires a
-// 4-byte-aligned uint32_t* and the struct is already 8 bytes with natural
-// 4-byte alignment (uint32_t + uint16_t + uint16_t, no padding). `packed`
-// would only relax the alignment guarantee and trigger
-// -Waddress-of-packed-member when we cast `&g` to uint32_t*.
+// RTC user memory survives soft restarts but not power loss.
+// Must NOT be packed: rtcUserMemoryRead/Write needs 4-byte alignment.
 struct BootGuard {
     uint32_t magic;
     uint16_t failures;
@@ -77,9 +55,7 @@ static void bootGuardWriteFailures(uint16_t failures) {
     LOG_ERROR("[CRITICAL] %s%s%s", line1 ? line1 : "(unknown)", line2 ? " — " : "",
               line2 ? line2 : "");
 
-    // The first thing setup() did was optimistically bump this counter. We
-    // never decremented it because we are failing, so the persistence check
-    // here sees the now-incremented value.
+    // setup() bumped this counter on entry; we never decremented because we're failing here.
     uint16_t failures = bootGuardReadFailures();
     bool persistent = failures >= kBootGuardSoftLimit;
 
@@ -114,22 +90,17 @@ static void bootGuardWriteFailures(uint16_t failures) {
     unsigned long hold = persistent ? kCritPersistentDisplayMs : kCritDisplayMs;
     LOG_ERROR("[CRITICAL] Holding for %lums (failures=%u)%s", hold, (unsigned)failures,
               persistent ? " — boot loop detected" : "");
-
-    // delay() yields to background tasks and feeds the watchdog, so a multi-
-    // second hold here is safe.
     delay(hold);
 
     LOG_ERROR("[CRITICAL] Restarting now");
-    delay(50);  // give Serial a moment to flush
+    delay(50);
     ESP.restart();
-    // Unreachable, but ESP.restart() is not marked noreturn in the headers.
-    while (true) {
+    while (true) {  // unreachable; ESP.restart() isn't marked noreturn
         delay(1000);
     }
 }
 
-/// Mount LittleFS, attempting a one-shot format-and-retry recovery if the
-/// initial mount fails. Returns true on success.
+/// Mount LittleFS with one-shot format-and-retry recovery.
 static bool mountLittleFsWithRecovery() {
     if (LittleFS.begin()) {
         return true;
@@ -162,21 +133,12 @@ static bool mountLittleFsWithRecovery() {
     return true;
 }
 
-// Heap supervision -----------------------------------------------------------
-//
-// On ESP8266 we have ~30 KB usable heap. Long-running firmware tends to slowly
-// fragment that heap, so even when "free heap" looks healthy the largest
-// contiguous block shrinks and eventually an allocation (MQTT, OTA, WiFi)
-// fails and we crash. We:
-//   * log free heap + fragmentation + largest block once a minute, so the
-//     trend is visible over a multi-day run.
-//   * proactively restart if we drop below safe thresholds. A clean restart
-//     is much less disruptive than a heap-exhaustion crash mid-OTA or
-//     mid-MQTT publish, and HA reconnects within seconds.
-static constexpr unsigned long kHeapLogIntervalMs = 60UL * 1000UL;     // 1 min
-static constexpr uint32_t kHeapFreePanicBytes = 4096;                  // 4 KB
-static constexpr uint16_t kHeapBlockPanicBytes = 2048;                 // 2 KB
-static constexpr uint8_t kHeapFragPanicPct = 80;                        // %
+// Heap supervisor: logs trend + proactively restarts before fragmentation
+// causes a mid-MQTT/OTA crash. ESP8266 has ~30 KB usable heap.
+static constexpr unsigned long kHeapLogIntervalMs = 60UL * 1000UL;
+static constexpr uint32_t kHeapFreePanicBytes = 4096;
+static constexpr uint16_t kHeapBlockPanicBytes = 2048;
+static constexpr uint8_t kHeapFragPanicPct = 80;
 static unsigned long lastHeapLog = 0;
 
 static void superviseHeap() {
@@ -196,7 +158,6 @@ static void superviseHeap() {
         frag > kHeapFragPanicPct) {
         LOG_ERROR("[Heap] Below safe limits (free=%u, max_block=%u, frag=%u%%) — restarting",
                   (unsigned)freeHeap, (unsigned)maxBlock, (unsigned)frag);
-        // Best-effort: give Serial a moment to flush the log line.
         delay(50);
         ESP.restart();
     }
@@ -205,10 +166,7 @@ static void superviseHeap() {
 void setup() {
     Serial.begin(115200);
 
-    // Optimistically bump the boot-loop counter on entry. The end of setup()
-    // clears it when we reach "system ready"; until then any criticalFailure
-    // will see the elevated count and (after a few cycles) hold the error on
-    // screen for longer instead of restarting immediately.
+    // Bump boot-loop counter; cleared at end of setup() when system ready.
     uint16_t bootFailures = bootGuardReadFailures();
     bootGuardWriteFailures(bootFailures + 1);
     if (bootFailures > 0) {
@@ -219,8 +177,6 @@ void setup() {
     // Initialize display first so subsequent failures can be shown on-screen.
     g_displayReady = display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE, DISPLAY_FLIPPED);
     if (!g_displayReady) {
-        // We can't show anything visual. Log + short delay + restart so the
-        // device doesn't sit silent forever.
         LOG_ERROR("[Boot] Failed to initialize display");
         criticalFailure("Display", "init failed");
     }
@@ -230,12 +186,8 @@ void setup() {
     display.printCentered("Initializing...", 40);
     display.update();
 
-    // Probe the haptics chip on the bus now (cheap I²C ACK) so the Settings
-    // UI can decide whether to show the "Haptics" toggle row. We deliberately
-    // *don't* run auto-calibration yet — that step physically drives the LRA,
-    // and if the user has previously muted haptics we don't want them to feel
-    // a buzz on every cold boot. Calibration runs later, after we've loaded
-    // their preference (or on demand when they re-enable from Settings).
+    // Probe only; defer calibration until after we know the user's haptics
+    // preference (so a muted boot doesn't buzz the LRA).
     if (!haptics.probe()) {
         LOG_WARN("[Haptics] DRV2605 not found — tactile feedback disabled");
     }
@@ -253,15 +205,8 @@ void setup() {
         criticalFailure("LittleFS", "mount failed");
     }
 
-    // Load persisted user preferences (sound on/off, etc.) now that
-    // LittleFS is mounted but before any subsystem that might react to them.
+    // Load prefs before any subsystem that reacts to them.
     userPrefsLoad();
-    // Now that we know the user's haptics preference, decide whether to run
-    // the calibration step. Only calibrate (which makes the LRA buzz briefly)
-    // if the user actually wants haptics enabled AND the chip is on the bus.
-    // Otherwise leave the driver un-initialized and quiet — `setMuted` is
-    // still a useful safety net but the gate on `initialized` is what
-    // guarantees silence here.
     if (userPrefsHapticsEnabled() && haptics.isPresent()) {
         if (!haptics.begin()) {
             LOG_WARN("[Haptics] DRV2605 calibration failed — tactile feedback disabled");
@@ -367,9 +312,7 @@ void setup() {
     // Set up activity callback to reset timeout on button interactions
     router.setActivityCallback([]() -> unsigned long { return button.getLastInteractionTime(); });
 
-    // We made it all the way through setup() — clear the boot-loop counter
-    // so the next failure (if any) gets the full kCritDisplayMs grace period.
-    bootGuardWriteFailures(0);
+    bootGuardWriteFailures(0);  // system ready, clear boot-loop counter
 
     LOG_INFO("[Boot] IR Hub: System Ready");
     LOG_INFO("[Heap] startup free=%u max_block=%u frag=%u%%",
@@ -379,13 +322,8 @@ void setup() {
 }
 
 void loop() {
-    // Service the LED ring before AND after the screen refresh. NeoRing has
-    // an internal 60 fps rate-limiter, so extra calls are essentially free
-    // no-ops — but the call right after `router.update()` is critical: the
-    // screen refresh ends with a blocking OLED I²C transfer, and without a
-    // service call immediately afterward the LED ring waits another full
-    // wifi/alexa/mqtt cycle before getting a chance to render, which is
-    // exactly what makes the animation feel choppy on non-Home screens.
+    // ledRing is serviced multiple times to absorb the OLED transfer stall.
+    // NeoRing's internal 60 fps gate makes extra calls free.
     ledRing.update();
     wifiManager.update();
     router.update();
