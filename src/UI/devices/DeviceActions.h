@@ -21,12 +21,12 @@ class DeviceActions : public Screen {
         : device(device), selectedAction(ActionType::ON), selectedIndex(0) {}
 
     void onEnter() override {
-        LOG_DEBUG("DeviceActions onEnter for device %d", device.id);
+        LOG_DEBUG("[DeviceActions] onEnter for device %d", device.id);
         ledRing.breathe(COLOR_INFO_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {
-            LOG_DEBUG("DeviceActions onButtonClick");
+            LOG_DEBUG("[DeviceActions] onButtonClick");
             // Navigate through actions
             selectedIndex = (selectedIndex + 1) % 5;
             selectedAction = static_cast<ActionType>(selectedIndex);
@@ -34,7 +34,7 @@ class DeviceActions : public Screen {
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("DeviceActions onButtonLongPress");
+            LOG_DEBUG("[DeviceActions] onButtonLongPress");
             switch (selectedAction) {
                 case ActionType::ON:
                 case ActionType::OFF:
@@ -80,12 +80,12 @@ class DeviceActions : public Screen {
         switch (selectedAction) {
             case ActionType::ON:
                 if (device.onCommand.isValid()) {
-                    LOG_INFO("Sending ON command for device %d", device.id);
+                    LOG_INFO("[DeviceActions] Sending ON command for device %d", device.id);
                     irManager.sendProtocol(device.onCommand);
                     ledRing.addAnimation(
                         std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS, SEND_ON_COMMAND_COLOR));
                 } else {
-                    LOG_ERROR("Invalid ON command for device %d", device.id);
+                    LOG_ERROR("[DeviceActions] Invalid ON command for device %d", device.id);
                     display.clear();
                     display.printCentered("Invalid ON command", 30);
                     display.update();
@@ -95,12 +95,12 @@ class DeviceActions : public Screen {
 
             case ActionType::OFF:
                 if (device.offCommand.isValid()) {
-                    LOG_INFO("Sending OFF command for device %d", device.id);
+                    LOG_INFO("[DeviceActions] Sending OFF command for device %d", device.id);
                     irManager.sendProtocol(device.offCommand);
                     ledRing.addAnimation(std::make_unique<ClickSweepOnceAnimation>(
                         NUM_LEDS, SEND_OFF_COMMAND_COLOR));
                 } else {
-                    LOG_ERROR("Invalid OFF command for device %d", device.id);
+                    LOG_ERROR("[DeviceActions] Invalid OFF command for device %d", device.id);
                     display.clear();
                     display.printCentered("Invalid OFF command", 30);
                     display.update();
@@ -108,10 +108,10 @@ class DeviceActions : public Screen {
                 }
                 break;
             default:
-                LOG_ERROR("Unhandled action type in executeAction: %d",
+                LOG_ERROR("[DeviceActions] Unhandled action type in executeAction: %d",
                           static_cast<int>(selectedAction));
         }
     }
 
-    void onExit() override { LOG_DEBUG("DeviceActions onExit"); }
+    void onExit() override { LOG_DEBUG("[DeviceActions] onExit"); }
 };

@@ -19,7 +19,7 @@ class HomeScreen : public Screen {
 
    public:
     void onEnter() override {
-        LOG_DEBUG("HomeScreen onEnter");
+        LOG_DEBUG("[HomeScreen] onEnter");
         lastActivityTime = millis();
         isBlanked = false;
         animationTimer = millis();
@@ -39,7 +39,7 @@ class HomeScreen : public Screen {
                 display.turnOn();
                 ringColor();
                 isBlanked = false;
-                LOG_DEBUG("Screen turned back on from blanked state");
+                LOG_DEBUG("[HomeScreen] Screen turned back on from blanked state");
                 return;
             }
         });
@@ -50,19 +50,19 @@ class HomeScreen : public Screen {
             lastActivityTime = millis();
 
             // Long press could be used for system functions in the future
-            LOG_DEBUG("HomeScreen onButtonLongPress");
+            LOG_DEBUG("[HomeScreen] onButtonLongPress");
 
             // If screen is blanked, turn it back on
             if (isBlanked) {
                 display.turnOn();
                 ringColor();
                 isBlanked = false;
-                LOG_DEBUG("Screen turned back on from blanked state");
+                LOG_DEBUG("[HomeScreen] Screen turned back on from blanked state");
                 return;
             }
 
             // Navigate to main menu
-            LOG_DEBUG("HomeScreen onButtonClick - navigating to MainMenu");
+            LOG_DEBUG("[HomeScreen] onButtonClick - navigating to MainMenu");
             router.push(new MainMenu());
         });
     }
@@ -74,7 +74,7 @@ class HomeScreen : public Screen {
             display.turnOff();
             ledRing.blank();
             lastLedBlankRefresh = millis();
-            LOG_DEBUG("Screen blanked due to inactivity on status screen");
+            LOG_DEBUG("[HomeScreen] Screen blanked due to inactivity on status screen");
             return;  // Don't update display when blanked
         }
 
@@ -100,7 +100,7 @@ class HomeScreen : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("HomeScreen onExit");
+        LOG_DEBUG("[HomeScreen] onExit");
         ledRing.blank();
         // Restore display FPS to default
         display.resetFPS();

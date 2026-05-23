@@ -83,7 +83,7 @@ class WiFiManagerLib {
             }
             if (!mqttCredentialsSave(host, port, mqttUserParam_.getValue(),
                                      mqttPassParam_.getValue())) {
-                LOG_WARN("MQTT credentials not saved; check LittleFS");
+                LOG_WARN("[Portal] MQTT credentials not saved; check LittleFS");
             }
             display.clear();
             display.printCentered("WiFi Saved!", 20);
@@ -188,21 +188,21 @@ class WiFiManagerLib {
             display.printCentered("Connecting...", 40);
             display.update();
 
-            LOG_INFO("Found saved WiFi credentials, attempting connection...");
-            LOG_DEBUG("Saved SSID: %s", WiFi.SSID().c_str());
+            LOG_INFO("[WiFi] Found saved credentials, attempting connection...");
+            LOG_DEBUG("[WiFi] Saved SSID: %s", WiFi.SSID().c_str());
         }
 
-        LOG_INFO("Starting WiFi connection attempt...");
-        LOG_DEBUG("WiFi timeout set to %d seconds", connectTimeout);
+        LOG_INFO("[WiFi] Starting connection attempt...");
+        LOG_DEBUG("[WiFi] Timeout set to %d seconds", connectTimeout);
 
         // Try to connect to WiFi
         wifiConnected = wifiManager.autoConnect(apName);
 
         if (wifiConnected) {
-            LOG_INFO("WiFi connection successful!");
-            LOG_DEBUG("IP Address: %s", WiFi.localIP().toString().c_str());
-            LOG_DEBUG("SSID: %s", WiFi.SSID().c_str());
-            LOG_DEBUG("RSSI: %d dBm", WiFi.RSSI());
+            LOG_INFO("[WiFi] Connection successful!");
+            LOG_DEBUG("[WiFi] IP Address: %s", WiFi.localIP().toString().c_str());
+            LOG_DEBUG("[WiFi] SSID: %s", WiFi.SSID().c_str());
+            LOG_DEBUG("[WiFi] RSSI: %d dBm", WiFi.RSSI());
 
             display.clear();
             display.printCentered("IR Hub", 20);
@@ -211,9 +211,9 @@ class WiFiManagerLib {
             delay(1000);
 
         } else {
-            LOG_WARN("WiFi connection failed - continuing in offline mode");
-            LOG_DEBUG("WiFi status: %d", WiFi.status());
-            LOG_DEBUG("No saved credentials or connection timeout");
+            LOG_WARN("[WiFi] Connection failed - continuing in offline mode");
+            LOG_DEBUG("[WiFi] Status: %d", WiFi.status());
+            LOG_DEBUG("[WiFi] No saved credentials or connection timeout");
 
             display.clear();
             display.printCentered("IR Hub", 20);
@@ -232,7 +232,7 @@ class WiFiManagerLib {
         this->otaSuccessColor = otaSuccessColor;
         this->otaErrorColor = otaErrorColor;
 
-        LOG_DEBUG("Setting up OTA...");
+        LOG_DEBUG("[OTA] Setting up OTA...");
         display.clear();
         display.printCentered("IR Hub", 20);
         display.printCentered("Setting up OTA...", 40);
@@ -242,7 +242,7 @@ class WiFiManagerLib {
 
         ArduinoOTA.onStart([this]() {
             const char* type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
-            LOG_INFO("Start updating %s", type);
+            LOG_INFO("[OTA] Start updating %s", type);
             if (!display.isDisplayOn()) {
                 display.turnOn();
             }
@@ -267,7 +267,7 @@ class WiFiManagerLib {
         });
 
         ArduinoOTA.onEnd([this]() {
-            LOG_INFO("OTA Update Complete");
+            LOG_INFO("[OTA] Update Complete");
             ledRing.solid(this->otaSuccessColor);
             ledRing.finishTransition();
             display.clear();
@@ -282,7 +282,7 @@ class WiFiManagerLib {
             }
             ledRing.solid(this->otaErrorColor);
             ledRing.finishTransition();
-            LOG_ERROR("OTA Error: %u", (unsigned)error);
+            LOG_ERROR("[OTA] Error: %u", (unsigned)error);
             display.clear();
             display.printCentered("OTA Error", 10);
             display.printCentered("Error: " + String(error), 30);
@@ -291,7 +291,7 @@ class WiFiManagerLib {
 
         ArduinoOTA.begin();
         isOtaSetup = true;
-        LOG_INFO("OTA Ready");
+        LOG_INFO("[OTA] Ready");
 
         // Display OTA info
         display.clear();
@@ -314,7 +314,7 @@ class WiFiManagerLib {
 
     void resetWiFi() {
         wifiManager.resetSettings();
-        LOG_INFO("WiFi settings reset");
+        LOG_INFO("[WiFi] Settings reset");
     }
 };
 

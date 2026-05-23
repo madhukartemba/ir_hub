@@ -12,7 +12,7 @@ class Devices : public Screen {
 
    public:
     void onEnter() override {
-        LOG_DEBUG("Devices onEnter");
+        LOG_DEBUG("[Devices] onEnter");
         selectedIndex = 0;
         loadDevices();
 
@@ -20,7 +20,7 @@ class Devices : public Screen {
 
         // Change button behavior
         button.setClickCallback([this]() {
-            LOG_DEBUG("Devices onButtonClick");
+            LOG_DEBUG("[Devices] onButtonClick");
             // Navigate through devices and back option
             int totalItems = devices.size() + 1;  // +1 for back button
             selectedIndex = (selectedIndex + 1) % totalItems;
@@ -28,7 +28,7 @@ class Devices : public Screen {
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("Devices onButtonLongPress");
+            LOG_DEBUG("[Devices] onButtonLongPress");
             if (selectedIndex < static_cast<int>(devices.size())) {
                 // Navigate to device actions page
                 Device selectedDevice = devices[selectedIndex];
@@ -42,7 +42,7 @@ class Devices : public Screen {
 
     void loadDevices() {
         devices = deviceManager.getDevices();
-        LOG_INFO("Loaded %d devices", devices.size());
+        LOG_INFO("[Devices] Loaded %d devices", devices.size());
     }
 
     void onUpdate() override {
@@ -83,6 +83,6 @@ class Devices : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("Devices onExit");
+        LOG_DEBUG("[Devices] onExit");
     }
 };

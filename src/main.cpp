@@ -221,7 +221,7 @@ void setup() {
     if (!g_displayReady) {
         // We can't show anything visual. Log + short delay + restart so the
         // device doesn't sit silent forever.
-        LOG_ERROR("Failed to initialize display");
+        LOG_ERROR("[Boot] Failed to initialize display");
         criticalFailure("Display", "init failed");
     }
 
@@ -237,16 +237,16 @@ void setup() {
     // a buzz on every cold boot. Calibration runs later, after we've loaded
     // their preference (or on demand when they re-enable from Settings).
     if (!haptics.probe()) {
-        LOG_WARN("DRV2605 haptics not found — tactile feedback disabled");
+        LOG_WARN("[Haptics] DRV2605 not found — tactile feedback disabled");
     }
 
     // Initialize NeoRing
-    LOG_DEBUG("Starting LED ring setup");
+    LOG_DEBUG("[Boot] Starting LED ring setup");
     ledRing.begin(NUM_LEDS, NEOPIXEL_PIN, DISPLAY_DRIVER);
     ledRing.solid(Color::RoyalBlue);
     ledRing.finishTransition();
     g_ledReady = true;
-    LOG_DEBUG("LED ring initialized on pin");
+    LOG_DEBUG("[Boot] LED ring initialized");
 
     // Initialize LittleFS, with a one-shot format-and-retry recovery.
     if (!mountLittleFsWithRecovery()) {
@@ -264,7 +264,7 @@ void setup() {
     // guarantees silence here.
     if (userPrefsHapticsEnabled() && haptics.isPresent()) {
         if (!haptics.begin()) {
-            LOG_WARN("DRV2605 calibration failed — tactile feedback disabled");
+            LOG_WARN("[Haptics] DRV2605 calibration failed — tactile feedback disabled");
         }
     }
     haptics.setMuted(!userPrefsHapticsEnabled());
@@ -285,22 +285,22 @@ void setup() {
     }
 
     // Initialize speaker
-    LOG_DEBUG("Starting speaker setup");
+    LOG_DEBUG("[Boot] Starting speaker setup");
     if (!speaker.begin(SPEAKER_PIN)) {
         criticalFailure("Speaker", "check speaker pin");
     }
     speaker.setMuted(!userPrefsSoundEnabled());
     g_speakerReady = true;
-    LOG_DEBUG("Speaker initialized (muted=%s)", speaker.isMuted() ? "yes" : "no");
+    LOG_DEBUG("[Speaker] Initialized (muted=%s)", speaker.isMuted() ? "yes" : "no");
 
     // Initialize button
-    LOG_DEBUG("Starting button setup");
+    LOG_DEBUG("[Boot] Starting button setup");
     if (!button.begin(TOUCH_BUTTON_PIN, INPUT)) {
         criticalFailure("Button", "check button pin");
     }
     button.setSpeaker(speaker);
     button.setHaptics(haptics);
-    LOG_DEBUG("Button initialized on pin");
+    LOG_DEBUG("[Button] Initialized");
 
     // Successful core initialization now setup wireless connection
     speaker.playStartupSound();
@@ -327,7 +327,7 @@ void setup() {
     mqttConnector.begin();
 
     auto onIrRemoteStateChange = [](const Device& device, bool state) {
-        LOG_DEBUG("Remote state: %s %s", device.name.c_str(), state ? "ON" : "OFF");
+        LOG_DEBUG("[Hub] Remote state: %s %s", device.name.c_str(), state ? "ON" : "OFF");
         if (state) {
             speaker.beep();
             ledRing.addAnimation(
@@ -371,7 +371,7 @@ void setup() {
     // so the next failure (if any) gets the full kCritDisplayMs grace period.
     bootGuardWriteFailures(0);
 
-    LOG_INFO("IR Hub: System Ready");
+    LOG_INFO("[Boot] IR Hub: System Ready");
     LOG_INFO("[Heap] startup free=%u max_block=%u frag=%u%%",
              (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxFreeBlockSize(),
              (unsigned)ESP.getHeapFragmentation());

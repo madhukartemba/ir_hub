@@ -52,23 +52,23 @@ class DeviceManager {
 
     bool begin() {
         if (!LittleFS.begin()) {
-            LOG_ERROR("Failed to mount LittleFS");
+            LOG_ERROR("[DeviceManager] Failed to mount LittleFS");
             return false;
         }
-        LOG_INFO("LittleFS mounted");
+        LOG_INFO("[DeviceManager] LittleFS mounted");
 
         if (!LittleFS.exists(storageDir)) {
             LittleFS.mkdir(storageDir);
-            LOG_INFO("Storage directory created");
+            LOG_INFO("[DeviceManager] Storage directory created");
         } else {
-            LOG_INFO("Storage directory exists");
+            LOG_INFO("[DeviceManager] Storage directory exists");
         }
         return true;
     }
 
     int addSingleCommandDevice(IRCode command) {
         if (!command.isValid()) {
-            LOG_ERROR("Invalid command");
+            LOG_ERROR("[DeviceManager] Invalid command");
             return -1;
         }
 
@@ -87,10 +87,10 @@ class DeviceManager {
     int addDualCommandDevice(IRCode onCommand, IRCode offCommand) {
         if (!onCommand.isValid() || !offCommand.isValid()) {
             if (!onCommand.isValid()) {
-                LOG_ERROR("Invalid on command");
+                LOG_ERROR("[DeviceManager] Invalid on command");
             }
             if (!offCommand.isValid()) {
-                LOG_ERROR("Invalid off command");
+                LOG_ERROR("[DeviceManager] Invalid off command");
             }
             return -1;
         }
@@ -115,7 +115,7 @@ class DeviceManager {
         String filename = String(device.id) + ".json";
         File file = LittleFS.open(String(storageDir) + "/" + filename, "w");
         if (!file) {
-            LOG_ERROR("Failed to open file");
+            LOG_ERROR("[DeviceManager] Failed to open file");
             return;
         }
         JsonDocument doc;
@@ -136,7 +136,7 @@ class DeviceManager {
             onDeviceAdded(device);
         }
 
-        LOG_INFO("Device saved to %s", filename.c_str());
+        LOG_INFO("[DeviceManager] Device saved to %s", filename.c_str());
     }
 
     bool removeDeviceById(int id) {
@@ -157,7 +157,7 @@ class DeviceManager {
         String filename = String(snapshot.id) + ".json";
         bool success = LittleFS.remove(String(storageDir) + "/" + filename);
         if (success) {
-            LOG_INFO("Device removed from %s", filename.c_str());
+            LOG_INFO("[DeviceManager] Device removed from %s", filename.c_str());
             deviceCacheByName.erase(snapshot.name);
             deviceCacheById.erase(snapshot.id);
 
@@ -167,7 +167,7 @@ class DeviceManager {
                 onDeviceRemoved(snapshot);
             }
         } else {
-            LOG_ERROR("Failed to remove device from %s", filename.c_str());
+            LOG_ERROR("[DeviceManager] Failed to remove device from %s", filename.c_str());
         }
         return success;
     }
@@ -184,7 +184,7 @@ class DeviceManager {
         String filename = String(id) + ".json";
         File file = LittleFS.open(String(storageDir) + "/" + filename, "r");
         if (!file) {
-            LOG_ERROR("Failed to open file for device %d", id);
+            LOG_ERROR("[DeviceManager] Failed to open file for device %d", id);
             return nullptr;
         }
         String json = file.readString();
@@ -193,7 +193,7 @@ class DeviceManager {
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, json);
         if (err) {
-            LOG_ERROR("Failed to parse JSON for device %d: %s", id, err.c_str());
+            LOG_ERROR("[DeviceManager] Failed to parse JSON for device %d: %s", id, err.c_str());
             return nullptr;
         }
 
@@ -240,7 +240,7 @@ class DeviceManager {
         for (const auto& kv : deviceCacheById) {
             devices.push_back(kv.second);
         }
-        LOG_INFO("Loaded %d devices", devices.size());
+        LOG_INFO("[DeviceManager] Loaded %d devices", devices.size());
         return devices;
     }
 
@@ -282,7 +282,7 @@ class DeviceManager {
             // getDeviceById will read+parse the file and insert into the cache
             // (skips disk if already cached).
             if (!getDeviceById(id)) {
-                LOG_ERROR("Failed to load device from %s", filename.c_str());
+                LOG_ERROR("[DeviceManager] Failed to load device from %s", filename.c_str());
             }
         }
         LOG_INFO("[DeviceManager] Cache primed with %u devices",

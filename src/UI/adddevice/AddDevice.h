@@ -27,7 +27,7 @@ class AddDevice : public Screen {
         : currentState(State::READY_TO_RECORD_FIRST), hasFirstCode(false), isTimeoutError(false) {}
 
     void onEnter() override {
-        LOG_DEBUG("AddDevice onEnter");
+        LOG_DEBUG("[AddDevice] onEnter");
         currentState = State::READY_TO_RECORD_FIRST;
         hasFirstCode = false;
         isTimeoutError = false;
@@ -36,7 +36,7 @@ class AddDevice : public Screen {
         ledRing.breathe(COLOR_INFO_ROYAL);
 
         button.setClickCallback([this]() {
-            LOG_DEBUG("AddDevice onButtonClick");
+            LOG_DEBUG("[AddDevice] onButtonClick");
             // Click behavior can be customized based on current state
             switch (currentState) {
                 case State::READY_TO_RECORD_FIRST:
@@ -57,7 +57,7 @@ class AddDevice : public Screen {
         });
 
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("AddDevice onButtonLongPress");
+            LOG_DEBUG("[AddDevice] onButtonLongPress");
             // Long press always means "back". If we're mid-recording we just
             // need to stop the IR capture before navigating away — we
             // explicitly do NOT drop into the ERROR state, because that would
@@ -65,7 +65,7 @@ class AddDevice : public Screen {
             // (firstCode is still the default-constructed UNKNOWN value) when
             // the user only wanted to abort.
             if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
-                LOG_DEBUG("Cancelling recording via long press");
+                LOG_DEBUG("[AddDevice] Cancelling recording via long press");
                 irManager.stopCapture();
             }
             router.pop();
@@ -76,7 +76,7 @@ class AddDevice : public Screen {
         // Check for recording timeout
         if ((currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) &&
             (millis() - recordingStartTime) > RECORDING_TIMEOUT) {
-            LOG_DEBUG("Recording timeout reached");
+            LOG_DEBUG("[AddDevice] Recording timeout reached");
             isTimeoutError = true;
             if (currentState == State::RECORDING_FIRST) {
                 stopRecordingFirst();
@@ -91,7 +91,7 @@ class AddDevice : public Screen {
         // Check for IR code reception during recording
         if ((currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) &&
             irManager.decode()) {
-            LOG_DEBUG("IR code received during recording");
+            LOG_DEBUG("[AddDevice] IR code received during recording");
             if (currentState == State::RECORDING_FIRST) {
                 stopRecordingFirst();
             } else {
@@ -129,7 +129,7 @@ class AddDevice : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("AddDevice onExit");
+        LOG_DEBUG("[AddDevice] onExit");
         // Clean up any recording resources if needed
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
             irManager.stopCapture();
@@ -165,7 +165,7 @@ class AddDevice : public Screen {
     }
 
     void startRecordingFirst() {
-        LOG_DEBUG("Starting first code IR recording");
+        LOG_DEBUG("[AddDevice] Starting first code IR recording");
         currentState = State::RECORDING_FIRST;
         setLedRingRecording();
         recordingStartTime = millis();
@@ -173,7 +173,7 @@ class AddDevice : public Screen {
     }
 
     void stopRecordingFirst() {
-        LOG_DEBUG("Stopping first code IR recording");
+        LOG_DEBUG("[AddDevice] Stopping first code IR recording");
         irManager.stopCapture();
 
         if (irManager.isValid()) {
@@ -181,17 +181,17 @@ class AddDevice : public Screen {
             firstCode = irManager.getLastCode();
             hasFirstCode = true;
             currentState = State::READY_TO_RECORD_SECOND;
-            LOG_INFO("First code recorded successfully");
+            LOG_INFO("[AddDevice] First code recorded successfully");
         } else {
             setLedRingError();
-            LOG_ERROR("Invalid first code received");
+            LOG_ERROR("[AddDevice] Invalid first code received");
             currentState = State::ERROR;
             speaker.errorBeep();
         }
     }
 
     void startRecordingSecond() {
-        LOG_DEBUG("Starting second code IR recording");
+        LOG_DEBUG("[AddDevice] Starting second code IR recording");
         setLedRingRecording();
         currentState = State::RECORDING_SECOND;
         recordingStartTime = millis();
@@ -199,7 +199,7 @@ class AddDevice : public Screen {
     }
 
     void stopRecordingSecond() {
-        LOG_DEBUG("Stopping second code IR recording");
+        LOG_DEBUG("[AddDevice] Stopping second code IR recording");
         irManager.stopCapture();
 
         if (irManager.isValid()) {
@@ -214,27 +214,28 @@ class AddDevice : public Screen {
                     // Codes match, save as single command device
                     int deviceId = deviceManager.addSingleCommandDevice(firstCode);
                     if (deviceId != -1) {
-                        LOG_INFO("Auto mode device saved with ID: %d", deviceId);
+                        LOG_INFO("[AddDevice] Auto mode device saved with ID: %d", deviceId);
                         currentState = State::SUCCESS;
                         setLedRingSuccess();
                         speaker.successBeep();
                     } else {
-                        LOG_ERROR("Failed to save auto mode device");
+                        LOG_ERROR("[AddDevice] Failed to save auto mode device");
                         currentState = State::ERROR;
                         setLedRingError();
                         speaker.errorBeep();
                     }
                 } else {
-                    LOG_INFO("Codes don't match - saving as dual device");
+                    LOG_INFO("[AddDevice] Codes don't match - saving as dual device");
                     // Codes don't match, save as dual command device
                     int deviceId = deviceManager.addDualCommandDevice(firstCode, secondCode);
                     if (deviceId != -1) {
-                        LOG_INFO("Auto mode device saved as dual device with ID: %d", deviceId);
+                        LOG_INFO("[AddDevice] Auto mode device saved as dual device with ID: %d",
+                                 deviceId);
                         currentState = State::SUCCESS;
                         setLedRingSuccess();
                         speaker.successBeep();
                     } else {
-                        LOG_ERROR("Failed to save auto mode device as dual device");
+                        LOG_ERROR("[AddDevice] Failed to save auto mode device as dual device");
                         currentState = State::ERROR;
                         setLedRingError();
                         speaker.errorBeep();
@@ -242,14 +243,14 @@ class AddDevice : public Screen {
                 }
             } else {
                 setLedRingError();
-                LOG_ERROR("Invalid codes - first: %s, second: %s",
+                LOG_ERROR("[AddDevice] Invalid codes - first: %s, second: %s",
                           firstCode.isValid() ? "valid" : "invalid",
                           secondCode.isValid() ? "valid" : "invalid");
                 currentState = State::ERROR;
                 speaker.errorBeep();
             }
         } else {
-            LOG_ERROR("Invalid second code received");
+            LOG_ERROR("[AddDevice] Invalid second code received");
             setLedRingError();
             currentState = State::ERROR;
             speaker.errorBeep();

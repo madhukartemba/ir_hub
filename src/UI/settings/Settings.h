@@ -32,7 +32,7 @@ class Settings : public Screen {
 
    public:
     void onEnter() override {
-        LOG_DEBUG("Settings onEnter");
+        LOG_DEBUG("[Settings] onEnter");
 
         // Show the Haptics row whenever the DRV2605 is *present* on the bus,
         // not just when it's been calibrated. The chip may not be initialized
@@ -46,7 +46,7 @@ class Settings : public Screen {
         ledRing.breathe(COLOR_SETTINGS);
 
         button.setClickCallback([this]() {
-            LOG_DEBUG("Settings onButtonClick");
+            LOG_DEBUG("[Settings] onButtonClick");
             if (isRestarting) {
                 return;
             }
@@ -54,7 +54,7 @@ class Settings : public Screen {
         });
 
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("Settings onButtonLongPress");
+            LOG_DEBUG("[Settings] onButtonLongPress");
             if (isRestarting) {
                 return;
             }
@@ -79,7 +79,7 @@ class Settings : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("Settings onExit");
+        LOG_DEBUG("[Settings] onExit");
     }
 
    private:
@@ -139,23 +139,23 @@ class Settings : public Screen {
                 toggleHaptics();
                 break;
             case Action::RESTART:
-                LOG_DEBUG("Settings onButtonLongPress RESTART");
+                LOG_DEBUG("[Settings] onButtonLongPress RESTART");
                 isRestarting = true;
                 restartStartTime = millis();
                 break;
             case Action::CLEAR_DATA:
-                LOG_DEBUG("Settings onButtonLongPress CLEAR_DATA");
+                LOG_DEBUG("[Settings] onButtonLongPress CLEAR_DATA");
                 router.push(new ClearDataConfirmation());
                 break;
             case Action::WIFI_WIPE:
-                LOG_DEBUG("Settings onButtonLongPress WIFI_WIPE");
+                LOG_DEBUG("[Settings] onButtonLongPress WIFI_WIPE");
                 wifiManager.resetWiFi();
                 speaker.successBeep();
                 isRestarting = true;
                 restartStartTime = millis();
                 break;
             case Action::BACK:
-                LOG_DEBUG("Settings onButtonLongPress BACK");
+                LOG_DEBUG("[Settings] onButtonLongPress BACK");
                 router.pop();
                 break;
         }

@@ -11,21 +11,21 @@ class DeviceDeleteConfirmation : public Screen {
     explicit DeviceDeleteConfirmation(const Device& device) : device(device), confirmed(false) {}
 
     void onEnter() override {
-        LOG_DEBUG("DeviceDeleteConfirmation onEnter for device %d", device.id);
+        LOG_DEBUG("[DeviceDeleteConfirmation] onEnter for device %d", device.id);
         ledRing.breathe(COLOR_ERROR_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {
-            LOG_DEBUG("DeviceDeleteConfirmation onButtonClick");
+            LOG_DEBUG("[DeviceDeleteConfirmation] onButtonClick");
             confirmed = !confirmed;
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("DeviceDeleteConfirmation onButtonLongPress");
+            LOG_DEBUG("[DeviceDeleteConfirmation] onButtonLongPress");
             if (confirmed) {
                 // Delete the device
-                LOG_INFO("Deleting device %d", device.id);
+                LOG_INFO("[DeviceDeleteConfirmation] Deleting device %d", device.id);
                 bool success = deviceManager.removeDeviceById(device.id);
                 if (success) {
                     speaker.successBeep();
@@ -74,6 +74,6 @@ class DeviceDeleteConfirmation : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("DeviceDeleteConfirmation onExit");
+        LOG_DEBUG("[DeviceDeleteConfirmation] onExit");
     }
 };

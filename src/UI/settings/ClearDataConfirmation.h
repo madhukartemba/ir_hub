@@ -5,16 +5,16 @@
 class ClearDataConfirmation : public Screen {
    public:
     void onEnter() override {
-        LOG_DEBUG("ClearDataConfirmation onEnter");
+        LOG_DEBUG("[ClearDataConfirmation] onEnter");
         ledRing.breathe(COLOR_ERROR);
 
         button.setClickCallback([this]() {
-            LOG_DEBUG("ClearDataConfirmation onButtonClick - Exit");
+            LOG_DEBUG("[ClearDataConfirmation] onButtonClick - Exit");
             router.pop();
         });
 
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("ClearDataConfirmation onButtonLongPress - Confirm");
+            LOG_DEBUG("[ClearDataConfirmation] onButtonLongPress - Confirm");
             clearAllDataAndRestart();
         });
     }
@@ -44,7 +44,7 @@ class ClearDataConfirmation : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("ClearDataConfirmation onExit");
+        LOG_DEBUG("[ClearDataConfirmation] onExit");
     }
 
    private:

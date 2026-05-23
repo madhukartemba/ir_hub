@@ -15,12 +15,12 @@ class DeviceDetails : public Screen {
         : device(device), currentPage(0), selectedDescriptionItem(0) {}
 
     void onEnter() override {
-        LOG_DEBUG("DeviceDetails onEnter for device %d", device.id);
+        LOG_DEBUG("[DeviceDetails] onEnter for device %d", device.id);
         ledRing.breathe(COLOR_SUCCESS_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {
-            LOG_DEBUG("DeviceDetails onButtonClick");
+            LOG_DEBUG("[DeviceDetails] onButtonClick");
             if (currentPage == 0) {
                 // On device details page, go to page 1
                 currentPage = 1;
@@ -65,7 +65,7 @@ class DeviceDetails : public Screen {
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("DeviceDetails onButtonLongPress");
+            LOG_DEBUG("[DeviceDetails] onButtonLongPress");
             // Exit from anywhere
             router.pop();
         });
@@ -180,7 +180,7 @@ class DeviceDetails : public Screen {
         // Always show description items in scrollable list
         if (descriptionItems.empty()) {
             String description = device.offCommand.getDescription();
-            LOG_DEBUG("Off command description: %s", description.c_str());
+            LOG_DEBUG("[DeviceDetails] Off command description: %s", description.c_str());
             if (!description.isEmpty()) {
                 parseDescription(description);
             }
@@ -194,7 +194,7 @@ class DeviceDetails : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("DeviceDetails onExit");
+        LOG_DEBUG("[DeviceDetails] onExit");
         selectedDescriptionItem = 0;
         descriptionItems.clear();
     }

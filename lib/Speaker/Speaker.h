@@ -25,7 +25,7 @@ class Speaker {
 
     bool begin() {
         if (pin == -1) {
-            LOG_ERROR("Speaker pin not set");
+            LOG_ERROR("[Speaker] Speaker pin not set");
             return false;
         }
         return begin(pin);

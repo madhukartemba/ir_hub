@@ -17,7 +17,7 @@ class MainMenu : public Screen {
 
    public:
     void onEnter() override {
-        LOG_DEBUG("MainMenu onEnter");
+        LOG_DEBUG("[MainMenu] onEnter");
         currentState = State::DEVICES;
         selectedIndex = 0;
         ledRing.breathe(COLOR_INFO_DARK);
@@ -25,14 +25,14 @@ class MainMenu : public Screen {
         // Change button behavior
         button.setClickCallback([this]() {
             // Switch to next state using mod operator (now only 3 states)
-            LOG_DEBUG("MainMenu onButtonClick");
+            LOG_DEBUG("[MainMenu] onButtonClick");
             selectedIndex = (selectedIndex + 1) % 3;
             currentState = static_cast<State>(selectedIndex);
         });
 
         // Change button long press behavior
         button.setLongPressCallback([this]() {
-            LOG_DEBUG("MainMenu onButtonLongPress");
+            LOG_DEBUG("[MainMenu] onButtonLongPress");
             if (currentState == State::DEVICES) {
                 router.push(new Devices());
             } else if (currentState == State::ADD_DEVICE) {
@@ -51,7 +51,7 @@ class MainMenu : public Screen {
     }
 
     void onExit() override {
-        LOG_DEBUG("MainMenu onExit");
+        LOG_DEBUG("[MainMenu] onExit");
         // Make sure display is turned on when exiting
         display.turnOn();
     }

@@ -88,13 +88,13 @@ class Display {
 
     // Setter for FPS
     void setFPS(uint8_t targetFPS) {
-        LOG_DEBUG("Setting display FPS to %d", targetFPS);
+        LOG_DEBUG("[Display] Setting display FPS to %d", targetFPS);
         if (targetFPS == 0) targetFPS = 1;  // Avoid division by zero
         fps = targetFPS;
     }
 
     void resetFPS() {
-        LOG_DEBUG("Resetting display FPS to default %d", defaultFPS);
+        LOG_DEBUG("[Display] Resetting display FPS to default %d", defaultFPS);
         fps = defaultFPS;
     }
 
