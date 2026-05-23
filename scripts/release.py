@@ -80,9 +80,16 @@ def check_tools() -> None:
     if missing:
         sys.exit(f"ERROR: required tools not found on PATH: {', '.join(missing)}")
 
-    auth = run_quiet(["gh", "auth", "status"])
-    if auth.returncode != 0:
-        sys.exit("ERROR: `gh auth status` failed. Run `gh auth login` first.")
+    # `gh auth status` exits non-zero for cosmetic warnings (missing scopes,
+    # stale GHES host, etc.) even when github.com auth is fine. Probe with an
+    # actual API call instead — if `gh api user` returns a login, we're good.
+    probe = run_quiet(["gh", "api", "user", "--jq", ".login"])
+    if probe.returncode != 0 or not probe.stdout.strip():
+        sys.stderr.write("ERROR: gh cannot make authenticated API calls.\n")
+        sys.stderr.write("Run `gh auth login` and confirm `gh api user` works.\n")
+        if probe.stderr.strip():
+            sys.stderr.write(f"gh said: {probe.stderr.strip()}\n")
+        sys.exit(1)
 
 
 def detect_repo_slug() -> str:
@@ -291,8 +298,9 @@ def main() -> None:
     if args.notes and args.notes_file:
         sys.exit("ERROR: pass --notes or --notes-file, not both.")
 
-    if not args.dry_run:
-        check_tools()
+    # Always validate tooling, even in dry-run, so the dry-run actually proves
+    # a real run would proceed past preflight.
+    check_tools()
 
     repo_slug = args.repo or detect_repo_slug()
     print(f"=== Releasing v{args.version} for {', '.join(args.envs)} to {repo_slug} ===")
