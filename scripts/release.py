@@ -34,8 +34,6 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Iterable, List, Optional
 
@@ -273,26 +271,31 @@ def create_release(version: str, notes: Optional[str], notes_file: Optional[Path
 
 def purge_jsdelivr(repo_slug: str, dry_run: bool) -> None:
     """Ask jsDelivr to drop its cached copy of the manifest so devices see the
-    new version immediately instead of waiting up to ~12 h for the TTL."""
+    new version immediately instead of waiting up to ~12 h for the TTL.
+
+    Uses curl rather than urllib.request because the system Python on macOS
+    often ships without a working CA bundle and TLS verification fails.
+    curl uses the OS trust store and just works."""
     url = (f"https://purge.jsdelivr.net/gh/{repo_slug}@main/ota/manifest.json")
     if dry_run:
-        print(f"[dry-run] GET {url}")
+        print(f"[dry-run] curl -sS {url}")
         return
     print(f"$ purge jsDelivr cache for ota/manifest.json")
-    try:
-        with urllib.request.urlopen(url, timeout=15) as resp:
-            body = resp.read().decode("utf-8", errors="replace")
-            data = {}
-            try:
-                data = json.loads(body)
-            except json.JSONDecodeError:
-                pass
-            status = data.get("status", "unknown")
-            print(f"  jsDelivr purge status: {status}")
-    except (urllib.error.URLError, OSError) as exc:
+    res = subprocess.run(
+        ["curl", "-sS", "--max-time", "20", url],
+        capture_output=True, text=True, cwd=str(REPO_ROOT),
+    )
+    if res.returncode != 0:
         # Non-fatal: devices will pick up the new manifest after the natural
         # TTL expires. Print so the operator knows but don't abort the release.
-        print(f"  WARN: jsDelivr purge failed: {exc}")
+        print(f"  WARN: jsDelivr purge failed: {res.stderr.strip() or res.returncode}")
+        return
+    status = "unknown"
+    try:
+        status = json.loads(res.stdout).get("status", "unknown")
+    except json.JSONDecodeError:
+        pass
+    print(f"  jsDelivr purge status: {status}")
 
 
 def commit_and_push(version: str, do_push: bool, dry_run: bool) -> None:

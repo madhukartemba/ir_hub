@@ -1,7 +1,10 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266httpUpdate.h>
 #include <LittleFS.h>
+#include <WiFiClientSecure.h>
 #include "NeoRing.h"
+#include "PendingOta.h"
 #include "UserPrefs.h"
 #include "config.h"
 #include "global/Global.h"
@@ -146,6 +149,115 @@ static bool mountLittleFsWithRecovery() {
     return true;
 }
 
+// ---- Downloader mode ------------------------------------------------------
+// Runs at the very top of setup() if RTC RAM has a checksum-valid pending OTA
+// slot. It initializes only display + LED ring + WiFi (no Alexa, no MQTT, no
+// device cache, no IR, no router) so the entire ~32 KB heap is available for
+// BearSSL's TLS handshake. That's the only reliable way to fit the binary
+// download on an ESP8266.
+
+static char g_downloaderProgressVersion[pending_ota::kVersionMax] = {0};
+
+static void downloaderShowStatus(const char* line1, const char* line2 = nullptr) {
+    display.clear();
+    display.setTextSize(1);
+    display.printCentered("Firmware Update", 6);
+    display.drawLine(0, 18, display.getWidth(), 18);
+    if (line1) display.printCentered(line1, 28);
+    if (line2) display.printCentered(line2, 42);
+    display.update();
+}
+
+[[noreturn]] static void runDownloaderMode(const pending_ota::Slot& slot) {
+    LOG_INFO("[Downloader] Entering for v%s (heap=%u, max_block=%u)",
+             slot.version, (unsigned)ESP.getFreeHeap(),
+             (unsigned)ESP.getMaxFreeBlockSize());
+    LOG_INFO("[Downloader] URL=%s", slot.url);
+
+    strncpy(g_downloaderProgressVersion, slot.version,
+            sizeof(g_downloaderProgressVersion) - 1);
+
+    g_displayReady = display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE, DISPLAY_FLIPPED);
+    if (!g_displayReady) {
+        LOG_ERROR("[Downloader] Display init failed — rebooting to normal mode");
+        delay(200);
+        ESP.restart();
+    }
+    char installing[24];
+    snprintf(installing, sizeof(installing), "Installing v%s", slot.version);
+    downloaderShowStatus(installing, "Connecting Wi-Fi");
+
+    ledRing.begin(NUM_LEDS, NEOPIXEL_PIN, DISPLAY_DRIVER);
+    g_ledReady = true;
+    ledRing.spinner(COLOR_INFO);
+
+    WiFi.persistent(false);
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin();  // uses stored SSID/PSK from flash
+
+    unsigned long wifiDeadline = millis() + 30000UL;
+    while (WiFi.status() != WL_CONNECTED && millis() < wifiDeadline) {
+        delay(200);
+        ledRing.update();
+    }
+    if (WiFi.status() != WL_CONNECTED) {
+        LOG_ERROR("[Downloader] Wi-Fi connect timeout — rebooting to normal mode");
+        downloaderShowStatus("Wi-Fi failed", "Try again later");
+        ledRing.solid(COLOR_ERROR);
+        ledRing.finishTransition();
+        delay(2500);
+        ESP.restart();
+    }
+    LOG_INFO("[Downloader] Wi-Fi connected (ip=%s, heap=%u)",
+             WiFi.localIP().toString().c_str(), (unsigned)ESP.getFreeHeap());
+
+    downloaderShowStatus(installing, "Downloading...");
+
+    WiFiClientSecure client;
+    client.setInsecure();
+    client.setBufferSizes(1024, 512);
+
+    ESPhttpUpdate.rebootOnUpdate(false);
+    ESPhttpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+    ESPhttpUpdate.onProgress([](int cur, int total) {
+        ledRing.update();
+        display.clear();
+        char title[24];
+        snprintf(title, sizeof(title), "Installing v%s", g_downloaderProgressVersion);
+        display.printCentered(title, 8);
+        display.drawLine(0, 20, display.getWidth(), 20);
+        display.drawProgressBar(10, 32, 108, 14, cur, total, true);
+        char pct[8];
+        unsigned p = (total > 0) ? (unsigned)(((unsigned long)cur * 100UL) / (unsigned long)total) : 0;
+        snprintf(pct, sizeof(pct), "%u%%", p);
+        display.printCentered(pct, 52);
+        display.update();
+    });
+
+    LOG_INFO("[Downloader] Starting ESPhttpUpdate (heap=%u)",
+             (unsigned)ESP.getFreeHeap());
+    t_httpUpdate_return ret = ESPhttpUpdate.update(client, slot.url);
+
+    if (ret == HTTP_UPDATE_OK) {
+        LOG_INFO("[Downloader] Flash successful — rebooting into new firmware");
+        downloaderShowStatus("Success!", "Restarting...");
+        ledRing.solid(COLOR_SUCCESS);
+        ledRing.finishTransition();
+        delay(1500);
+    } else {
+        const String& msg = ESPhttpUpdate.getLastErrorString();
+        LOG_ERROR("[Downloader] Update failed (ret=%d): %s", (int)ret, msg.c_str());
+        downloaderShowStatus("Update failed",
+                             msg.length() ? msg.c_str() : "Try again later");
+        ledRing.solid(COLOR_ERROR);
+        ledRing.finishTransition();
+        delay(3000);
+    }
+    ESP.restart();
+    while (true) delay(1000);  // unreachable
+}
+
 // Heap supervisor: logs trend + proactively restarts before fragmentation
 // causes a mid-MQTT/OTA crash. ESP8266 has ~30 KB usable heap.
 static constexpr unsigned long kHeapLogIntervalMs = 60UL * 1000UL;
@@ -178,6 +290,18 @@ static void superviseHeap() {
 
 void setup() {
     Serial.begin(115200);
+
+    // OTA downloader-mode trampoline: if the previous boot's normal-mode
+    // firmware armed a pending OTA, hand the entire heap to the TLS download
+    // by skipping all non-essential subsystem init. We clear the slot first so
+    // a crash during download falls back to normal boot on the next restart
+    // (preventing an OTA-induced boot loop).
+    pending_ota::Slot pending{};
+    bool hasPending = pending_ota::peek(pending);
+    if (hasPending) {
+        pending_ota::clear();
+        runDownloaderMode(pending);  // [[noreturn]]
+    }
 
     // Bump boot-loop counter; cleared at end of setup() when system ready.
     uint16_t bootFailures = bootGuardReadFailures();
@@ -300,33 +424,22 @@ void setup() {
     mqttConnector.setOnStateChangeCallback(onIrRemoteStateChange);
 
     otaUpdater.begin(OTA_MANIFEST_URL, FIRMWARE_VERSION, OTA_HW_VARIANT, kOtaCheckIntervalMs);
-    otaUpdater.setOnUpdateStart([]() {
-        LOG_INFO("[OTA-HTTP] Starting download — disconnecting MQTT to free heap");
-        mqttConnector.shutdown();
-        if (display.isDisplayOn() == false) display.turnOn();
-        display.clear();
-        display.printCentered("OTA Update", 10);
-        display.printCentered("Downloading...", 30);
-        display.update();
-        ledRing.spinner(COLOR_INFO);
-    });
-    otaUpdater.setOnUpdateProgress([](unsigned cur, unsigned total) {
+    otaUpdater.setOnUpdatePending([](const char* version, const char* /*url*/) {
+        // Flash a brief message before the reboot trampoline picks the OTA up
+        // in downloader mode. The actual download UI lives in runDownloaderMode().
         if (!display.isDisplayOn()) display.turnOn();
-        ledRing.update();
-        display.clear();
-        display.printCentered("OTA Update", 10);
-        display.drawProgressBar(10, 32, 108, 12, cur, total, true);
-        display.update();
-    });
-    otaUpdater.setOnUpdateError([](const char* msg) {
-        ledRing.solid(COLOR_ERROR);
+        ledRing.solid(COLOR_INFO);
         ledRing.finishTransition();
         display.clear();
-        display.printCentered("OTA Failed", 10);
-        if (msg && *msg) display.printCentered(msg, 30);
-        display.printCentered("Will retry later", 50);
+        display.printCentered("Update found", 10);
+        char line[24];
+        snprintf(line, sizeof(line), "v%s", version);
+        display.printCentered(line, 26);
+        display.printCentered("Restarting to", 42);
+        display.printCentered("install...", 54);
         display.update();
-        delay(3000);
+        // Best-effort tidy-up of network sockets before reboot.
+        mqttConnector.shutdown();
     });
     mqttConnector.setOnOtaCheckCallback([]() { otaUpdater.checkNow(); });
 

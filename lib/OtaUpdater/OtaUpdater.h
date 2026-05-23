@@ -4,15 +4,21 @@
 #include <ArduinoJson.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266httpUpdate.h>
 #include <WiFiClientSecure.h>
 #include <functional>
 #include <memory>
 #include "Log.h"
+#include "PendingOta.h"
 
 /// Pull-based OTA: periodically fetches a JSON manifest, compares versions,
-/// and self-flashes via ESP8266HTTPUpdate when a newer build is published.
-/// Designed for remote devices (manifest hosted on GitHub Releases or similar).
+/// and — when a newer build is published — stashes the URL in RTC RAM and
+/// reboots into the downloader-mode boot path defined in main.cpp.
+///
+/// We deliberately do NOT download in-process: even after MQTT teardown,
+/// Alexa + device cache + UI router leave only ~18 KB free, and BearSSL's
+/// transient handshake needs ~17 KB. Rebooting first frees the full ~32 KB,
+/// which is comfortably above the TLS budget. The user sees a brief
+/// "Installing v…" screen during the reboot.
 ///
 /// Manifest schema (minimum):
 ///   { "version": "1.0.1", "url": "https://.../firmware_v3.bin" }
@@ -57,12 +63,11 @@ class OtaUpdater {
         bootDelayUntil_ = 0;  // bypass the boot grace period for on-demand checks
     }
 
-    /// Wire UI / subsystem teardown hooks. All optional.
-    void setOnUpdateStart(std::function<void()> cb) { onUpdateStart_ = cb; }
-    void setOnUpdateProgress(std::function<void(unsigned, unsigned)> cb) {
-        onUpdateProgress_ = cb;
+    /// Called just before the device reboots into downloader mode, so the UI
+    /// can flash a "Restarting to install vX.Y.Z" message. Optional.
+    void setOnUpdatePending(std::function<void(const char* version, const char* url)> cb) {
+        onUpdatePending_ = cb;
     }
-    void setOnUpdateError(std::function<void(const char*)> cb) { onUpdateError_ = cb; }
 
     void update() {
         if (!enabled_) return;
@@ -87,19 +92,13 @@ class OtaUpdater {
     // simultaneously connecting to Wi-Fi, registering with HA, AND pulling TLS
     // — the heap spike would risk a boot-time crash on flaky networks.
     static constexpr unsigned long kBootDelayMs = 30UL * 1000UL;
-    // A TLS handshake on ESP8266 needs:
-    //   - the receive buffer (kTlsRxBuffer below)
-    //   - BearSSL session state (~6 KB)
-    //   - lwIP TCP packet buffers (~3 KB)
-    // Measured transient cost is ~11 KB for both manifest and binary download
-    // (the binary streams to flash in 1 KB chunks via ESPhttpUpdate, so it
-    // doesn't need a big buffer). 14 KB free is the floor; below that the
-    // SYS task starts OOMing during the handshake.
+    // Manifest fetch needs ~11 KB transient (TLS RX buf 1 KB + BearSSL session
+    // state ~6 KB + lwIP TCP buffers ~3 KB + JSON parse). 14 KB free is the
+    // floor; below that the SYS task starts OOMing during the handshake.
     static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
-    static constexpr uint32_t kMinHeapForUpdate = 14 * 1024;
     // Small TLS buffers only work when the server supports MFLN (RFC 6066).
-    // jsDelivr does; Fastly (which fronts raw.githubusercontent.com) usually
-    // doesn't. See docs/OTA_RELEASES.md for the recommended URL pattern.
+    // jsDelivr does; raw.githubusercontent.com (Fastly) does not. See
+    // docs/OTA_RELEASES.md for the recommended URL pattern.
     static constexpr int kTlsRxBuffer = 1024;
     static constexpr int kTlsTxBuffer = 512;
 
@@ -112,9 +111,7 @@ class OtaUpdater {
     bool enabled_ = false;
     bool checkPending_ = false;
 
-    std::function<void()> onUpdateStart_;
-    std::function<void(unsigned, unsigned)> onUpdateProgress_;
-    std::function<void(const char*)> onUpdateError_;
+    std::function<void(const char*, const char*)> onUpdatePending_;
 
     void performCheck() {
         LOG_INFO("[OTA-HTTP] Checking manifest at %s", manifestUrl_);
@@ -141,18 +138,18 @@ class OtaUpdater {
         LOG_INFO("[OTA-HTTP] New firmware available: %s -> %s",
                  currentVersion_, newVersion.c_str());
 
-        // Re-check heap before committing to the download — the manifest fetch
-        // may have left the heap slightly more fragmented.
-        freeHeap = ESP.getFreeHeap();
-        if (freeHeap < kMinHeapForUpdate) {
-            LOG_WARN("[OTA-HTTP] New firmware available but heap too low "
-                     "(%u < %u) — will retry next cycle",
-                     (unsigned)freeHeap, (unsigned)kMinHeapForUpdate);
+        // Stash the URL in RTC RAM and reboot into downloader mode. We don't
+        // download in-process because BearSSL needs more transient heap than
+        // we have once Alexa + device cache + UI are loaded.
+        if (!pending_ota::arm(firmwareUrl.c_str(), newVersion.c_str())) {
+            LOG_ERROR("[OTA-HTTP] Failed to arm pending OTA (URL or version too long)");
             return;
         }
+        if (onUpdatePending_) onUpdatePending_(newVersion.c_str(), firmwareUrl.c_str());
 
-        LOG_INFO("[OTA-HTTP] Downloading from %s", firmwareUrl.c_str());
-        performUpdate(firmwareUrl.c_str());
+        LOG_INFO("[OTA-HTTP] Restarting into downloader mode...");
+        delay(1500);  // let the UI message render before the reboot
+        ESP.restart();
     }
 
     bool fetchManifest(String& outUrl, String& outVersion) {
@@ -212,42 +209,6 @@ class OtaUpdater {
         outVersion = version;
         outUrl = url;
         return true;
-    }
-
-    void performUpdate(const char* url) {
-        if (onUpdateStart_) onUpdateStart_();
-
-        bool isHttps = urlIsHttps(url);
-        std::unique_ptr<WiFiClient> client = makeClient(isHttps);
-        if (!client) {
-            LOG_ERROR("[OTA-HTTP] Failed to allocate update client");
-            if (onUpdateError_) onUpdateError_("no client");
-            return;
-        }
-
-        ESPhttpUpdate.rebootOnUpdate(false);
-        ESPhttpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-        ESPhttpUpdate.onProgress([this](int cur, int total) {
-            if (onUpdateProgress_) onUpdateProgress_((unsigned)cur, (unsigned)total);
-        });
-
-        t_httpUpdate_return ret = ESPhttpUpdate.update(*client, url);
-        switch (ret) {
-            case HTTP_UPDATE_FAILED: {
-                const String& msg = ESPhttpUpdate.getLastErrorString();
-                LOG_ERROR("[OTA-HTTP] Update failed: %s", msg.c_str());
-                if (onUpdateError_) onUpdateError_(msg.c_str());
-                break;
-            }
-            case HTTP_UPDATE_NO_UPDATES:
-                LOG_INFO("[OTA-HTTP] Server reported no updates");
-                break;
-            case HTTP_UPDATE_OK:
-                LOG_INFO("[OTA-HTTP] Update successful — restarting");
-                delay(500);
-                ESP.restart();
-                break;
-        }
     }
 
     static bool urlIsHttps(const char* url) {
