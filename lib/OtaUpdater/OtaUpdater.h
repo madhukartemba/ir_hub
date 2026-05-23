@@ -87,13 +87,20 @@ class OtaUpdater {
     // simultaneously connecting to Wi-Fi, registering with HA, AND pulling TLS
     // — the heap spike would risk a boot-time crash on flaky networks.
     static constexpr unsigned long kBootDelayMs = 30UL * 1000UL;
-    // A TLS manifest GET is small (~10 KB of BearSSL working set + tiny JSON).
-    // The actual firmware download is heavier because ESPhttpUpdate streams
-    // straight into flash but still keeps the TLS session + HTTP buffers
-    // around. Split the threshold so a manual "Check Update" can succeed even
-    // when MQTT/Alexa are eating their normal share of heap.
-    static constexpr uint32_t kMinHeapForManifest = 10 * 1024;
-    static constexpr uint32_t kMinHeapForUpdate = 16 * 1024;
+    // A TLS handshake on ESP8266 needs:
+    //   - the receive buffer (kTlsRxBuffer below)
+    //   - BearSSL session state (~6 KB)
+    //   - lwIP TCP packet buffers (~3 KB)
+    // So the minimum free heap before we even *attempt* a manifest fetch is
+    // ~12-14 KB. Refuse below that — better to log "skipped" than to OOM the
+    // SYS task and panic the chip.
+    static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
+    static constexpr uint32_t kMinHeapForUpdate = 20 * 1024;
+    // Small TLS buffers only work when the server supports MFLN (RFC 6066).
+    // jsDelivr does; Fastly (which fronts raw.githubusercontent.com) usually
+    // doesn't. See docs/OTA_RELEASES.md for the recommended URL pattern.
+    static constexpr int kTlsRxBuffer = 1024;
+    static constexpr int kTlsTxBuffer = 512;
 
     const char* manifestUrl_ = "";
     const char* currentVersion_ = "0.0.0";
@@ -156,9 +163,10 @@ class OtaUpdater {
         }
 
         HTTPClient http;
-        http.setTimeout(8000);
+        http.setTimeout(10000);
         http.useHTTP10(true);
         http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+        http.setUserAgent(String("IRHub/") + currentVersion_);
         if (!http.begin(*client, manifestUrl_)) {
             LOG_WARN("[OTA-HTTP] http.begin failed for manifest");
             return false;
@@ -166,7 +174,7 @@ class OtaUpdater {
 
         int code = http.GET();
         if (code != HTTP_CODE_OK) {
-            LOG_WARN("[OTA-HTTP] Manifest GET returned %d", code);
+            logHttpFailure("Manifest GET", code, isHttps, client.get());
             http.end();
             return false;
         }
@@ -249,15 +257,40 @@ class OtaUpdater {
         if (isHttps) {
             auto* secure = new (std::nothrow) WiFiClientSecure();
             if (!secure) return nullptr;
-            // Trust-on-first-use. Bytes are still encrypted in transit; an
-            // attacker controlling the network could in principle MITM the
-            // update, which is why we recommend signing the binary if you
-            // care about supply-chain attacks (see OTA_RELEASES.md).
+            // Trust-on-first-use. Bytes are still encrypted in transit; for
+            // supply-chain protection sign the binary (see OTA_RELEASES.md).
             secure->setInsecure();
-            secure->setBufferSizes(512, 512);
+            secure->setBufferSizes(kTlsRxBuffer, kTlsTxBuffer);
             return std::unique_ptr<WiFiClient>(secure);
         }
         return std::unique_ptr<WiFiClient>(new (std::nothrow) WiFiClient());
+    }
+
+    static void logHttpFailure(const char* op, int code, bool isHttps, WiFiClient* client) {
+        const char* httpErr = "";
+        switch (code) {
+            case -1:  httpErr = " (CONNECTION_FAILED — likely TLS handshake)"; break;
+            case -2:  httpErr = " (SEND_HEADER_FAILED)"; break;
+            case -3:  httpErr = " (SEND_PAYLOAD_FAILED)"; break;
+            case -4:  httpErr = " (NOT_CONNECTED)"; break;
+            case -5:  httpErr = " (CONNECTION_LOST)"; break;
+            case -6:  httpErr = " (NO_STREAM)"; break;
+            case -7:  httpErr = " (NO_HTTP_SERVER)"; break;
+            case -8:  httpErr = " (TOO_LESS_RAM — bump TLS buffers down or free heap)"; break;
+            case -11: httpErr = " (READ_TIMEOUT)"; break;
+            default:  break;
+        }
+        if (isHttps && client) {
+            auto* secure = static_cast<WiFiClientSecure*>(client);
+            char errBuf[64] = {0};
+            int sslErr = secure->getLastSSLError(errBuf, sizeof(errBuf));
+            if (sslErr != 0) {
+                LOG_WARN("[OTA-HTTP] %s returned %d%s — SSL err %d: %s",
+                         op, code, httpErr, sslErr, errBuf);
+                return;
+            }
+        }
+        LOG_WARN("[OTA-HTTP] %s returned %d%s", op, code, httpErr);
     }
 
     /// Returns >0 if a is newer than b, 0 if equal, <0 if older.

@@ -13,7 +13,7 @@ Edit `include/secrets.h` before flashing:
 
 ```c
 #define OTA_PASSWORD       "pick-something-long"
-#define OTA_MANIFEST_URL   "https://raw.githubusercontent.com/<you>/<repo>/main/ota/manifest.json"
+#define OTA_MANIFEST_URL   "https://cdn.jsdelivr.net/gh/<you>/<repo>@main/ota/manifest.json"
 ```
 
 - `OTA_PASSWORD` protects LAN pushes via `pio run --target upload --upload-port <ip>`.
@@ -21,10 +21,22 @@ Edit `include/secrets.h` before flashing:
 - `OTA_MANIFEST_URL` is what the device polls. Empty disables HTTP-pull OTA
   entirely.
 
-`raw.githubusercontent.com` is the recommended host for the manifest:
-- Direct file, no redirects.
-- Versioned in git, so you have an audit trail of every release.
-- CDN-cached but with a short TTL, so changes propagate in a few minutes.
+**Use jsDelivr, not `raw.githubusercontent.com`.** jsDelivr is a free CDN
+that mirrors public GitHub repos and — crucially — supports the TLS MFLN
+extension (RFC 6066). The ESP8266 has only ~18-20 KB free heap available
+for a TLS handshake, which is too tight to receive full-size 16 KB TLS
+records. MFLN lets the client negotiate smaller records so a 1 KB receive
+buffer is sufficient. `raw.githubusercontent.com` is fronted by Fastly,
+whose MFLN support is inconsistent — it works for some clients/networks
+and crashes the SYS task (Exception 29) for others.
+
+Both URLs serve the same file from the same commit; jsDelivr just plays
+nicer with constrained TLS clients.
+
+The actual **firmware binary** stays on GitHub Releases (linked from inside
+the manifest). By the time the device downloads it, MQTT has been shut down
+to free heap, so the larger TLS buffer needed for the GitHub Releases edge
+(objects.githubusercontent.com) usually fits.
 
 ### 2. Commit the manifest skeleton
 
