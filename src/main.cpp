@@ -38,11 +38,19 @@ static bool g_speakerReady = false;
 // RTC user memory survives soft restarts (but not full power loss), which is
 // exactly the semantics we want: a board cycling on a broken peripheral keeps
 // the counter; a user unplugging-and-replugging starts fresh.
-struct __attribute__((packed)) BootGuard {
+//
+// NOTE: do NOT mark this `packed`. `rtcUserMemoryRead/Write` requires a
+// 4-byte-aligned uint32_t* and the struct is already 8 bytes with natural
+// 4-byte alignment (uint32_t + uint16_t + uint16_t, no padding). `packed`
+// would only relax the alignment guarantee and trigger
+// -Waddress-of-packed-member when we cast `&g` to uint32_t*.
+struct BootGuard {
     uint32_t magic;
     uint16_t failures;
     uint16_t reserved;
 };
+static_assert(sizeof(BootGuard) == 8, "BootGuard layout changed unexpectedly");
+static_assert(alignof(BootGuard) >= 4, "BootGuard must be uint32-aligned for RTC API");
 static constexpr uint32_t kBootGuardMagic = 0xCAFEF00D;
 static constexpr uint32_t kBootGuardRtcOffset = 64;  // away from OTA region
 static constexpr uint16_t kBootGuardSoftLimit = 3;
