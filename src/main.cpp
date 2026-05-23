@@ -379,8 +379,17 @@ void setup() {
 }
 
 void loop() {
+    // Service the LED ring before AND after the screen refresh. NeoRing has
+    // an internal 60 fps rate-limiter, so extra calls are essentially free
+    // no-ops — but the call right after `router.update()` is critical: the
+    // screen refresh ends with a blocking OLED I²C transfer, and without a
+    // service call immediately afterward the LED ring waits another full
+    // wifi/alexa/mqtt cycle before getting a chance to render, which is
+    // exactly what makes the animation feel choppy on non-Home screens.
+    ledRing.update();
     wifiManager.update();
     router.update();
+    ledRing.update();
     button.update();
     alexaConnector.update();
     mqttConnector.update();

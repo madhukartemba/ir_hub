@@ -37,6 +37,16 @@ class Display {
         if (sdaPin != -1 && sclPin != -1) {
             Wire.begin(sdaPin, sclPin);
         }
+        // ESP8266's Wire library defaults to 100 kHz, which means a single
+        // 1024-byte OLED frame takes ~82 ms to push over the bus — long
+        // enough that any animation we run alongside the display (LED ring,
+        // recording pulse, etc.) visibly hitches every refresh.
+        //
+        // 400 kHz is "Fast Mode" — the rated max for both the SH1106 OLED
+        // and the DRV2605 haptics driver that share this bus, so it's safe
+        // for the whole I²C peripheral set with no per-device clock juggling
+        // required. Cuts a full-frame transfer to ~23 ms.
+        Wire.setClock(400000);
 
         // Create display object based on type
         if (displayType == SH1106) {
@@ -80,11 +90,30 @@ class Display {
         unsigned long currentTime = millis();
         unsigned long frameDelay = 1000 / fps;  // ms per frame
 
-        if (currentTime - lastUpdateTime >= frameDelay) {
+        if (currentTime - lastUpdateTime < frameDelay) return;
+        lastUpdateTime = currentTime;
+
+        // Dirty-buffer skip: most non-Home screens (Settings menu, device
+        // list, AddDevice "Click to begin" steps) re-draw an identical
+        // 1024-byte buffer every frame. Sending that takes ~12 ms over
+        // I²C, during which the LED ring can't update — that's the dominant
+        // source of perceived animation hitching. Hashing the buffer is
+        // ~30 µs (1024 byte FNV-1a at 160 MHz), and on static frames we
+        // skip the I²C transfer entirely. Animated screens (recording
+        // pulse, progress bar) keep paying the full cost because their
+        // pixels really do change.
+        uint32_t hash = computeBufferHash();
+        if (needsFirstSend || hash != lastBufferHash) {
             display->sendBuffer();
-            lastUpdateTime = currentTime;
+            lastBufferHash = hash;
+            needsFirstSend = false;
         }
     }
+
+    /// Force the next update() to push the buffer regardless of the dirty
+    /// check. Useful when external code knows the OLED's GDDRAM may have
+    /// been disturbed (e.g. coming back from power save).
+    void invalidate() { needsFirstSend = true; }
 
     // Setter for FPS
     void setFPS(uint8_t targetFPS) {
@@ -112,6 +141,10 @@ class Display {
         if (display) {
             display->setPowerSave(0);
             displayOn = true;
+            // Be safe: if GDDRAM survived the sleep we'll re-send the same
+            // pixels (no visible glitch); if it didn't we'd otherwise be
+            // stuck on a blank screen until the next pixel change.
+            needsFirstSend = true;
         }
     }
     void turnOff() {
@@ -418,6 +451,27 @@ class Display {
     uint8_t fps = 10;              // Target FPS
     uint8_t defaultFPS = 10;       // Default FPS
     unsigned long lastUpdateTime;  // Last time display was updated
+
+    // Dirty-buffer skip state. Set `needsFirstSend` true to force a send on
+    // the next update() regardless of hash (used at boot and after wake).
+    uint32_t lastBufferHash = 0;
+    bool needsFirstSend = true;
+
+    /// Cheap content hash over the full U8g2 frame buffer. FNV-1a 32-bit is
+    /// a good fit: ~30 µs for 1024 bytes on ESP8266 @ 160 MHz, low
+    /// collision rate, no allocations.
+    uint32_t computeBufferHash() const {
+        if (!display) return 0;
+        const uint8_t* buf = display->getBufferPtr();
+        size_t size = static_cast<size_t>(display->getBufferTileWidth()) *
+                      display->getBufferTileHeight() * 8;
+        uint32_t h = 0x811C9DC5u;  // FNV offset basis
+        for (size_t i = 0; i < size; i++) {
+            h ^= buf[i];
+            h *= 0x01000193u;  // FNV prime
+        }
+        return h;
+    }
 
     // Helper methods
     void wrapText(const String& text, int x, int y, int maxWidth, TextAlign align = ALIGN_LEFT) {
