@@ -87,9 +87,13 @@ class OtaUpdater {
     // simultaneously connecting to Wi-Fi, registering with HA, AND pulling TLS
     // — the heap spike would risk a boot-time crash on flaky networks.
     static constexpr unsigned long kBootDelayMs = 30UL * 1000UL;
-    // ESPhttpUpdate + WiFiClientSecure together need ~16-20 KB. Skip the check
-    // if we're already low on heap rather than risk an OOM mid-update.
-    static constexpr uint32_t kMinHeapForUpdate = 18 * 1024;
+    // A TLS manifest GET is small (~10 KB of BearSSL working set + tiny JSON).
+    // The actual firmware download is heavier because ESPhttpUpdate streams
+    // straight into flash but still keeps the TLS session + HTTP buffers
+    // around. Split the threshold so a manual "Check Update" can succeed even
+    // when MQTT/Alexa are eating their normal share of heap.
+    static constexpr uint32_t kMinHeapForManifest = 10 * 1024;
+    static constexpr uint32_t kMinHeapForUpdate = 16 * 1024;
 
     const char* manifestUrl_ = "";
     const char* currentVersion_ = "0.0.0";
@@ -108,8 +112,9 @@ class OtaUpdater {
         LOG_INFO("[OTA-HTTP] Checking manifest at %s", manifestUrl_);
 
         uint32_t freeHeap = ESP.getFreeHeap();
-        if (freeHeap < kMinHeapForUpdate) {
-            LOG_WARN("[OTA-HTTP] Skipping check, low heap (%u)", (unsigned)freeHeap);
+        if (freeHeap < kMinHeapForManifest) {
+            LOG_WARN("[OTA-HTTP] Skipping check, low heap (%u < %u)",
+                     (unsigned)freeHeap, (unsigned)kMinHeapForManifest);
             return;
         }
 
@@ -127,8 +132,18 @@ class OtaUpdater {
 
         LOG_INFO("[OTA-HTTP] New firmware available: %s -> %s",
                  currentVersion_, newVersion.c_str());
-        LOG_INFO("[OTA-HTTP] Downloading from %s", firmwareUrl.c_str());
 
+        // Re-check heap before committing to the download — the manifest fetch
+        // may have left the heap slightly more fragmented.
+        freeHeap = ESP.getFreeHeap();
+        if (freeHeap < kMinHeapForUpdate) {
+            LOG_WARN("[OTA-HTTP] New firmware available but heap too low "
+                     "(%u < %u) — will retry next cycle",
+                     (unsigned)freeHeap, (unsigned)kMinHeapForUpdate);
+            return;
+        }
+
+        LOG_INFO("[OTA-HTTP] Downloading from %s", firmwareUrl.c_str());
         performUpdate(firmwareUrl.c_str());
     }
 
