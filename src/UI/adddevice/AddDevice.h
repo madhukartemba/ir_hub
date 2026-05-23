@@ -58,16 +58,17 @@ class AddDevice : public Screen {
 
         button.setLongPressCallback([this]() {
             LOG_DEBUG("AddDevice onButtonLongPress");
-            // Long press cancels operation and goes back
+            // Long press always means "back". If we're mid-recording we just
+            // need to stop the IR capture before navigating away — we
+            // explicitly do NOT drop into the ERROR state, because that would
+            // show a misleading "Unknown protocol / Try again" screen
+            // (firstCode is still the default-constructed UNKNOWN value) when
+            // the user only wanted to abort.
             if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
                 LOG_DEBUG("Cancelling recording via long press");
                 irManager.stopCapture();
-                currentState = State::ERROR;
-                speaker.errorBeep();
-            } else {
-                // Go back to main menu
-                router.pop();
             }
+            router.pop();
         });
     }
 
