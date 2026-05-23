@@ -26,7 +26,6 @@ class HomeScreen : public Screen {
         animationFrame = 0;
         ringColor();
 
-        // Change refresh rate to 1 FPS for status screen
         display.setFPS(1);
 
         // Change button behavior
@@ -87,8 +86,7 @@ class HomeScreen : public Screen {
             return;
         }
 
-        // Update animation frame every 500ms
-        if (millis() - animationTimer > 500) {
+        if (millis() - animationTimer >= 1000) {
             animationFrame = (animationFrame + 1) % 4;
             animationTimer = millis();
         }
@@ -186,8 +184,6 @@ class HomeScreen : public Screen {
         display.setTextSize(1);
         display.setTextColor(1);
 
-        // Format directly into a stack buffer to avoid the per-frame `String`
-        // heap allocations that `WiFi.localIP().toString()` would cause.
         char body[20];
         if (WiFi.status() == WL_CONNECTED) {
             IPAddress ip = WiFi.localIP();
@@ -230,9 +226,6 @@ class HomeScreen : public Screen {
                 break;
         }
 
-        // Format the uptime directly into a fixed stack buffer to avoid the
-        // ~7 `String` heap allocations the previous implementation made every
-        // second. Over days that was a large source of heap fragmentation.
         char buf[24];
         unsigned long uptime = millis() / 1000;
         unsigned long hours = uptime / 3600;
