@@ -4,6 +4,10 @@
 #include "../preferences.h"
 #include "../ui/MainMenu.h"
 
+#ifndef FIRMWARE_VERSION
+#  define FIRMWARE_VERSION "0.0.0"
+#endif
+
 class HomeScreen : public Screen {
    private:
     unsigned long lastActivityTime;
@@ -127,12 +131,12 @@ class HomeScreen : public Screen {
     }
 
     void drawHeader() {
-        // Draw title in top left
         display.setTextSize(1);
-        display.setTextColor(1);  // White text
-        display.print("IR Hub", 2, 0);
+        display.setTextColor(1);
+        char title[20];
+        snprintf(title, sizeof(title), "IR Hub v%s", FIRMWARE_VERSION);
+        display.print(title, 2, 0);
 
-        // Draw top signal bar
         drawSignalBar();
     }
 

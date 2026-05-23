@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ESP8266WiFi.h>
 #include <LittleFS.h>
 #include "NeoRing.h"
 #include "UserPrefs.h"
@@ -6,7 +7,19 @@
 #include "global/Global.h"
 #include "led/ClickSweepOnceAnimation.h"
 #include "preferences.h"
+#include "secrets.h"
 #include "ui/HomeScreen.h"
+
+#ifndef FIRMWARE_VERSION
+#  define FIRMWARE_VERSION "0.0.0"
+#endif
+#ifndef OTA_HW_VARIANT
+#  define OTA_HW_VARIANT ""
+#endif
+
+// 6-hour gap between manifest checks. Long enough to be polite to GitHub's
+// edge cache, short enough that a critical patch reaches the friend overnight.
+static constexpr unsigned long kOtaCheckIntervalMs = 6UL * 60UL * 60UL * 1000UL;
 
 unsigned long lastAnimSwitch = 0;
 const unsigned long animSwitchInterval = 5000;  // 5 seconds
@@ -286,6 +299,37 @@ void setup() {
     alexaConnector.setOnStateChangeCallback(onIrRemoteStateChange);
     mqttConnector.setOnStateChangeCallback(onIrRemoteStateChange);
 
+    otaUpdater.begin(OTA_MANIFEST_URL, FIRMWARE_VERSION, OTA_HW_VARIANT, kOtaCheckIntervalMs);
+    otaUpdater.setOnUpdateStart([]() {
+        LOG_INFO("[OTA-HTTP] Starting download — disconnecting MQTT to free heap");
+        mqttConnector.shutdown();
+        if (display.isDisplayOn() == false) display.turnOn();
+        display.clear();
+        display.printCentered("OTA Update", 10);
+        display.printCentered("Downloading...", 30);
+        display.update();
+        ledRing.spinner(COLOR_INFO);
+    });
+    otaUpdater.setOnUpdateProgress([](unsigned cur, unsigned total) {
+        if (!display.isDisplayOn()) display.turnOn();
+        ledRing.update();
+        display.clear();
+        display.printCentered("OTA Update", 10);
+        display.drawProgressBar(10, 32, 108, 12, cur, total, true);
+        display.update();
+    });
+    otaUpdater.setOnUpdateError([](const char* msg) {
+        ledRing.solid(COLOR_ERROR);
+        ledRing.finishTransition();
+        display.clear();
+        display.printCentered("OTA Failed", 10);
+        if (msg && *msg) display.printCentered(msg, 30);
+        display.printCentered("Will retry later", 50);
+        display.update();
+        delay(3000);
+    });
+    mqttConnector.setOnOtaCheckCallback([]() { otaUpdater.checkNow(); });
+
     // Show ready message on display
     delay(1000);
     display.clear();
@@ -331,6 +375,7 @@ void loop() {
     button.update();
     alexaConnector.update();
     mqttConnector.update();
+    otaUpdater.update();
     ledRing.update();
     superviseHeap();
 }

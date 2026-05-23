@@ -27,6 +27,7 @@ class MQTTConnector {
     static constexpr unsigned long kReconnectIntervalMs = 5000;
 
     std::function<void(const Device& device, bool state)> onStateChangeCallback;
+    std::function<void()> onOtaCheckCallback;
 
     static void staticCallback(char* topic, byte* payload, unsigned int length) {
         if (instance) {
@@ -54,6 +55,10 @@ class MQTTConnector {
 
     String stateTopicForId(int deviceId) const {
         return String("ir_hub/") + hubMacHex + "/device/" + String(deviceId) + "/state";
+    }
+
+    String otaCheckTopic() const {
+        return String("ir_hub/") + hubMacHex + "/ota/check";
     }
 
     bool publishDiscovery(const Device& device) {
@@ -104,6 +109,9 @@ class MQTTConnector {
         if (!ok) {
             LOG_ERROR("[MQTT] Failed to subscribe to command topics");
         }
+        if (!mqttClient.subscribe(otaCheckTopic().c_str())) {
+            LOG_WARN("[MQTT] Failed to subscribe to OTA check topic");
+        }
         return ok;
     }
 
@@ -130,14 +138,23 @@ class MQTTConnector {
     }
 
     void handleIncomingMessage(char* topic, byte* payload, unsigned int length) {
-        // Topic shape is `ir_hub/<macHex>/device/<id>/set`. We parse it with
-        // pointer arithmetic so an incoming MQTT message costs zero heap.
+        // Fast-path the (rare) OTA check command before parsing the device
+        // topic shape; topic strings are interned by PubSubClient on the stack.
+        const size_t topicLen = strlen(topic);
+        const String otaTopic = otaCheckTopic();
+        if (topicLen == otaTopic.length() && memcmp(topic, otaTopic.c_str(), topicLen) == 0) {
+            LOG_INFO("[MQTT] OTA check requested via MQTT");
+            if (onOtaCheckCallback) onOtaCheckCallback();
+            return;
+        }
+
+        // Topic shape is `ir_hub/<macHex>/device/<id>/set`. Pointer-arithmetic
+        // parser so an incoming MQTT message costs zero heap.
         const size_t macLen = hubMacHex.length();
         const size_t kPrefixFixed = sizeof("ir_hub/") - 1;        // 7
         const size_t kMid = sizeof("/device/") - 1;               // 8
         const size_t kSuffix = sizeof("/set") - 1;                // 4
 
-        const size_t topicLen = strlen(topic);
         if (topicLen < kPrefixFixed + macLen + kMid + 1 + kSuffix) {
             return;
         }
@@ -251,6 +268,10 @@ class MQTTConnector {
 
     void setOnStateChangeCallback(std::function<void(const Device& device, bool state)> callback) {
         onStateChangeCallback = callback;
+    }
+
+    void setOnOtaCheckCallback(std::function<void()> callback) {
+        onOtaCheckCallback = callback;
     }
 
     void begin() {

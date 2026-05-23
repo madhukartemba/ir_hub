@@ -11,6 +11,11 @@
 #include "MqttCredentials.h"
 #include "NeoRing.h"
 #include "Speaker.h"
+#include "secrets.h"
+
+#ifndef OTA_PASSWORD
+#  define OTA_PASSWORD ""
+#endif
 
 class WiFiManagerLib {
    private:
@@ -239,6 +244,12 @@ class WiFiManagerLib {
         display.update();
 
         ArduinoOTA.setHostname("ir-hub");
+        if (OTA_PASSWORD[0] != '\0') {
+            ArduinoOTA.setPassword(OTA_PASSWORD);
+            LOG_INFO("[OTA] LAN push protected by password");
+        } else {
+            LOG_WARN("[OTA] No OTA_PASSWORD set — LAN push is unauthenticated");
+        }
 
         ArduinoOTA.onStart([this]() {
             const char* type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";

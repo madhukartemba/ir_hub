@@ -11,6 +11,7 @@
 #include "IRManager.h"
 #include "IdGen.h"
 #include "Log.h"
+#include "OtaUpdater.h"
 #include "Router.h"
 #include "Speaker.h"
 #include "WiFiManagerLib.h"
@@ -28,3 +29,4 @@ extern DeviceManager deviceManager;
 extern AlexaConnector alexaConnector;
 extern MQTTConnector mqttConnector;
 extern WiFiManagerLib wifiManager;
+extern OtaUpdater otaUpdater;
