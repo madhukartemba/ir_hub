@@ -1,7 +1,8 @@
 #include <Arduino.h>
+#include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266httpUpdate.h>
 #include <LittleFS.h>
+#include <Updater.h>
 #include <WiFiClientSecure.h>
 #include "NeoRing.h"
 #include "PendingOta.h"
@@ -156,7 +157,13 @@ static bool mountLittleFsWithRecovery() {
 // BearSSL's TLS handshake. That's the only reliable way to fit the binary
 // download on an ESP8266.
 
-static char g_downloaderProgressVersion[pending_ota::kVersionMax] = {0};
+// TLS receive buffer for the firmware download. 4 KB easily fits Cloudflare's
+// HTTP/1.1 MSS-framed response records (~1.4 KB) plus margin. 16 KB (the TLS
+// maximum) would OOM in downloader mode (~14 KB transient breaks our budget),
+// and 1 KB was the size we tried first — it crashed mid-stream because some
+// edges emit records up to ~3 KB even with MTU-aware framing.
+static constexpr int kDownloaderTlsRxBuffer = 4096;
+static constexpr int kDownloaderTlsTxBuffer = 512;
 
 static void downloaderShowStatus(const char* line1, const char* line2 = nullptr) {
     display.clear();
@@ -168,14 +175,133 @@ static void downloaderShowStatus(const char* line1, const char* line2 = nullptr)
     display.update();
 }
 
+static void downloaderShowProgress(const char* version, size_t cur, size_t total) {
+    if (g_ledReady) ledRing.update();
+    display.clear();
+    char title[32];
+    snprintf(title, sizeof(title), "Installing v%s", version);
+    display.printCentered(title, 8);
+    display.drawLine(0, 20, display.getWidth(), 20);
+    display.drawProgressBar(10, 32, 108, 14, (int)cur, (int)total, true);
+    char pct[8];
+    unsigned p = (total > 0) ? (unsigned)(((unsigned long)cur * 100UL) / (unsigned long)total) : 0;
+    snprintf(pct, sizeof(pct), "%u%%", p);
+    display.printCentered(pct, 52);
+    display.update();
+}
+
+static void downloaderLogSslError(WiFiClientSecure& client, const char* phase) {
+    char buf[64] = {0};
+    int err = client.getLastSSLError(buf, sizeof(buf));
+    if (err != 0) {
+        LOG_ERROR("[Downloader] BearSSL err %d (%s) during %s", err, buf, phase);
+    }
+}
+
+/// Streams the firmware binary directly into the Update region. Avoids
+/// ESPhttpUpdate so we (a) reuse the exact HTTPClient setup that worked for
+/// the manifest fetch and (b) skip the x-ESP8266-* request headers that some
+/// edges/WAFs reject under load.
+static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
+                                   const char* version) {
+    HTTPClient http;
+    http.setTimeout(20000);
+    http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+    http.setUserAgent(String("IRHub-OTA/") + version);
+    if (!http.begin(client, url)) {
+        LOG_ERROR("[Downloader] http.begin failed");
+        return false;
+    }
+
+    int code = http.GET();
+    if (code != HTTP_CODE_OK) {
+        LOG_ERROR("[Downloader] GET returned %d", code);
+        downloaderLogSslError(client, "GET");
+        http.end();
+        return false;
+    }
+
+    int totalLen = http.getSize();
+    if (totalLen <= 0) {
+        LOG_ERROR("[Downloader] Missing/invalid Content-Length: %d", totalLen);
+        http.end();
+        return false;
+    }
+    LOG_INFO("[Downloader] Binary is %d bytes; beginning Update", totalLen);
+
+    if (!Update.begin((size_t)totalLen, U_FLASH)) {
+        LOG_ERROR("[Downloader] Update.begin failed (err=%d)", Update.getError());
+        http.end();
+        return false;
+    }
+
+    WiFiClient* stream = http.getStreamPtr();
+    uint8_t buf[512];
+    size_t written = 0;
+    unsigned long lastProgress = millis();
+    unsigned long lastByteAt = millis();
+    constexpr unsigned long kStreamIdleTimeoutMs = 20000UL;
+
+    while (written < (size_t)totalLen) {
+        int avail = stream->available();
+        if (avail <= 0) {
+            if (!http.connected() && stream->available() <= 0) {
+                LOG_ERROR("[Downloader] Stream closed early at %u/%d",
+                          (unsigned)written, totalLen);
+                downloaderLogSslError(client, "read");
+                break;
+            }
+            if (millis() - lastByteAt > kStreamIdleTimeoutMs) {
+                LOG_ERROR("[Downloader] Stream idle timeout at %u/%d",
+                          (unsigned)written, totalLen);
+                break;
+            }
+            delay(1);
+            continue;
+        }
+        size_t toRead = (size_t)avail < sizeof(buf) ? (size_t)avail : sizeof(buf);
+        int n = stream->readBytes(buf, toRead);
+        if (n <= 0) {
+            LOG_ERROR("[Downloader] readBytes returned %d at %u/%d",
+                      n, (unsigned)written, totalLen);
+            downloaderLogSslError(client, "read");
+            break;
+        }
+        if (Update.write(buf, (size_t)n) != (size_t)n) {
+            LOG_ERROR("[Downloader] Update.write failed at %u (err=%d)",
+                      (unsigned)written, Update.getError());
+            Update.end(false);
+            http.end();
+            return false;
+        }
+        written += (size_t)n;
+        lastByteAt = millis();
+        if (millis() - lastProgress > 250) {
+            downloaderShowProgress(version, written, (size_t)totalLen);
+            lastProgress = millis();
+        }
+    }
+    http.end();
+
+    if (written != (size_t)totalLen) {
+        LOG_ERROR("[Downloader] Truncated download: %u/%d", (unsigned)written, totalLen);
+        Update.end(false);
+        return false;
+    }
+
+    if (!Update.end(true)) {
+        LOG_ERROR("[Downloader] Update.end failed (err=%d)", Update.getError());
+        return false;
+    }
+    downloaderShowProgress(version, (size_t)totalLen, (size_t)totalLen);
+    return true;
+}
+
 [[noreturn]] static void runDownloaderMode(const pending_ota::Slot& slot) {
     LOG_INFO("[Downloader] Entering for v%s (heap=%u, max_block=%u)",
              slot.version, (unsigned)ESP.getFreeHeap(),
              (unsigned)ESP.getMaxFreeBlockSize());
     LOG_INFO("[Downloader] URL=%s", slot.url);
-
-    strncpy(g_downloaderProgressVersion, slot.version,
-            sizeof(g_downloaderProgressVersion) - 1);
 
     g_displayReady = display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE, DISPLAY_FLIPPED);
     if (!g_displayReady) {
@@ -183,7 +309,7 @@ static void downloaderShowStatus(const char* line1, const char* line2 = nullptr)
         delay(200);
         ESP.restart();
     }
-    char installing[24];
+    char installing[32];
     snprintf(installing, sizeof(installing), "Installing v%s", slot.version);
     downloaderShowStatus(installing, "Connecting Wi-Fi");
 
@@ -216,40 +342,21 @@ static void downloaderShowStatus(const char* line1, const char* line2 = nullptr)
 
     WiFiClientSecure client;
     client.setInsecure();
-    client.setBufferSizes(1024, 512);
+    client.setBufferSizes(kDownloaderTlsRxBuffer, kDownloaderTlsTxBuffer);
 
-    ESPhttpUpdate.rebootOnUpdate(false);
-    ESPhttpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-    ESPhttpUpdate.onProgress([](int cur, int total) {
-        ledRing.update();
-        display.clear();
-        char title[24];
-        snprintf(title, sizeof(title), "Installing v%s", g_downloaderProgressVersion);
-        display.printCentered(title, 8);
-        display.drawLine(0, 20, display.getWidth(), 20);
-        display.drawProgressBar(10, 32, 108, 14, cur, total, true);
-        char pct[8];
-        unsigned p = (total > 0) ? (unsigned)(((unsigned long)cur * 100UL) / (unsigned long)total) : 0;
-        snprintf(pct, sizeof(pct), "%u%%", p);
-        display.printCentered(pct, 52);
-        display.update();
-    });
+    LOG_INFO("[Downloader] Starting download (heap=%u)", (unsigned)ESP.getFreeHeap());
+    bool ok = downloaderStreamUpdate(client, slot.url, slot.version);
 
-    LOG_INFO("[Downloader] Starting ESPhttpUpdate (heap=%u)",
-             (unsigned)ESP.getFreeHeap());
-    t_httpUpdate_return ret = ESPhttpUpdate.update(client, slot.url);
-
-    if (ret == HTTP_UPDATE_OK) {
+    if (ok) {
         LOG_INFO("[Downloader] Flash successful — rebooting into new firmware");
         downloaderShowStatus("Success!", "Restarting...");
         ledRing.solid(COLOR_SUCCESS);
         ledRing.finishTransition();
         delay(1500);
     } else {
-        const String& msg = ESPhttpUpdate.getLastErrorString();
-        LOG_ERROR("[Downloader] Update failed (ret=%d): %s", (int)ret, msg.c_str());
-        downloaderShowStatus("Update failed",
-                             msg.length() ? msg.c_str() : "Try again later");
+        LOG_ERROR("[Downloader] Update failed (heap_at_exit=%u)",
+                  (unsigned)ESP.getFreeHeap());
+        downloaderShowStatus("Update failed", "Will retry later");
         ledRing.solid(COLOR_ERROR);
         ledRing.finishTransition();
         delay(3000);
