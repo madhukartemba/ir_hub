@@ -8,7 +8,7 @@ class DeviceDeleteConfirmation : public Screen {
     bool confirmed;
 
    public:
-    DeviceDeleteConfirmation(Device& device) : device(device), confirmed(false) {}
+    explicit DeviceDeleteConfirmation(const Device& device) : device(device), confirmed(false) {}
 
     void onEnter() override {
         LOG_DEBUG("DeviceDeleteConfirmation onEnter for device %d", device.id);

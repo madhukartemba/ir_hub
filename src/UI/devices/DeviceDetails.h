@@ -11,7 +11,8 @@ class DeviceDetails : public Screen {
     int selectedDescriptionItem;
 
    public:
-    DeviceDetails(Device& device) : device(device), currentPage(0), selectedDescriptionItem(0) {}
+    explicit DeviceDetails(const Device& device)
+        : device(device), currentPage(0), selectedDescriptionItem(0) {}
 
     void onEnter() override {
         LOG_DEBUG("DeviceDetails onEnter for device %d", device.id);

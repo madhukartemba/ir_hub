@@ -17,7 +17,7 @@ class DeviceActions : public Screen {
     const char* actions[5] = {"Send ON", "Send OFF", "Details", "Delete Device", "Back"};
 
    public:
-    DeviceActions(Device& device)
+    explicit DeviceActions(const Device& device)
         : device(device), selectedAction(ActionType::ON), selectedIndex(0) {}
 
     void onEnter() override {

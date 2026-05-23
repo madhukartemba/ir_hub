@@ -12,6 +12,147 @@ const unsigned long animSwitchInterval = 5000;  // 5 seconds
 
 int currentAnim = 0;  // index to track which animation is active
 
+// ---------------------------------------------------------------------------
+// Critical-failure handling
+//
+// Previously every peripheral init failure trapped the device in
+// `while(1) delay(100);`. If anything went wrong in the field (e.g. LittleFS
+// corruption after a power glitch) the device became a paperweight that only
+// a reflash could recover. We now:
+//
+//   * try a one-shot recovery for LittleFS via `format()`,
+//   * show the error on the OLED (+ red LED ring + error beep when those
+//     subsystems are up), hold for a few seconds so the user/tester can read
+//     it, then `ESP.restart()`,
+//   * track consecutive failed boots in RTC user memory so a genuinely
+//     broken board doesn't spin in a tight restart loop — after a few
+//     consecutive failures we hold the error on screen for much longer
+//     before retrying, giving the user time to power off and contact us.
+// ---------------------------------------------------------------------------
+
+static bool g_displayReady = false;
+static bool g_ledReady = false;
+static bool g_speakerReady = false;
+
+// RTC user memory survives soft restarts (but not full power loss), which is
+// exactly the semantics we want: a board cycling on a broken peripheral keeps
+// the counter; a user unplugging-and-replugging starts fresh.
+struct __attribute__((packed)) BootGuard {
+    uint32_t magic;
+    uint16_t failures;
+    uint16_t reserved;
+};
+static constexpr uint32_t kBootGuardMagic = 0xCAFEF00D;
+static constexpr uint32_t kBootGuardRtcOffset = 64;  // away from OTA region
+static constexpr uint16_t kBootGuardSoftLimit = 3;
+static constexpr unsigned long kCritDisplayMs = 5000UL;
+static constexpr unsigned long kCritPersistentDisplayMs = 30000UL;
+
+static uint16_t bootGuardReadFailures() {
+    BootGuard g{};
+    if (!ESP.rtcUserMemoryRead(kBootGuardRtcOffset, reinterpret_cast<uint32_t*>(&g), sizeof(g))) {
+        return 0;
+    }
+    if (g.magic != kBootGuardMagic) {
+        return 0;
+    }
+    return g.failures;
+}
+
+static void bootGuardWriteFailures(uint16_t failures) {
+    BootGuard g{kBootGuardMagic, failures, 0};
+    ESP.rtcUserMemoryWrite(kBootGuardRtcOffset, reinterpret_cast<uint32_t*>(&g), sizeof(g));
+}
+
+[[noreturn]] static void criticalFailure(const char* line1, const char* line2 = nullptr) {
+    LOG_ERROR("[CRITICAL] %s%s%s", line1 ? line1 : "(unknown)", line2 ? " — " : "",
+              line2 ? line2 : "");
+
+    // The first thing setup() did was optimistically bump this counter. We
+    // never decremented it because we are failing, so the persistence check
+    // here sees the now-incremented value.
+    uint16_t failures = bootGuardReadFailures();
+    bool persistent = failures >= kBootGuardSoftLimit;
+
+    if (g_ledReady) {
+        ledRing.solid(COLOR_ERROR);
+        ledRing.finishTransition();
+    }
+
+    if (g_displayReady) {
+        display.clear();
+        display.printCentered("ERROR", 6);
+        display.drawLine(0, 18, display.getWidth(), 18);
+        if (line1) {
+            display.printCentered(line1, 26);
+        }
+        if (line2) {
+            display.printCentered(line2, 38);
+        }
+        if (persistent) {
+            display.printCentered("Boot loop detected", 50);
+            display.printCentered("Power off & re-flash", 58);
+        } else {
+            display.printCentered("Restarting...", 54);
+        }
+        display.update();
+    }
+
+    if (g_speakerReady) {
+        speaker.errorBeep();
+    }
+
+    unsigned long hold = persistent ? kCritPersistentDisplayMs : kCritDisplayMs;
+    LOG_ERROR("[CRITICAL] Holding for %lums (failures=%u)%s", hold, (unsigned)failures,
+              persistent ? " — boot loop detected" : "");
+
+    // delay() yields to background tasks and feeds the watchdog, so a multi-
+    // second hold here is safe.
+    delay(hold);
+
+    LOG_ERROR("[CRITICAL] Restarting now");
+    delay(50);  // give Serial a moment to flush
+    ESP.restart();
+    // Unreachable, but ESP.restart() is not marked noreturn in the headers.
+    while (true) {
+        delay(1000);
+    }
+}
+
+/// Mount LittleFS, attempting a one-shot format-and-retry recovery if the
+/// initial mount fails. Returns true on success.
+static bool mountLittleFsWithRecovery() {
+    if (LittleFS.begin()) {
+        return true;
+    }
+
+    LOG_WARN("[LittleFS] Mount failed — attempting recovery via format()");
+    if (g_displayReady) {
+        display.clear();
+        display.printCentered("Storage Recovery", 6);
+        display.drawLine(0, 18, display.getWidth(), 18);
+        display.printCentered("Formatting...", 30);
+        display.printCentered("Please wait", 44);
+        display.update();
+    }
+    if (g_ledReady) {
+        ledRing.solid(COLOR_WARNING);
+        ledRing.finishTransition();
+    }
+
+    if (!LittleFS.format()) {
+        LOG_ERROR("[LittleFS] Format failed");
+        return false;
+    }
+    if (!LittleFS.begin()) {
+        LOG_ERROR("[LittleFS] Mount failed even after format");
+        return false;
+    }
+
+    LOG_WARN("[LittleFS] Recovered via format (all stored data wiped)");
+    return true;
+}
+
 // Heap supervision -----------------------------------------------------------
 //
 // On ESP8266 we have ~30 KB usable heap. Long-running firmware tends to slowly
@@ -55,9 +196,24 @@ static void superviseHeap() {
 void setup() {
     Serial.begin(115200);
 
-    // Initialize display first so we can show error messages
-    if (!display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE, DISPLAY_FLIPPED)) {
+    // Optimistically bump the boot-loop counter on entry. The end of setup()
+    // clears it when we reach "system ready"; until then any criticalFailure
+    // will see the elevated count and (after a few cycles) hold the error on
+    // screen for longer instead of restarting immediately.
+    uint16_t bootFailures = bootGuardReadFailures();
+    bootGuardWriteFailures(bootFailures + 1);
+    if (bootFailures > 0) {
+        LOG_WARN("[Boot] Recovering from previous failed boot (count=%u)",
+                 (unsigned)bootFailures);
+    }
+
+    // Initialize display first so subsequent failures can be shown on-screen.
+    g_displayReady = display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE, DISPLAY_FLIPPED);
+    if (!g_displayReady) {
+        // We can't show anything visual. Log + short delay + restart so the
+        // device doesn't sit silent forever.
         LOG_ERROR("Failed to initialize display");
+        criticalFailure("Display", "init failed");
     }
 
     display.clear();
@@ -74,87 +230,41 @@ void setup() {
     ledRing.begin(NUM_LEDS, NEOPIXEL_PIN, DISPLAY_DRIVER);
     ledRing.solid(Color::RoyalBlue);
     ledRing.finishTransition();
+    g_ledReady = true;
     LOG_DEBUG("LED ring initialized on pin");
 
-    // Initialize LittleFS
-    if (!LittleFS.begin()) {
-        LOG_ERROR("Failed to mount LittleFS");
-        display.clear();
-        display.printCentered("ERROR", 10);
-        display.printCentered("LittleFS failed", 25);
-        display.printCentered("Check wiring", 40);
-        display.update();
-        while (1) {
-            delay(100);
-        }
+    // Initialize LittleFS, with a one-shot format-and-retry recovery.
+    if (!mountLittleFsWithRecovery()) {
+        criticalFailure("LittleFS", "mount failed");
     }
 
     // Initialize IdGen
     if (!idGen.begin()) {
-        LOG_ERROR("Failed to initialize IdGen");
-        display.clear();
-        display.printCentered("ERROR", 10);
-        display.printCentered("IdGen failed", 25);
-        display.printCentered("Check storage", 40);
-        display.update();
-        while (1) {
-            delay(100);
-        }
+        criticalFailure("IdGen", "init failed");
     }
 
     // Initialize IRManager
     if (!irManager.begin(IR_RX_PIN, IR_TX_PIN)) {
-        LOG_ERROR("Failed to initialize IRManager");
-        display.clear();
-        display.printCentered("ERROR", 10);
-        display.printCentered("IR Manager failed", 25);
-        display.printCentered("Check IR pins", 40);
-        display.update();
-        while (1) {
-            delay(100);
-        }
+        criticalFailure("IR Manager", "check IR pins");
     }
 
     // Initialize DeviceManager
     if (!deviceManager.begin()) {
-        LOG_ERROR("Failed to initialize DeviceManager");
-        display.clear();
-        display.printCentered("ERROR", 10);
-        display.printCentered("Device Manager failed", 25);
-        display.printCentered("Check storage", 40);
-        display.update();
-        while (1) {
-            delay(100);
-        }
+        criticalFailure("Device Manager", "storage error");
     }
 
     // Initialize speaker
     LOG_DEBUG("Starting speaker setup");
     if (!speaker.begin(SPEAKER_PIN)) {
-        LOG_ERROR("Failed to initialize speaker");
-        display.clear();
-        display.printCentered("ERROR", 10);
-        display.printCentered("Speaker failed", 25);
-        display.printCentered("Check speaker pin", 40);
-        display.update();
-        while (1) {
-            delay(100);
-        }
+        criticalFailure("Speaker", "check speaker pin");
     }
+    g_speakerReady = true;
     LOG_DEBUG("Speaker initialized");
 
     // Initialize button
     LOG_DEBUG("Starting button setup");
     if (!button.begin(TOUCH_BUTTON_PIN, INPUT)) {
-        LOG_ERROR("Failed to initialize button");
-        display.clear();
-        display.printCentered("ERROR", 10);
-        display.printCentered("Button failed", 25);
-        display.printCentered("Check button pin", 40);
-        display.update();
-        while (1) {
-            delay(100);
-        }
+        criticalFailure("Button", "check button pin");
     }
     button.setSpeaker(speaker);
     button.setHaptics(haptics);
@@ -224,6 +334,10 @@ void setup() {
 
     // Set up activity callback to reset timeout on button interactions
     router.setActivityCallback([]() -> unsigned long { return button.getLastInteractionTime(); });
+
+    // We made it all the way through setup() — clear the boot-loop counter
+    // so the next failure (if any) gets the full kCritDisplayMs grace period.
+    bootGuardWriteFailures(0);
 
     LOG_INFO("IR Hub: System Ready");
     LOG_INFO("[Heap] startup free=%u max_block=%u frag=%u%%",
