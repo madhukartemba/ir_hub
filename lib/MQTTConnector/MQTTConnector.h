@@ -318,5 +318,15 @@ class MQTTConnector {
         mqttClient.loop();
     }
 
+    /// Disconnect from the broker and stop attempting reconnects. Use this
+    /// before destructive operations like `LittleFS.format()` so we don't
+    /// keep retransmitting / publishing during the wipe.
+    void shutdown() {
+        if (mqttClient.connected()) {
+            mqttClient.disconnect();
+        }
+        enabled = false;
+    }
+
     bool isEnabled() const { return enabled; }
 };

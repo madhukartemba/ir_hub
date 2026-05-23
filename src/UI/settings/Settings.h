@@ -3,10 +3,12 @@
 #include "../../preferences.h"
 #include "../../utils/MenuUtils.h"
 #include "ClearDataConfirmation.h"
+#include "UserPrefs.h"
 
 class Settings : public Screen {
    private:
     enum class State {
+        SOUND,
         RESTART,
         CLEAR_DATA,
         WIFI_WIPE,
@@ -16,12 +18,16 @@ class Settings : public Screen {
     State currentState;
     unsigned long restartStartTime;
     int selectedIndex;
-    const char* menuItems[4] = {"Restart", "Clear Data", "Wipe Wi-Fi", "Back"};
+
+    // menuItems[0] (the sound row) is rebuilt on every render from the
+    // current preference, so the label flips between "Sound: On" and
+    // "Sound: Off" the moment the user toggles it.
+    const char* menuItems[5] = {"Sound: On", "Restart", "Clear Data", "Wipe Wi-Fi", "Back"};
 
    public:
     void onEnter() override {
         LOG_DEBUG("Settings onEnter");
-        currentState = State::RESTART;
+        currentState = State::SOUND;
         selectedIndex = 0;
 
         ledRing.breathe(COLOR_SETTINGS);
@@ -29,12 +35,9 @@ class Settings : public Screen {
         button.setClickCallback([this]() {
             LOG_DEBUG("Settings onButtonClick");
             if (currentState == State::RESTARTING) {
-                // Do nothing during restart
                 return;
             }
-
-            // Navigate through menu items
-            selectedIndex = (selectedIndex + 1) % 4;
+            selectedIndex = (selectedIndex + 1) % 5;
             currentState = static_cast<State>(selectedIndex);
         });
 
@@ -42,6 +45,9 @@ class Settings : public Screen {
             LOG_DEBUG("Settings onButtonLongPress");
 
             switch (currentState) {
+                case State::SOUND:
+                    toggleSound();
+                    break;
                 case State::RESTART:
                     LOG_DEBUG("Settings onButtonLongPress RESTART");
                     currentState = State::RESTARTING;
@@ -53,10 +59,8 @@ class Settings : public Screen {
                     break;
                 case State::WIFI_WIPE:
                     LOG_DEBUG("Settings onButtonLongPress WIFI_WIPE");
-                    // Wipe WiFi credentials using our WiFiManagerLib
                     wifiManager.resetWiFi();
                     speaker.successBeep();
-                    // Restart to trigger WiFi setup
                     currentState = State::RESTARTING;
                     restartStartTime = millis();
                     break;
@@ -65,7 +69,6 @@ class Settings : public Screen {
                     router.pop();
                     break;
                 case State::RESTARTING:
-                    // Do nothing during restart
                     break;
             }
         });
@@ -76,11 +79,11 @@ class Settings : public Screen {
 
         if (currentState == State::RESTARTING) {
             drawRestarting();
-            // Restart after 2 seconds
             if (millis() - restartStartTime > 2000) {
                 ESP.restart();
             }
         } else {
+            menuItems[0] = userPrefsSoundEnabled() ? "Sound: On" : "Sound: Off";
             drawMenu();
         }
 
@@ -92,27 +95,30 @@ class Settings : public Screen {
     }
 
     void drawMenu() {
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Settings", 0);
-
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Use the scrollable menu utility
-        MenuUtils::drawScrollableMenu(menuItems, 4, selectedIndex, 3, 20);
+        MenuUtils::drawScrollableMenu(menuItems, 5, selectedIndex, 3, 20);
     }
 
     void drawRestarting() {
-        // Clear display and show restarting message
         display.clear();
-
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Restarting...", 20);
-
-        // Show a brief message before restart
         display.setTextSize(1);
         display.printCentered("Please wait", 35);
+    }
+
+   private:
+    void toggleSound() {
+        bool newState = !userPrefsSoundEnabled();
+        userPrefsSetSoundEnabled(newState);
+        speaker.setMuted(!newState);
+        // Give immediate audible confirmation only when turning the sound
+        // ON — otherwise we'd contradict the user's "off" choice.
+        if (newState) {
+            speaker.shortBeep();
+        }
+        LOG_INFO("[Settings] Sound %s", newState ? "ON" : "OFF");
     }
 };

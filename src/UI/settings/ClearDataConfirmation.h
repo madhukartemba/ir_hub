@@ -1,3 +1,4 @@
+#include <ESP8266WiFi.h>
 #include "../../global/Global.h"
 #include "../../preferences.h"
 
@@ -48,13 +49,34 @@ class ClearDataConfirmation : public Screen {
 
    private:
     void clearAllDataAndRestart() {
-        // Clear all data from LittleFS
-        LittleFS.format();
-        LOG_INFO("All data cleared from LittleFS");
+        // Show the user what we're about to do *before* tearing the network
+        // down, so they don't stare at a frozen screen.
+        display.clear();
+        display.setTextSize(1);
+        display.printCentered("Wiping...", 22);
+        display.printCentered("Please wait", 36);
+        display.update();
+        ledRing.solid(COLOR_ERROR);
+        ledRing.finishTransition();
+
+        // Bring the network sessions down cleanly first. Otherwise PubSubClient
+        // keeps retrying mid-format and we see a noisy log full of "rc=-2".
+        LOG_INFO("[ClearData] Disconnecting MQTT + WiFi before format()");
+        mqttConnector.shutdown();
+        WiFi.disconnect(true);
+        delay(150);  // let the radio quiesce
+
+        bool ok = LittleFS.format();
+        LOG_INFO("[ClearData] LittleFS.format() returned %s", ok ? "true" : "false");
 
         speaker.successBeep();
 
-        // Restart the device
+        display.clear();
+        display.printCentered("All data cleared", 22);
+        display.printCentered("Restarting...", 38);
+        display.update();
+        delay(800);
+
         ESP.restart();
     }
 };

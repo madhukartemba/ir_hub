@@ -12,6 +12,10 @@ class Speaker {
    private:
     uint8_t pin;
     bool isInitialized;
+    // When true every tone-producing call is a no-op. Controlled at runtime
+    // by the user's "Sound" preference in Settings — persisted across reboots
+    // so the device stays silent until they change their mind.
+    bool muted = false;
 
    public:
     // Constructor
@@ -36,11 +40,21 @@ class Speaker {
         return true;
     }
 
+    // Runtime mute controls — gate every tone-producing method.
+    void setMuted(bool m) {
+        muted = m;
+        if (muted) {
+            stop();
+        }
+    }
+    bool isMuted() const { return muted; }
+
     // Basic beep with default duration (100ms)
     void beep() { beep(100); }
 
     // Beep with custom duration
     void beep(unsigned long duration) {
+        if (muted) return;
         if (!isInitialized) {
             begin();
         }
@@ -49,6 +63,7 @@ class Speaker {
 
     // Beep with custom frequency and duration
     void beep(unsigned int frequency, unsigned long duration) {
+        if (muted) return;
         if (!isInitialized) {
             begin();
         }
@@ -95,6 +110,7 @@ class Speaker {
 
     // Play a continuous tone (until stopped)
     void playTone(unsigned int frequency) {
+        if (muted) return;
         if (!isInitialized) {
             begin();
         }
@@ -102,6 +118,7 @@ class Speaker {
     }
     // Play a startup melody
     void playStartupSound() {
+        if (muted) return;
         if (!isInitialized) {
             begin();
         }

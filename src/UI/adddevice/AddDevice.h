@@ -463,37 +463,40 @@ class AddDevice : public Screen {
         // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Better centered content layout
         display.setTextSize(1);
         display.printCentered("ERROR!", 18);
 
-        // Centered error icon with better spacing
-        display.drawCircle(64, 38, 8);
-        display.drawLine(60, 34, 68, 42);
-        display.drawLine(60, 42, 68, 34);
+        // Compact X icon to leave room for a two-line reason underneath.
+        display.drawCircle(64, 34, 6);
+        display.drawLine(61, 31, 67, 37);
+        display.drawLine(61, 37, 67, 31);
 
-        // Show specific error cause with better centering
+        // Pick the right error explanation. There are three distinct cases:
+        //   * recording timed out without any IR pulses → "No signal"
+        //   * IR was received but the IRrecv library returned the UNKNOWN
+        //     protocol → tell the user the *protocol* couldn't be classified,
+        //     not that the receiver didn't see anything (the old message
+        //     misled people into thinking the IR receiver was broken)
+        //   * IR was received and classified, but somehow doesn't pass
+        //     isValid() (e.g. zero bits) → show the protocol so we can debug
+        const IRCode& failedCode = hasFirstCode ? secondCode : firstCode;
+        String protocol = typeToString(failedCode.getProtocol(), false);
+        bool unknownProtocol = (protocol == "Unknown");
+
         display.setTextSize(1);
         if (isTimeoutError) {
-            display.printCentered("Timeout", 52);
-        } else if (currentState == State::ERROR) {
-            if (!hasFirstCode) {
-                // Show protocol info for first code failure
-                String protocol = typeToString(firstCode.getProtocol(), false);
-                if (protocol == "Unknown") {
-                    display.printCentered("No signal detected", 52);
-                } else {
-                    display.printCentered("Protocol: " + protocol, 52);
-                }
-            } else {
-                // Show protocol info for second code failure
-                String protocol = typeToString(secondCode.getProtocol(), false);
-                if (protocol == "Unknown") {
-                    display.printCentered("No signal detected", 52);
-                } else {
-                    display.printCentered("Protocol: " + protocol, 52);
-                }
-            }
+            display.printCentered("Timeout", 46);
+            display.printCentered("No signal received", 56);
+        } else if (unknownProtocol) {
+            display.printCentered("Unknown protocol", 46);
+            display.printCentered("Try again", 56);
+        } else {
+            // Decoded but invalid for some other reason — surface the protocol
+            // so the user (or we) can see what was actually captured.
+            char line[24];
+            snprintf(line, sizeof(line), "Got: %s", protocol.c_str());
+            display.printCentered(line, 46);
+            display.printCentered("Try again", 56);
         }
     }
 };

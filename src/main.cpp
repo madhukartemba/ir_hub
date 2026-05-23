@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <LittleFS.h>
 #include "NeoRing.h"
+#include "UserPrefs.h"
 #include "config.h"
 #include "global/Global.h"
 #include "led/ClickSweepOnceAnimation.h"
@@ -238,6 +239,10 @@ void setup() {
         criticalFailure("LittleFS", "mount failed");
     }
 
+    // Load persisted user preferences (sound on/off, etc.) now that
+    // LittleFS is mounted but before any subsystem that might react to them.
+    userPrefsLoad();
+
     // Initialize IdGen
     if (!idGen.begin()) {
         criticalFailure("IdGen", "init failed");
@@ -258,8 +263,9 @@ void setup() {
     if (!speaker.begin(SPEAKER_PIN)) {
         criticalFailure("Speaker", "check speaker pin");
     }
+    speaker.setMuted(!userPrefsSoundEnabled());
     g_speakerReady = true;
-    LOG_DEBUG("Speaker initialized");
+    LOG_DEBUG("Speaker initialized (muted=%s)", speaker.isMuted() ? "yes" : "no");
 
     // Initialize button
     LOG_DEBUG("Starting button setup");

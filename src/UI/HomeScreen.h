@@ -7,7 +7,6 @@
 class HomeScreen : public Screen {
    private:
     unsigned long lastActivityTime;
-    const unsigned long INACTIVITY_TIMEOUT = 30000;    // 30 seconds to show status
     const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
     /// Re-send black while blanked: NeoRing only pushes pixels to the strip when the frame
     /// changes; static black stops updating after the first frame, so flaky LEDs can stay lit.
