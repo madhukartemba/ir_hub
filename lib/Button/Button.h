@@ -55,6 +55,13 @@ class Button {
     // Getter for last interaction time
     unsigned long getLastInteractionTime() const { return lastInteractionTime; }
 
+    /// True between physical press and release. Useful for screens that need
+    /// to suppress unrelated input (e.g. the IR receiver) while the user is
+    /// still interacting with the touch button — otherwise EMI from pressing
+    /// the button can be mis-decoded as a stray IR pulse during the
+    /// long-press window.
+    bool isPressed() const { return buttonPressed; }
+
     void update() {
         if (!initialized) {
             LOG_ERROR("[Button] Button not initialized");
