@@ -91,11 +91,12 @@ class OtaUpdater {
     //   - the receive buffer (kTlsRxBuffer below)
     //   - BearSSL session state (~6 KB)
     //   - lwIP TCP packet buffers (~3 KB)
-    // So the minimum free heap before we even *attempt* a manifest fetch is
-    // ~12-14 KB. Refuse below that — better to log "skipped" than to OOM the
-    // SYS task and panic the chip.
+    // Measured transient cost is ~11 KB for both manifest and binary download
+    // (the binary streams to flash in 1 KB chunks via ESPhttpUpdate, so it
+    // doesn't need a big buffer). 14 KB free is the floor; below that the
+    // SYS task starts OOMing during the handshake.
     static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
-    static constexpr uint32_t kMinHeapForUpdate = 20 * 1024;
+    static constexpr uint32_t kMinHeapForUpdate = 14 * 1024;
     // Small TLS buffers only work when the server supports MFLN (RFC 6066).
     // jsDelivr does; Fastly (which fronts raw.githubusercontent.com) usually
     // doesn't. See docs/OTA_RELEASES.md for the recommended URL pattern.
