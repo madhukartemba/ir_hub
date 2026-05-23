@@ -34,7 +34,11 @@ class Settings : public Screen {
     void onEnter() override {
         LOG_DEBUG("Settings onEnter");
 
-        hasHaptics = haptics.isReady();
+        // Show the Haptics row whenever the DRV2605 is *present* on the bus,
+        // not just when it's been calibrated. The chip may not be initialized
+        // yet (e.g. user had haptics muted at boot, so we skipped cal); we
+        // still want the user to be able to re-enable it from this menu.
+        hasHaptics = haptics.isPresent();
         buildMenu();
         selectedIndex = 0;
         isRestarting = false;
@@ -172,12 +176,30 @@ class Settings : public Screen {
     void toggleHaptics() {
         bool newState = !userPrefsHapticsEnabled();
         userPrefsSetHapticsEnabled(newState);
-        haptics.setMuted(!newState);
-        // Tactile confirmation only when turning ON, same rationale as
-        // toggleSound. Skipped if the driver isn't actually present.
-        if (newState && haptics.isReady()) {
-            haptics.playSelection();
+
+        if (newState) {
+            // First re-enable in this boot session also runs auto-calibration
+            // (which makes the LRA buzz briefly — that's expected feedback for
+            // an explicit "turn it on" action). Subsequent toggles just flip
+            // the mute flag since the chip is still calibrated.
+            if (!haptics.isReady() && haptics.isPresent()) {
+                display.clear();
+                display.setTextSize(1);
+                display.printCentered("Calibrating", 24);
+                display.printCentered("haptics...", 36);
+                display.update();
+                if (!haptics.begin()) {
+                    LOG_WARN("[Settings] DRV2605 calibration failed");
+                }
+            }
+            haptics.setMuted(false);
+            if (haptics.isReady()) {
+                haptics.playSelection();
+            }
+        } else {
+            haptics.setMuted(true);
         }
+
         LOG_INFO("[Settings] Haptics %s", newState ? "ON" : "OFF");
     }
 

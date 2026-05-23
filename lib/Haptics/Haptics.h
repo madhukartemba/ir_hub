@@ -35,6 +35,12 @@ class Haptics {
     static constexpr uint8_t EFFECT_SHARP_TICK_2 = 5;
 
     uint8_t addr;
+    // `present` is "the DRV2605 ACKs on the I²C bus" — cheap detection, no
+    // motor drive. `initialized` is "we've also run auto-calibration and the
+    // chip is in INTTRIG mode ready to fire effects". We split them so that a
+    // user who has muted haptics doesn't have to feel a calibration buzz on
+    // every cold boot — we skip calibration entirely until they re-enable it.
+    bool present = false;
     bool initialized = false;
     // Runtime mute. Default off so existing behaviour is unchanged; the user
     // can disable tactile feedback from the Settings menu, persisted across
@@ -96,12 +102,27 @@ class Haptics {
    public:
     explicit Haptics(uint8_t i2cAddr = kDefaultAddr) : addr(i2cAddr) {}
 
+    /// Cheap, non-invasive bus probe. Returns true if a DRV2605 ACKs at our
+    /// address. Does NOT calibrate, so it doesn't cause any motor movement.
+    /// Safe to call before LittleFS is mounted.
+    bool probe() {
+        present = i2cAddressAck(addr);
+        return present;
+    }
+
+    bool isPresent() const { return present; }
+
+    /// Full init + auto-calibration. The calibration step physically drives
+    /// the LRA briefly, so only call this when the user actually wants
+    /// haptics enabled.
     bool begin() {
         initialized = false;
         // Wire.begin() expected to have been called (e.g. by display).
         if (!i2cAddressAck(addr)) {
+            present = false;
             return false;
         }
+        present = true;
         if (!writeReg(REG_FEEDBACK, 0x80)) {
             return false;
         }

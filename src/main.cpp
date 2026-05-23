@@ -222,12 +222,15 @@ void setup() {
     display.printCentered("Initializing...", 40);
     display.update();
 
-    if (!haptics.begin()) {
+    // Probe the haptics chip on the bus now (cheap I²C ACK) so the Settings
+    // UI can decide whether to show the "Haptics" toggle row. We deliberately
+    // *don't* run auto-calibration yet — that step physically drives the LRA,
+    // and if the user has previously muted haptics we don't want them to feel
+    // a buzz on every cold boot. Calibration runs later, after we've loaded
+    // their preference (or on demand when they re-enable from Settings).
+    if (!haptics.probe()) {
         LOG_WARN("DRV2605 haptics not found — tactile feedback disabled");
     }
-    // Apply user preference. Loaded later from LittleFS in setup(); this call
-    // is harmless before then because the default is "enabled" anyway, and we
-    // re-apply below right after userPrefsLoad().
 
     // Initialize NeoRing
     LOG_DEBUG("Starting LED ring setup");
@@ -245,8 +248,17 @@ void setup() {
     // Load persisted user preferences (sound on/off, etc.) now that
     // LittleFS is mounted but before any subsystem that might react to them.
     userPrefsLoad();
-    // Apply haptics preference now (the driver was begin()'d before LittleFS
-    // came up). Speaker mute is applied later, right after speaker.begin().
+    // Now that we know the user's haptics preference, decide whether to run
+    // the calibration step. Only calibrate (which makes the LRA buzz briefly)
+    // if the user actually wants haptics enabled AND the chip is on the bus.
+    // Otherwise leave the driver un-initialized and quiet — `setMuted` is
+    // still a useful safety net but the gate on `initialized` is what
+    // guarantees silence here.
+    if (userPrefsHapticsEnabled() && haptics.isPresent()) {
+        if (!haptics.begin()) {
+            LOG_WARN("DRV2605 calibration failed — tactile feedback disabled");
+        }
+    }
     haptics.setMuted(!userPrefsHapticsEnabled());
 
     // Initialize IdGen
