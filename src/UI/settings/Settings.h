@@ -18,7 +18,6 @@ class Settings : public Screen {
         UPDATE_STATUS_INFO,
         CHECK_UPDATE,
         AUTHOR_INFO,
-        CONTACT_INFO,
         CONTACT_QR,
         RESTART,
         CLEAR_DATA,
@@ -26,7 +25,7 @@ class Settings : public Screen {
         BACK,
     };
 
-    static constexpr int kMaxItems = 13;
+    static constexpr int kMaxItems = 12;
     const char* menuItems[kMaxItems];
     Action menuActions[kMaxItems];
     int menuCount = 0;
@@ -104,7 +103,6 @@ class Settings : public Screen {
             addRow(Action::CHECK_UPDATE);
         }
         addRow(Action::AUTHOR_INFO);
-        addRow(Action::CONTACT_INFO);
         addRow(Action::CONTACT_QR);
         addRow(Action::RESTART);
         addRow(Action::CLEAR_DATA);
@@ -132,19 +130,18 @@ class Settings : public Screen {
     }
 
     void refreshOtaInfoLabels() {
-        snprintf(firmwareLabel, sizeof(firmwareLabel), "Firmware: v%s", otaUpdater.currentVersion());
+        snprintf(firmwareLabel, sizeof(firmwareLabel), "Firmware: v%s",
+                 otaUpdater.currentVersion());
 
         if (!otaUpdater.hasCompletedCheck()) {
             snprintf(lastCheckLabel, sizeof(lastCheckLabel), "Last check: --");
         } else {
             unsigned long ageMin = otaUpdater.lastCheckAgeMs() / 60000UL;
             if (ageMin < 60UL) {
-                snprintf(lastCheckLabel, sizeof(lastCheckLabel), "Last check: %lum ago",
-                         ageMin);
+                snprintf(lastCheckLabel, sizeof(lastCheckLabel), "Last check: %lum ago", ageMin);
             } else {
                 unsigned long ageHours = ageMin / 60UL;
-                snprintf(lastCheckLabel, sizeof(lastCheckLabel), "Last check: %luh ago",
-                         ageHours);
+                snprintf(lastCheckLabel, sizeof(lastCheckLabel), "Last check: %luh ago", ageHours);
             }
         }
 
@@ -167,11 +164,9 @@ class Settings : public Screen {
             case Action::CHECK_UPDATE:
                 return "Check for Updates";
             case Action::AUTHOR_INFO:
-                return "Author: Madhukar";
-            case Action::CONTACT_INFO:
-                return "Contact: @madhukar";
+                return "By Madhukar Temba :)";
             case Action::CONTACT_QR:
-                return "Show Contact QR";
+                return "Help";
             case Action::RESTART:
                 return "Restart";
             case Action::CLEAR_DATA:
@@ -203,7 +198,6 @@ class Settings : public Screen {
                 triggerUpdateCheck();
                 break;
             case Action::AUTHOR_INFO:
-            case Action::CONTACT_INFO:
                 // Read-only rows.
                 speaker.shortBeep();
                 break;
@@ -293,5 +287,4 @@ class Settings : public Screen {
         display.setTextSize(1);
         display.printCentered("Please wait", 35);
     }
-
 };
