@@ -27,7 +27,7 @@ class FactoryResetConfirmation : public Screen {
         display.printCentered("Factory Reset?", 0);
         display.drawLine(0, 12, display.getWidth(), 12);
 
-        display.printCentered("Will clear Wi-Fi", 20);
+        display.printCentered("Will reset Wi-Fi", 20);
         display.printCentered("+ all saved data", 30);
         display.printCentered("+ pending OTA", 40);
 

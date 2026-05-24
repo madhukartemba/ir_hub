@@ -24,7 +24,7 @@ class ClearDataConfirmation : public Screen {
 
         // Draw title
         display.setTextSize(1);
-        display.printCentered("Clear All Data?", 0);
+        display.printCentered("Erase Saved Data?", 0);
 
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -51,7 +51,7 @@ class ClearDataConfirmation : public Screen {
     void clearAllDataAndRestart() {
         display.clear();
         display.setTextSize(1);
-        display.printCentered("Wiping...", 22);
+        display.printCentered("Erasing data...", 22);
         display.printCentered("Please wait", 36);
         display.update();
         ledRing.solid(COLOR_ERROR);
@@ -70,7 +70,7 @@ class ClearDataConfirmation : public Screen {
         speaker.successBeep();
 
         display.clear();
-        display.printCentered("All data cleared", 22);
+        display.printCentered("Saved data erased", 22);
         display.printCentered("Restarting...", 38);
         display.update();
         delay(800);

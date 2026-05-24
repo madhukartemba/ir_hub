@@ -6,6 +6,7 @@
 #include "ClearDataConfirmation.h"
 #include "ContactQrScreen.h"
 #include "FactoryResetConfirmation.h"
+#include "ResetWiFiConfirmation.h"
 #include "UpdateCheckScreen.h"
 #include "UserPrefs.h"
 
@@ -185,9 +186,9 @@ class Settings : public Screen {
             case Action::RESTART:
                 return "Restart";
             case Action::CLEAR_DATA:
-                return "Clear Data";
+                return "Erase Saved Data";
             case Action::WIFI_WIPE:
-                return "Wipe Wi-Fi";
+                return "Reset Wi-Fi";
             case Action::FACTORY_RESET:
                 return "Factory Reset";
             case Action::BACK:
@@ -234,10 +235,7 @@ class Settings : public Screen {
                 break;
             case Action::WIFI_WIPE:
                 LOG_DEBUG("[Settings] onButtonLongPress WIFI_WIPE");
-                wifiManager.resetWiFi();
-                speaker.successBeep();
-                isRestarting = true;
-                restartStartTime = millis();
+                router.push(new ResetWiFiConfirmation());
                 break;
             case Action::FACTORY_RESET:
                 LOG_DEBUG("[Settings] onButtonLongPress FACTORY_RESET");
