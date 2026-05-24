@@ -95,22 +95,32 @@ class Settings : public Screen {
    private:
     void buildMenu() {
         menuCount = 0;
+
+        // 1) Everyday toggles
         addRow(Action::SOUND);
         if (hasHaptics) {
             addRow(Action::HAPTICS);
         }
+
+        // 2) OTA actions + status
         if (hasOta) {
+            addRow(Action::CHECK_UPDATE);
             addRow(Action::FIRMWARE_INFO);
             addRow(Action::LAST_CHECK_INFO);
             addRow(Action::UPDATE_STATUS_INFO);
-            addRow(Action::CHECK_UPDATE);
         }
-        addRow(Action::AUTHOR_INFO);
+
+        // 3) Help/About
         addRow(Action::CONTACT_QR);
+        addRow(Action::AUTHOR_INFO);
+
+        // 4) Device/system actions
         addRow(Action::RESTART);
-        addRow(Action::CLEAR_DATA);
         addRow(Action::WIFI_WIPE);
+        addRow(Action::CLEAR_DATA);
         addRow(Action::FACTORY_RESET);
+
+        // 5) Navigation
         addRow(Action::BACK);
     }
 
