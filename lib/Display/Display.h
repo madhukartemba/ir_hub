@@ -369,27 +369,30 @@ class Display {
     void drawProgressBar(int x, int y, int width, int height, int progress, int maxProgress = 100,
                          bool showText = true) {
         if (!display) return;
+        if (maxProgress <= 0) maxProgress = 1;
+        if (progress < 0) progress = 0;
+        if (progress > maxProgress) progress = maxProgress;
 
-        // Draw border
+        // Match OTA progress style: framed container + inner fill.
         drawRect(x, y, width, height);
-
-        // Calculate fill width
-        int fillWidth = (width - 2) * progress / maxProgress;
-        if (fillWidth > 0) {
-            fillRect(x + 1, y + 1, fillWidth, height - 2);
+        int innerPad = (width >= 12 && height >= 8) ? 2 : 1;
+        int innerW = width - (innerPad * 2);
+        int innerH = height - (innerPad * 2);
+        if (innerW > 0 && innerH > 0) {
+            int fillWidth = (innerW * progress) / maxProgress;
+            if (fillWidth > 0) {
+                fillRect(x + innerPad, y + innerPad, fillWidth, innerH);
+            }
         }
 
-        // Show percentage text if requested
         if (showText) {
             String percentText = String((progress * 100) / maxProgress) + "%";
-            int textWidth = getTextWidth(percentText);
-            int textX = x + (width - textWidth) / 2;
-            int textY = y + (height - getTextHeight()) / 2;
-
-            // Set inverted colors for text
-            setTextColor(0);  // Black text on white background
-            print(percentText, textX, textY);
-            setTextColor(1);  // Reset to white text
+            int textY = y + height + 2;
+            // If there is no room below the bar, fall back to centered overlay.
+            if (textY + getTextHeight() > SCREEN_HEIGHT) {
+                textY = y + (height - getTextHeight()) / 2;
+            }
+            printCentered(percentText, textY);
         }
     }
 

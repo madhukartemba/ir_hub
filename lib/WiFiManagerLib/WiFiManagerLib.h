@@ -276,9 +276,9 @@ class WiFiManagerLib {
             }
             ledRing.update();
             display.clear();
-            display.printCentered("OTA Update", 10);
-
-            display.drawProgressBar(10, 32, 108, 12, progress, total, true);
+            display.printCentered("OTA Update", 4);
+            display.drawLine(0, 20, display.getWidth(), 20);
+            display.drawProgressBar(10, 32, 108, 14, (int)progress, (int)total, true);
 
             display.update();
         });
