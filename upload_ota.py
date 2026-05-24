@@ -12,6 +12,8 @@ import concurrent.futures
 import threading
 import time
 import socket
+import re
+from pathlib import Path
 
 try:
     from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
@@ -49,23 +51,51 @@ def build_firmware_once(env_name):
         return None
 
 
-def upload_firmware_to_ip(env_name, ip_address, firmware_path, lock):
+def find_espota_script():
+    """Locate espota.py from common PlatformIO package paths."""
+    candidates = [
+        Path.home() / ".platformio/packages/framework-arduinoespressif8266/tools/espota.py",
+        Path.home() / ".platformio/packages/tool-esptoolpy/espota.py",
+    ]
+    for path in candidates:
+        if path.exists():
+            return str(path)
+    return None
+
+
+def read_ota_password(secrets_file):
+    """Read OTA_PASSWORD from include/secrets.h-style header."""
+    path = Path(secrets_file)
+    if not path.exists():
+        print(f"❌ secrets file not found: {path}")
+        return None
+    text = path.read_text()
+    match = re.search(r'^\s*#define\s+OTA_PASSWORD\s+"([^"]*)"\s*$', text, re.M)
+    if not match:
+        print(f"❌ OTA_PASSWORD not found in {path}")
+        return None
+    return match.group(1)
+
+
+def upload_firmware_to_ip(ip_address, firmware_path, espota_path, ota_port, ota_password, lock):
     """Upload pre-built firmware to a specific IP address"""
     with lock:
         print(f"📡 Uploading firmware to {ip_address}...")
 
     try:
-        # Use PlatformIO's upload command with direct IP specification
+        # Upload directly through espota.py so auth can be passed reliably.
         cmd = [
-            "pio",
-            "run",
-            "-e",
-            env_name,
-            "--target",
-            "upload",
-            "--upload-port",
+            sys.executable,
+            espota_path,
+            "-i",
             ip_address,
+            "-p",
+            str(ota_port),
+            "-f",
+            firmware_path,
         ]
+        if ota_password:
+            cmd.extend(["-a", ota_password])
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
 
         with lock:
@@ -152,6 +182,9 @@ Examples:
   python upload_ota.py -e ir_hub_version_3 --discover
   python upload_ota.py -e ir_hub_version_3 --discover --discover-timeout 8
 
+  # Read OTA password from include/secrets.h and upload
+  python upload_ota.py -e ir_hub_version_3 --discover --secrets-file include/secrets.h
+
   # Upload to multiple devices (builds once, uploads in parallel)
   python upload_ota.py -e ir_hub_version_0 -i 192.168.1.100 192.168.1.101
   python upload_ota.py -e ir_hub_version_1 -i 192.168.0.183 192.168.0.110 192.168.0.25 192.168.0.161
@@ -193,6 +226,22 @@ Examples:
         "--discover-prefix",
         default="ir-hub-",
         help="mDNS hostname/service prefix filter for discovery (default: ir-hub-).",
+    )
+    parser.add_argument(
+        "--secrets-file",
+        default="include/secrets.h",
+        help="Path to secrets header containing OTA_PASSWORD (default: include/secrets.h).",
+    )
+    parser.add_argument(
+        "--ota-password",
+        default=None,
+        help="Override OTA password (otherwise read from --secrets-file).",
+    )
+    parser.add_argument(
+        "--ota-port",
+        type=int,
+        default=8266,
+        help="ArduinoOTA TCP port (default: 8266).",
     )
     parser.add_argument(
         "--dry-run",
@@ -243,6 +292,20 @@ Examples:
     print(f"Total boards: {len(ip_list)}")
     print(f"Max workers: {args.max_workers}")
 
+    espota_path = find_espota_script()
+    if not espota_path:
+        print("❌ Could not locate espota.py in PlatformIO packages.")
+        print("   Try running: pio run -e <env> once, then retry.")
+        sys.exit(1)
+
+    ota_password = args.ota_password
+    if ota_password is None:
+        ota_password = read_ota_password(args.secrets_file)
+        if ota_password is None:
+            sys.exit(1)
+    auth_status = "set" if ota_password else "empty (unauthenticated)"
+    print(f"OTA auth: {auth_status}")
+
     if args.dry_run:
         print("\n🔍 Dry run mode - no actual uploads will be performed")
         for i, ip in enumerate(ip_list, 1):
@@ -271,7 +334,9 @@ Examples:
         # Single device - no need for threading
         ip = ip_list[0]
         print(f"📡 Uploading to {ip}...")
-        if upload_firmware_to_ip(args.env, ip, firmware_path, threading.Lock()):
+        if upload_firmware_to_ip(
+            ip, firmware_path, espota_path, args.ota_port, ota_password, threading.Lock()
+        ):
             successful += 1
         else:
             failed += 1
@@ -286,7 +351,13 @@ Examples:
             futures = []
             for ip in ip_list:
                 future = executor.submit(
-                    upload_firmware_to_ip, args.env, ip, firmware_path, print_lock
+                    upload_firmware_to_ip,
+                    ip,
+                    firmware_path,
+                    espota_path,
+                    args.ota_port,
+                    ota_password,
+                    print_lock,
                 )
                 futures.append((future, ip))
 
