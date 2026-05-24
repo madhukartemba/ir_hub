@@ -18,7 +18,7 @@ Edit `include/secrets.h` before flashing:
 
 ```c
 #define OTA_PASSWORD       "pick-something-long"
-#define OTA_MANIFEST_URL   "https://cdn.jsdelivr.net/gh/<you>/<repo>@main/ota/manifest.json"
+#define OTA_MANIFEST_URL   "https://<your-project>.pages.dev/ota/manifest.json"
 ```
 
 - `OTA_PASSWORD` protects LAN pushes via `pio run --target upload --upload-port <ip>`.
@@ -26,25 +26,24 @@ Edit `include/secrets.h` before flashing:
 - `OTA_MANIFEST_URL` is what the device polls. Empty disables HTTP-pull OTA
   entirely.
 
-**Use jsDelivr for both manifest and binary, not `raw.githubusercontent.com`
-or GitHub Releases.** jsDelivr is a free CDN that mirrors public GitHub repos
+**Use Cloudflare Pages for both manifest and binary, not jsDelivr, `raw.githubusercontent.com`
+or GitHub Releases.** Cloudflare Pages is a free hosting service that you can link to your GitHub repo, 
 and — crucially — supports the TLS MFLN extension (RFC 6066). The ESP8266
 has only ~18-20 KB free heap available for a TLS handshake, which is too
 tight to receive full-size 16 KB TLS records. MFLN lets the client negotiate
-smaller records so a 1 KB receive buffer is sufficient.
+smaller records so a 4 KB receive buffer is sufficient.
 
-Fastly (`raw.githubusercontent.com`) and the GitHub Releases edge
-(`objects.githubusercontent.com`) both negotiate MFLN inconsistently. They
-work from a laptop but crash the ESP8266 mid-handshake with
-`Unhandled C++ exception: OOM` (the binary fetch is heavier than the
-manifest fetch, so it tends to fail even when manifest fetches succeed).
+Fastly (`raw.githubusercontent.com`), jsDelivr (which uses Fastly for some requests), and the GitHub Releases edge
+(`objects.githubusercontent.com`) all negotiate MFLN inconsistently. They
+work from a laptop but crash the ESP8266 mid-handshake or mid-download with
+`Unhandled C++ exception: OOM` or TLS aborts.
 
 That's why every release commits the firmware binary into this repo's
 `binaries/` folder (e.g. `binaries/firmware_v3_v1.0.3.bin`) and the
-manifest URL points at jsDelivr:
+manifest URL points at Cloudflare Pages:
 
 ```
-https://cdn.jsdelivr.net/gh/<you>/<repo>@main/binaries/firmware_v3_v1.0.3.bin
+https://<your-project>.pages.dev/binaries/firmware_v3_v1.0.3.bin
 ```
 
 The GitHub Release still gets the binary as an attached asset for easy
@@ -59,7 +58,7 @@ Create `ota/manifest.json` in this repo:
   "variants": {
     "v0": { "version": "0.0.0", "url": "" },
     "v1": { "version": "0.0.0", "url": "" },
-    "v3": { "version": "1.0.0", "url": "https://cdn.jsdelivr.net/gh/<you>/<repo>@main/binaries/firmware_v3_v1.0.0.bin" }
+    "v3": { "version": "1.0.0", "url": "https://<your-project>.pages.dev/binaries/firmware_v3_v1.0.0.bin" }
   }
 }
 ```
@@ -94,7 +93,7 @@ Use `scripts/release.py` — it does all of the below in one command. See
    pio run -e ir_hub_version_3
    ```
 
-3. **Commit the binary into `binaries/`** so jsDelivr can serve it:
+3. **Commit the binary into `binaries/`** so Cloudflare Pages can serve it:
 
    ```bash
    mkdir -p binaries
@@ -109,14 +108,14 @@ Use `scripts/release.py` — it does all of the below in one command. See
      --notes "Fix XYZ, improve ABC"
    ```
 
-5. **Update `ota/manifest.json`** to point at the jsDelivr URL:
+5. **Update `ota/manifest.json`** to point at the Cloudflare Pages URL:
 
    ```json
    {
      "variants": {
        "v3": {
          "version": "1.0.1",
-         "url": "https://cdn.jsdelivr.net/gh/<you>/<repo>@main/binaries/firmware_v3_v1.0.1.bin"
+         "url": "https://<your-project>.pages.dev/binaries/firmware_v3_v1.0.1.bin"
        }
      }
    }

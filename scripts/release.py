@@ -43,8 +43,8 @@ PLATFORMIO_INI = REPO_ROOT / "platformio.ini"
 MANIFEST_PATH = REPO_ROOT / "ota" / "manifest.json"
 # Where we stage binaries for the GitHub Release upload (gitignored).
 RELEASE_DIR = REPO_ROOT / "release"
-# Where we commit binaries that the device pulls via jsDelivr. Versioned
-# filenames so jsDelivr's CDN sees each one as a brand-new URL (no cache
+# Where we commit binaries that the device pulls via Cloudflare Pages. Versioned
+# filenames so the CDN sees each one as a brand-new URL (no cache
 # coherency issues even across the global edge network).
 BINARIES_DIR = REPO_ROOT / "binaries"
 
@@ -187,7 +187,7 @@ def stage_binary(env_name: str, source: Path, dry_run: bool) -> Path:
 
 def commit_binary_for_cdn(env_name: str, version: str, source: Path,
                           dry_run: bool) -> Path:
-    """Copy build artifact into the git-tracked `binaries/` dir so jsDelivr
+    """Copy build artifact into the git-tracked `binaries/` dir so Cloudflare Pages
     can serve it via its MFLN-friendly TLS edge (which is what the device
     actually downloads). Versioned filename so the CDN treats each release
     as a unique URL with no cache invalidation needed."""
@@ -199,7 +199,7 @@ def commit_binary_for_cdn(env_name: str, version: str, source: Path,
     BINARIES_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, dst)
     size_kb = dst.stat().st_size / 1024
-    print(f"Committed {dst.relative_to(REPO_ROOT)} ({size_kb:.1f} KB) for jsDelivr")
+    print(f"Committed {dst.relative_to(REPO_ROOT)} ({size_kb:.1f} KB) for Cloudflare Pages")
     return dst
 
 
@@ -214,12 +214,13 @@ def update_manifest(version: str, envs: Iterable[str], repo_slug: str,
     for env_name in envs:
         variant = env_to_variant(env_name)
         bin_path = BINARIES_DIR / f"firmware_{variant}_v{version}.bin"
-        # jsDelivr URL pointing at the binary we committed under binaries/.
+        # Cloudflare Pages URL pointing at the binary we committed under binaries/.
         # The device's TLS budget can't handle a full-size record from
         # objects.githubusercontent.com (where GitHub Release downloads
-        # land), so we deliberately route via jsDelivr's MFLN-friendly edge.
+        # land), so we deliberately route via Cloudflare Pages's MFLN-friendly edge.
+        project_name = repo_slug.split("/")[-1].replace("_", "-")
         url = (
-            f"https://cdn.jsdelivr.net/gh/{repo_slug}@main/"
+            f"https://{project_name}.pages.dev/"
             f"binaries/firmware_{variant}_v{version}.bin"
         )
         # Stash size + md5 in the manifest so the device doesn't have to trust
@@ -285,32 +286,8 @@ def create_release(version: str, notes: Optional[str], notes_file: Optional[Path
 
 
 def purge_jsdelivr(repo_slug: str, dry_run: bool) -> None:
-    """Ask jsDelivr to drop its cached copy of the manifest so devices see the
-    new version immediately instead of waiting up to ~12 h for the TTL.
-
-    Uses curl rather than urllib.request because the system Python on macOS
-    often ships without a working CA bundle and TLS verification fails.
-    curl uses the OS trust store and just works."""
-    url = (f"https://purge.jsdelivr.net/gh/{repo_slug}@main/ota/manifest.json")
-    if dry_run:
-        print(f"[dry-run] curl -sS {url}")
-        return
-    print(f"$ purge jsDelivr cache for ota/manifest.json")
-    res = subprocess.run(
-        ["curl", "-sS", "--max-time", "20", url],
-        capture_output=True, text=True, cwd=str(REPO_ROOT),
-    )
-    if res.returncode != 0:
-        # Non-fatal: devices will pick up the new manifest after the natural
-        # TTL expires. Print so the operator knows but don't abort the release.
-        print(f"  WARN: jsDelivr purge failed: {res.stderr.strip() or res.returncode}")
-        return
-    status = "unknown"
-    try:
-        status = json.loads(res.stdout).get("status", "unknown")
-    except json.JSONDecodeError:
-        pass
-    print(f"  jsDelivr purge status: {status}")
+    """Cloudflare Pages automatically purges cache on new deployments, so this is just a placeholder."""
+    print(f"$ Cloudflare Pages automatically purges cache on deployment")
 
 
 def commit_and_push(version: str, do_push: bool, dry_run: bool) -> None:
@@ -406,7 +383,7 @@ def main() -> None:
     if not args.no_commit:
         commit_and_push(args.version, do_push=not args.no_push, dry_run=args.dry_run)
 
-    # Purge jsDelivr's CDN cache for the manifest path so devices see the bump
+    # Purge cache for the manifest path so devices see the bump
     # without waiting on the default ~12 h TTL.
     if not args.no_release:
         purge_jsdelivr(repo_slug, args.dry_run)

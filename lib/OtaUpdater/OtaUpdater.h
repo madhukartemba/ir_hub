@@ -97,7 +97,7 @@ class OtaUpdater {
     // floor; below that the SYS task starts OOMing during the handshake.
     static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
     // Small TLS buffers only work when the server supports MFLN (RFC 6066).
-    // jsDelivr does; raw.githubusercontent.com (Fastly) does not. See
+    // Cloudflare Pages does; raw.githubusercontent.com (Fastly) and jsDelivr do not. See
     // docs/OTA_RELEASES.md for the recommended URL pattern.
     static constexpr int kTlsRxBuffer = 1024;
     static constexpr int kTlsTxBuffer = 512;
