@@ -133,6 +133,8 @@ class AddDevice : public Screen {
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
             irManager.stopCapture();
         }
+        // Free the ~2 KB IRrecv timing buffer; it's only needed while learning.
+        irManager.releaseReceiver();
     }
 
    private:

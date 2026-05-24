@@ -44,36 +44,58 @@ class MQTTConnector {
         return String(buf);
     }
 
-    String discoveryTopicForId(int deviceId) const {
-        return String("homeassistant/switch/ir_hub_") + hubMacHex + "_device_" + String(deviceId) +
-               "/config";
+    // Topic builders write into a caller-provided stack buffer to keep the
+    // MQTT hot-paths heap-free. Returns the number of bytes that *would*
+    // have been written (snprintf semantics); callers can ignore unless
+    // checking for truncation.
+    static constexpr size_t kTopicBufSize = 80;
+
+    size_t discoveryTopicForId(int deviceId, char* out, size_t outSize) const {
+        return snprintf(out, outSize,
+                        "homeassistant/switch/ir_hub_%s_device_%d/config",
+                        hubMacHex.c_str(), deviceId);
     }
 
-    String commandTopicForId(int deviceId) const {
-        return String("ir_hub/") + hubMacHex + "/device/" + String(deviceId) + "/set";
+    size_t commandTopicForId(int deviceId, char* out, size_t outSize) const {
+        return snprintf(out, outSize, "ir_hub/%s/device/%d/set",
+                        hubMacHex.c_str(), deviceId);
     }
 
-    String stateTopicForId(int deviceId) const {
-        return String("ir_hub/") + hubMacHex + "/device/" + String(deviceId) + "/state";
+    size_t stateTopicForId(int deviceId, char* out, size_t outSize) const {
+        return snprintf(out, outSize, "ir_hub/%s/device/%d/state",
+                        hubMacHex.c_str(), deviceId);
     }
 
-    String otaCheckTopic() const {
-        return String("ir_hub/") + hubMacHex + "/ota/check";
+    size_t otaCheckTopic(char* out, size_t outSize) const {
+        return snprintf(out, outSize, "ir_hub/%s/ota/check", hubMacHex.c_str());
     }
 
     bool publishDiscovery(const Device& device) {
+        // Stack-build all topic / id strings the discovery JSON references.
+        // ArduinoJson v7 stores const char* by reference (no copy), so these
+        // buffers must outlive serializeJson — which they do, both live in
+        // this function's scope.
+        char cmdTopic[kTopicBufSize];
+        char stTopic[kTopicBufSize];
+        char uniqueId[40];   // "ir_hub_" + 12 mac hex + "_" + 10 digits + null
+        char identifier[24]; // "ir_hub_" + 12 mac hex + null
+        commandTopicForId(device.id, cmdTopic, sizeof(cmdTopic));
+        stateTopicForId(device.id, stTopic, sizeof(stTopic));
+        snprintf(uniqueId, sizeof(uniqueId), "ir_hub_%s_%d", hubMacHex.c_str(), device.id);
+        snprintf(identifier, sizeof(identifier), "ir_hub_%s", hubMacHex.c_str());
+
         JsonDocument doc;
         doc["name"] = device.name;
-        doc["command_topic"] = commandTopicForId(device.id);
-        doc["state_topic"] = stateTopicForId(device.id);
-        doc["unique_id"] = String("ir_hub_") + hubMacHex + "_" + String(device.id);
+        doc["command_topic"] = cmdTopic;
+        doc["state_topic"] = stTopic;
+        doc["unique_id"] = uniqueId;
         doc["payload_on"] = "ON";
         doc["payload_off"] = "OFF";
         doc["optimistic"] = false;
 
         JsonObject dev = doc["device"].to<JsonObject>();
         JsonArray ids = dev["identifiers"].to<JsonArray>();
-        ids.add(String("ir_hub_") + hubMacHex);
+        ids.add(identifier);
         dev["name"] = "IR Hub";
         dev["model"] = "ESP8266 IR Hub";
         dev["manufacturer"] = "IR Hub";
@@ -85,8 +107,9 @@ class MQTTConnector {
             return false;
         }
 
-        const String topic = discoveryTopicForId(device.id);
-        bool ok = mqttClient.publish(topic.c_str(), buf, true);
+        char topic[kTopicBufSize];
+        discoveryTopicForId(device.id, topic, sizeof(topic));
+        bool ok = mqttClient.publish(topic, buf, true);
         if (!ok) {
             LOG_ERROR("[MQTT] Failed to publish discovery for device %d", device.id);
         }
@@ -95,21 +118,28 @@ class MQTTConnector {
 
     bool publishState(int deviceId, bool on) {
         const char* payload = on ? "ON" : "OFF";
-        return mqttClient.publish(stateTopicForId(deviceId).c_str(), payload, true);
+        char topic[kTopicBufSize];
+        stateTopicForId(deviceId, topic, sizeof(topic));
+        return mqttClient.publish(topic, payload, true);
     }
 
     bool publishDiscoveryRemove(int deviceId) {
         // Empty retained payload removes MQTT discovery entities in Home Assistant
-        return mqttClient.publish(discoveryTopicForId(deviceId).c_str(), "", true);
+        char topic[kTopicBufSize];
+        discoveryTopicForId(deviceId, topic, sizeof(topic));
+        return mqttClient.publish(topic, "", true);
     }
 
     bool subscribeCommands() {
-        const String sub = String("ir_hub/") + hubMacHex + "/device/+/set";
-        bool ok = mqttClient.subscribe(sub.c_str());
+        char sub[kTopicBufSize];
+        snprintf(sub, sizeof(sub), "ir_hub/%s/device/+/set", hubMacHex.c_str());
+        bool ok = mqttClient.subscribe(sub);
         if (!ok) {
             LOG_ERROR("[MQTT] Failed to subscribe to command topics");
         }
-        if (!mqttClient.subscribe(otaCheckTopic().c_str())) {
+        char ota[kTopicBufSize];
+        otaCheckTopic(ota, sizeof(ota));
+        if (!mqttClient.subscribe(ota)) {
             LOG_WARN("[MQTT] Failed to subscribe to OTA check topic");
         }
         return ok;
@@ -143,8 +173,9 @@ class MQTTConnector {
         // Fast-path the (rare) OTA check command before parsing the device
         // topic shape; topic strings are interned by PubSubClient on the stack.
         const size_t topicLen = strlen(topic);
-        const String otaTopic = otaCheckTopic();
-        if (topicLen == otaTopic.length() && memcmp(topic, otaTopic.c_str(), topicLen) == 0) {
+        char otaTopic[kTopicBufSize];
+        const size_t otaLen = otaCheckTopic(otaTopic, sizeof(otaTopic));
+        if (topicLen == otaLen && memcmp(topic, otaTopic, topicLen) == 0) {
             LOG_INFO("[MQTT] OTA check requested via MQTT");
             if (onOtaCheckCallback) onOtaCheckCallback();
             return;
@@ -214,14 +245,15 @@ class MQTTConnector {
     }
 
     bool connectBroker() {
-        String clientId = String("ir_hub_") + hubMacHex;
+        char clientId[24];  // "ir_hub_" (7) + 12 mac hex + null = 20
+        snprintf(clientId, sizeof(clientId), "ir_hub_%s", hubMacHex.c_str());
         // Pass nullptr for empty credentials so PubSubClient connects
         // anonymously instead of sending empty username/password frames.
         const char* user = mqttCredentialsUser();
         const char* pass = mqttCredentialsPass();
         const char* userArg = (user && *user) ? user : nullptr;
         const char* passArg = (pass && *pass) ? pass : nullptr;
-        if (mqttClient.connect(clientId.c_str(), userArg, passArg)) {
+        if (mqttClient.connect(clientId, userArg, passArg)) {
             LOG_INFO("[MQTT] Connected to broker");
             subscribeCommands();
             deviceManager.forEachDevice([this](Device& d) {
@@ -264,6 +296,11 @@ class MQTTConnector {
         // permanent heap vs the previous 1024 B. Keep in sync with the
         // 768 B `buf` cap inside publishDiscovery().
         mqttClient.setBufferSize(768);
+        // Default 15 s keepalive ⇒ PINGREQ/PINGRESP every 15 s, ~5760 round
+        // trips/day. Each one churns the heap a little. 60 s is well within
+        // HA's default `birth/will` timeout window and reduces background
+        // MQTT traffic and fragmentation drift ~4×.
+        mqttClient.setKeepAlive(60);
     }
 
     ~MQTTConnector() {

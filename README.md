@@ -14,7 +14,7 @@ It ships as a complete hardware + firmware project: custom KiCad PCB, 3D-printed
 
 - **Learns IR remotes.** Point any IR remote at the receiver, press a button, and the Hub stores the raw signal.
 - **Replays IR commands.** 8x parallel high-current IR LEDs give very long range so the Hub can sit across the room from the appliance.
-- **Smart home bridge.** Each learned device shows up as an MQTT entity (works great with Home Assistant) and as an Alexa-controllable device (via FauxmoESP / Espalexa).
+- **Smart home bridge.** Each learned device shows up as an MQTT entity (works great with Home Assistant) and as an Alexa-controllable device (via Espalexa).
 - **Standalone UI.** 128x64 OLED + single button + 30-LED NeoPixel ring + haptic motor + buzzer. No phone required for day-to-day use.
 - **Captive-portal Wi-Fi setup.** First boot exposes an `IRHub V3 Setup` AP; users join it and configure Wi-Fi + MQTT from their phone.
 - **OTA updates.** Cloud OTA (via Cloudflare Pages manifest, polled hourly) and LAN OTA (ArduinoOTA + mDNS auto-discovery).

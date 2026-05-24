@@ -5,6 +5,7 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <IRutils.h>
+#include <new>
 #include "IRCode.h"
 class IRManager {
    private:
@@ -15,6 +16,10 @@ class IRManager {
     const uint16_t kMinUnknownSize = 12;
     const uint8_t kTolerancePercentage = 25;  // 25% tolerance
 
+    // IRrecv carries a 1024-entry uint16_t timing buffer plus internal state
+    // (~2 KB heap). Only the AddDevice flow needs it, so we allocate lazily on
+    // the first startCapture() and free via releaseReceiver() once the user
+    // leaves that flow. Steady-state heap recovers ~2 KB.
     IRrecv *irrecv = nullptr;
     IRsend *irsend = nullptr;
 
@@ -30,6 +35,24 @@ class IRManager {
         return code;
     }
 
+    bool ensureReceiver() {
+        if (irrecv) return true;
+        if (rxPin == -1) {
+            LOG_ERROR("[IRManager] Cannot allocate receiver: rxPin not set");
+            return false;
+        }
+        irrecv = new (std::nothrow) IRrecv(rxPin, kCaptureBufferSize, kTimeout, true);
+        if (!irrecv) {
+            LOG_ERROR("[IRManager] Failed to allocate IRrecv (free heap=%u)",
+                      (unsigned)ESP.getFreeHeap());
+            return false;
+        }
+        irrecv->setUnknownThreshold(kMinUnknownSize);
+        irrecv->setTolerance(kTolerancePercentage);
+        LOG_INFO("[IRManager] IRrecv allocated (free heap=%u)", (unsigned)ESP.getFreeHeap());
+        return true;
+    }
+
    public:
     IRManager() : rxPin(-1), txPin(-1) {}
     IRManager(int rx, int tx) : rxPin(rx), txPin(tx) {}
@@ -39,15 +62,10 @@ class IRManager {
             LOG_ERROR("[IRManager] Pins not set. Use begin(rx, tx) or constructor with pins.");
             return false;
         }
-        LOG_INFO("[IRManager] Initializing with RX=%d, TX=%d", rxPin, txPin);
-        irrecv = new IRrecv(rxPin, kCaptureBufferSize, kTimeout, true);
+        LOG_INFO("[IRManager] Initializing TX=%d (RX=%d allocated lazily on first capture)",
+                 txPin, rxPin);
         irsend = new IRsend(txPin);
-
-        irrecv->setUnknownThreshold(kMinUnknownSize);
-        irrecv->setTolerance(kTolerancePercentage);
         irsend->begin();
-        stopCapture();
-        LOG_INFO("[IRManager] IR receiver and sender started (receiver paused)");
         return true;
     }
 
@@ -58,24 +76,36 @@ class IRManager {
     }
 
     void stopCapture() {
-        irrecv->disableIRIn();
+        if (irrecv) {
+            irrecv->disableIRIn();
+        }
         isCapturing = false;
     }
 
     void startCapture() {
+        if (!ensureReceiver()) return;
         irrecv->enableIRIn();
         isCapturing = true;
     }
 
-    bool decode() {
-        if (!irrecv) {
-            LOG_ERROR("[IRManager] irrecv not initialized");
-            return false;
-        }
+    /// Free the IRrecv timing buffer. Call when leaving the device-learning
+    /// flow so the ~2 KB returns to the heap pool until the next learn.
+    void releaseReceiver() {
+        if (!irrecv) return;
+        irrecv->disableIRIn();
+        delete irrecv;
+        irrecv = nullptr;
+        isCapturing = false;
+        LOG_INFO("[IRManager] IRrecv released (free heap=%u)", (unsigned)ESP.getFreeHeap());
+    }
 
+    bool decode() {
         if (!isCapturing) {
             LOG_INFO("[IRManager] IR receiver now capturing data");
             startCapture();
+        }
+        if (!irrecv) {
+            return false;
         }
 
         if (irrecv->decode(&lastResults)) {
