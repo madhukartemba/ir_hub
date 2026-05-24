@@ -2,6 +2,7 @@
 #include "../../global/Global.h"
 #include "../../preferences.h"
 #include "../../utils/MenuUtils.h"
+#include "AuthorEasterEggScreen.h"
 #include "ClearDataConfirmation.h"
 #include "ContactQrScreen.h"
 #include "FactoryResetConfirmation.h"
@@ -215,8 +216,8 @@ class Settings : public Screen {
                 router.push(new UpdateCheckScreen());
                 break;
             case Action::AUTHOR_INFO:
-                // Read-only rows.
                 speaker.shortBeep();
+                router.push(new AuthorEasterEggScreen());
                 break;
             case Action::CONTACT_QR:
                 speaker.shortBeep();
