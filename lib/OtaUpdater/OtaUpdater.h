@@ -92,14 +92,14 @@ class OtaUpdater {
     // simultaneously connecting to Wi-Fi, registering with HA, AND pulling TLS
     // — the heap spike would risk a boot-time crash on flaky networks.
     static constexpr unsigned long kBootDelayMs = 30UL * 1000UL;
-    // Manifest fetch needs ~11 KB transient (TLS RX buf 8 KB + BearSSL session
-    // state ~6 KB + lwIP TCP buffers ~3 KB + JSON parse). 
-    // Since we enabled the 16KB secondary heap, the 8KB TLS RX buffer goes there,
-    // saving precious DRAM.
+    // Manifest fetch needs ~11 KB transient (TLS RX buf 1 KB + BearSSL session
+    // state ~6 KB + lwIP TCP buffers ~3 KB + JSON parse). 14 KB free is the
+    // floor; below that the SYS task starts OOMing during the handshake.
     static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
-    // We use an 8KB buffer to comfortably fit the certificate chain from
-    // raw.githubusercontent.com during the handshake, without needing MFLN.
-    static constexpr int kTlsRxBuffer = 8192;
+    // Small TLS buffers only work when the server supports MFLN (RFC 6066).
+    // Cloudflare Pages does; raw.githubusercontent.com (Fastly) and jsDelivr do not. See
+    // docs/OTA_RELEASES.md for the recommended URL pattern.
+    static constexpr int kTlsRxBuffer = 1024;
     static constexpr int kTlsTxBuffer = 512;
 
     const char* manifestUrl_ = "";

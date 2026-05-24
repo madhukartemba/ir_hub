@@ -159,10 +159,9 @@ static bool mountLittleFsWithRecovery() {
 // download on an ESP8266.
 
 // TLS receive buffer for the firmware download. We must use 16KB (the TLS maximum)
-// because GitHub Releases (objects.githubusercontent.com) does not support MFLN 
-// (Max Fragment Length Negotiation) and sends full 16KB records for large files. 
-// This fits in our ~27KB downloader-mode heap because the BearSSL handshake 
-// transient memory (~4KB) is freed before Update.begin()
+// because Cloudflare Pages does not reliably support MFLN (Max Fragment Length Negotiation)
+// and sends full 16KB records for large files. This fits in our ~27KB downloader-mode
+// heap because the BearSSL handshake transient memory (~4KB) is freed before Update.begin()
 // allocates its flash buffer (~4KB).
 static constexpr int kDownloaderTlsRxBuffer = 16384;
 static constexpr int kDownloaderTlsTxBuffer = 512;

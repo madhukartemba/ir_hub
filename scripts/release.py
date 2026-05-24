@@ -43,7 +43,7 @@ PLATFORMIO_INI = REPO_ROOT / "platformio.ini"
 MANIFEST_PATH = REPO_ROOT / "ota" / "manifest.json"
 # Where we stage binaries for the GitHub Release upload (gitignored).
 RELEASE_DIR = REPO_ROOT / "release"
-# Where we commit binaries that the device pulls via GitHub Releases. Versioned
+# Where we commit binaries that the device pulls via Cloudflare Pages. Versioned
 # filenames so the CDN sees each one as a brand-new URL (no cache
 # coherency issues even across the global edge network).
 BINARIES_DIR = REPO_ROOT / "binaries"
@@ -187,7 +187,7 @@ def stage_binary(env_name: str, source: Path, dry_run: bool) -> Path:
 
 def commit_binary_for_cdn(env_name: str, version: str, source: Path,
                           dry_run: bool) -> Path:
-    """Copy build artifact into the git-tracked `binaries/` dir so GitHub Releases
+    """Copy build artifact into the git-tracked `binaries/` dir so Cloudflare Pages
     can serve it via its MFLN-friendly TLS edge (which is what the device
     actually downloads). Versioned filename so the CDN treats each release
     as a unique URL with no cache invalidation needed."""
@@ -199,7 +199,7 @@ def commit_binary_for_cdn(env_name: str, version: str, source: Path,
     BINARIES_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, dst)
     size_kb = dst.stat().st_size / 1024
-    print(f"Committed {dst.relative_to(REPO_ROOT)} ({size_kb:.1f} KB) for GitHub Releases")
+    print(f"Committed {dst.relative_to(REPO_ROOT)} ({size_kb:.1f} KB) for Cloudflare Pages")
     return dst
 
 
@@ -284,8 +284,8 @@ def create_release(version: str, notes: Optional[str], notes_file: Optional[Path
 
 
 def purge_jsdelivr(repo_slug: str, dry_run: bool) -> None:
-    """GitHub automatically serves the latest manifest from raw.githubusercontent.com."""
-    print(f"$ GitHub automatically serves the latest manifest")
+    """Cloudflare Pages automatically purges cache on new deployments, so this is just a placeholder."""
+    print(f"$ Cloudflare Pages automatically purges cache on deployment")
 
 
 def commit_and_push(version: str, do_push: bool, dry_run: bool) -> None:
