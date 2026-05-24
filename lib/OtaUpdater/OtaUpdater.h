@@ -161,8 +161,13 @@ class OtaUpdater {
     // max_block to refuse the check cleanly before BearSSL OOMs.
     static constexpr uint16_t kMinMaxBlockForManifest = 7 * 1024;
     // Small TLS buffers only work when the server supports MFLN (RFC 6066).
-    // Cloudflare Pages does; raw.githubusercontent.com (Fastly) and jsDelivr do not. See
-    // docs/OTA_RELEASES.md for the recommended URL pattern.
+    // Cloudflare Pages does; raw.githubusercontent.com (Fastly) and jsDelivr do not.
+    // See docs/OTA_RELEASES.md for the recommended URL pattern.
+    //
+    // Empirically: Cloudflare Pages negotiates MFLN at 1024 but NOT at 512 —
+    // dropping the RX buffer to 512 makes BearSSL fail the handshake with
+    // BR_ERR_TOO_LARGE (SSL err 6) on the certificate-chain flight, since
+    // Cloudflare keeps sending standard-sized records. Stay at 1024.
     static constexpr int kTlsRxBuffer = 1024;
     static constexpr int kTlsTxBuffer = 512;
 
@@ -291,14 +296,14 @@ class OtaUpdater {
             return false;
         }
 
-        String body = http.getString();
-        sample("after getString");
+        // Stream-parse straight from the socket so we never materialise the
+        // full body as a String. Saves ~(body size) bytes of transient heap
+        // and one fragmentation event during the TLS-handshake spike.
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, http.getStream());
+        sample("after json parse");
         http.end();
         sample("after http.end");
-
-        JsonDocument doc;
-        DeserializationError err = deserializeJson(doc, body);
-        sample("after json parse");
         if (err) {
             LOG_WARN("[OTA-HTTP] Manifest JSON parse error: %s", err.c_str());
             return false;

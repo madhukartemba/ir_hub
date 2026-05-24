@@ -257,7 +257,11 @@ class MQTTConnector {
           mqttClient(wifiClient),
           enabled(false),
           lastReconnectAttempt(0) {
-        mqttClient.setBufferSize(1024);
+        // 768 B holds our worst-case discovery packet (~470 B JSON +
+        // ~60 B topic + headers) with comfortable margin. Saves 256 B of
+        // permanent heap vs the previous 1024 B. Keep in sync with the
+        // 768 B `buf` cap inside publishDiscovery().
+        mqttClient.setBufferSize(768);
     }
 
     ~MQTTConnector() {
