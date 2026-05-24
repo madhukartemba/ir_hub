@@ -165,94 +165,114 @@ static bool mountLittleFsWithRecovery() {
 static constexpr int kDownloaderTlsRxBuffer = 16384;
 static constexpr int kDownloaderTlsTxBuffer = 512;
 
+static U8G2* g_dlDisplay = nullptr;
+
 static void downloaderShowStatus(const char* line1, const char* line2 = nullptr) {
-    display.clear();
-    display.setTextSize(1);
-    display.printCentered("Firmware Update", 6);
-    display.drawLine(0, 18, display.getWidth(), 18);
-    if (line1) display.printCentered(line1, 28);
-    if (line2) display.printCentered(line2, 42);
-    display.update();
+    if (!g_dlDisplay) return;
+    g_dlDisplay->firstPage();
+    do {
+        g_dlDisplay->setFont(u8g2_font_ncenB08_tr);
+        int w = g_dlDisplay->getStrWidth("Firmware Update");
+        g_dlDisplay->drawStr((128 - w) / 2, 12, "Firmware Update");
+        g_dlDisplay->drawLine(0, 18, 128, 18);
+        if (line1) {
+            w = g_dlDisplay->getStrWidth(line1);
+            g_dlDisplay->drawStr((128 - w) / 2, 34, line1);
+        }
+        if (line2) {
+            w = g_dlDisplay->getStrWidth(line2);
+            g_dlDisplay->drawStr((128 - w) / 2, 48, line2);
+        }
+    } while (g_dlDisplay->nextPage());
 }
 
 static void downloaderShowProgress(const char* version, size_t cur, size_t total) {
     if (g_ledReady) ledRing.update();
-    display.clear();
+    if (!g_dlDisplay) return;
+    
     char title[32];
     snprintf(title, sizeof(title), "Installing v%s", version);
-    display.printCentered(title, 8);
-    display.drawLine(0, 20, display.getWidth(), 20);
-    display.drawProgressBar(10, 32, 108, 14, (int)cur, (int)total, true);
     char pct[8];
     unsigned p = (total > 0) ? (unsigned)(((unsigned long)cur * 100UL) / (unsigned long)total) : 0;
     snprintf(pct, sizeof(pct), "%u%%", p);
-    display.printCentered(pct, 52);
-    display.update();
+
+    g_dlDisplay->firstPage();
+    do {
+        g_dlDisplay->setFont(u8g2_font_ncenB08_tr);
+        int w = g_dlDisplay->getStrWidth(title);
+        g_dlDisplay->drawStr((128 - w) / 2, 12, title);
+        g_dlDisplay->drawLine(0, 20, 128, 20);
+        
+        g_dlDisplay->drawFrame(10, 32, 108, 14);
+        if (total > 0) {
+            int bw = (int)(104UL * cur / total);
+            if (bw > 0) g_dlDisplay->drawBox(12, 34, bw, 10);
+        }
+        
+        w = g_dlDisplay->getStrWidth(pct);
+        g_dlDisplay->drawStr((128 - w) / 2, 60, pct);
+    } while (g_dlDisplay->nextPage());
 }
 
 static void downloaderLogSslError(WiFiClientSecure& client, const char* phase) {
-    char buf[64] = {0};
-    int err = client.getLastSSLError(buf, sizeof(buf));
-    if (err != 0) {
-        LOG_ERROR("[Downloader] BearSSL err %d (%s) during %s", err, buf, phase);
-    }
+    // In downloader mode, Serial is intentionally disabled to save 512 bytes of heap
+    // for the 16KB TLS buffer. So we just ignore the error logging here.
+    (void)client;
+    (void)phase;
 }
 
-/// Streams the firmware binary directly into the Update region. Avoids
-/// ESPhttpUpdate so we (a) reuse the exact HTTPClient setup that worked for
-/// the manifest fetch and (b) skip the x-ESP8266-* request headers that some
-/// edges/WAFs reject under load.
-///
-/// `expectedSize` and `md5Hex` come from the manifest (carried through the
-/// pending-OTA RTC slot) so we don't have to trust the response's
-/// Content-Length header — empirically some CDN edges drop it on long-lived
-/// TLS streams to embedded clients. md5Hex may be empty to skip integrity
-/// verification.
+/// Streams the firmware binary directly into the Update region.
 static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
                                    const char* version, size_t expectedSize,
                                    const char* md5Hex) {
-    HTTPClient http;
-    http.setTimeout(20000);
-    http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-    http.setUserAgent(String("IRHub-OTA/") + version);
-    if (!http.begin(client, url)) {
-        LOG_ERROR("[Downloader] http.begin failed");
+    // Parse URL to avoid String allocations
+    const char* urlPath = url;
+    if (strncmp(urlPath, "https://", 8) == 0) urlPath += 8;
+    else if (strncmp(urlPath, "http://", 7) == 0) urlPath += 7;
+    
+    const char* slash = strchr(urlPath, '/');
+    if (!slash) slash = "/";
+    
+    char host[64];
+    size_t hostLen = slash > urlPath ? slash - urlPath : 0;
+    if (hostLen >= sizeof(host)) hostLen = sizeof(host) - 1;
+    strncpy(host, urlPath, hostLen);
+    host[hostLen] = '\0';
+
+    if (!client.connect(host, 443)) {
         return false;
     }
 
-    int code = http.GET();
-    if (code != HTTP_CODE_OK) {
-        LOG_ERROR("[Downloader] GET returned %d", code);
-        downloaderLogSslError(client, "GET");
-        http.end();
-        return false;
+    client.print("GET ");
+    client.print(slash);
+    client.print(" HTTP/1.0\r\nHost: ");
+    client.print(host);
+    client.print("\r\nUser-Agent: IRHub-OTA/");
+    client.print(version);
+    client.print("\r\nConnection: close\r\n\r\n");
+
+    // Read headers manually to save HTTPClient overhead (~300 bytes)
+    char c;
+    int newlines = 0;
+    unsigned long timeout = millis() + 10000UL;
+    while (client.connected() || client.available()) {
+        if (millis() > timeout) return false;
+        if (!client.available()) { delay(1); continue; }
+        c = client.read();
+        if (c == '\n') newlines++;
+        else if (c != '\r') newlines = 0;
+        if (newlines == 2) break;
     }
 
-    int headerLen = http.getSize();
-    if (headerLen > 0 && (size_t)headerLen != expectedSize) {
-        LOG_WARN("[Downloader] Content-Length (%d) != manifest size (%u) — "
-                 "trusting manifest", headerLen, (unsigned)expectedSize);
-    } else if (headerLen <= 0) {
-        LOG_INFO("[Downloader] No Content-Length in response; using manifest size %u",
-                 (unsigned)expectedSize);
-    }
-    LOG_INFO("[Downloader] Binary is %u bytes; beginning Update", (unsigned)expectedSize);
+    if (newlines != 2) return false;
 
     if (!Update.begin(expectedSize, U_FLASH)) {
-        LOG_ERROR("[Downloader] Update.begin failed (err=%d)", Update.getError());
-        http.end();
         return false;
     }
     if (md5Hex && *md5Hex) {
-        if (!Update.setMD5(md5Hex)) {
-            LOG_WARN("[Downloader] setMD5(%s) rejected — skipping integrity check",
-                     md5Hex);
-        } else {
-            LOG_INFO("[Downloader] Verifying against MD5 %s", md5Hex);
-        }
+        Update.setMD5(md5Hex);
     }
 
-    WiFiClient* stream = http.getStreamPtr();
     uint8_t buf[512];
     size_t written = 0;
     unsigned long lastProgress = millis();
@@ -260,19 +280,10 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
     constexpr unsigned long kStreamIdleTimeoutMs = 20000UL;
 
     while (written < expectedSize) {
-        int avail = stream->available();
+        int avail = client.available();
         if (avail <= 0) {
-            if (!http.connected() && stream->available() <= 0) {
-                LOG_ERROR("[Downloader] Stream closed early at %u/%u",
-                          (unsigned)written, (unsigned)expectedSize);
-                downloaderLogSslError(client, "read");
-                break;
-            }
-            if (millis() - lastByteAt > kStreamIdleTimeoutMs) {
-                LOG_ERROR("[Downloader] Stream idle timeout at %u/%u",
-                          (unsigned)written, (unsigned)expectedSize);
-                break;
-            }
+            if (!client.connected() && client.available() <= 0) break;
+            if (millis() - lastByteAt > kStreamIdleTimeoutMs) break;
             delay(1);
             continue;
         }
@@ -280,18 +291,10 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
         if (toRead > expectedSize - written) {
             toRead = expectedSize - written;
         }
-        int n = stream->readBytes(buf, toRead);
-        if (n <= 0) {
-            LOG_ERROR("[Downloader] readBytes returned %d at %u/%u",
-                      n, (unsigned)written, (unsigned)expectedSize);
-            downloaderLogSslError(client, "read");
-            break;
-        }
+        int n = client.readBytes(buf, toRead);
+        if (n <= 0) break;
         if (Update.write(buf, (size_t)n) != (size_t)n) {
-            LOG_ERROR("[Downloader] Update.write failed at %u (err=%d)",
-                      (unsigned)written, Update.getError());
             Update.end(false);
-            http.end();
             return false;
         }
         written += (size_t)n;
@@ -301,18 +304,13 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
             lastProgress = millis();
         }
     }
-    http.end();
 
     if (written != expectedSize) {
-        LOG_ERROR("[Downloader] Truncated download: %u/%u",
-                  (unsigned)written, (unsigned)expectedSize);
         Update.end(false);
         return false;
     }
 
     if (!Update.end(true)) {
-        LOG_ERROR("[Downloader] Update.end failed (err=%d) — likely MD5 mismatch",
-                  Update.getError());
         return false;
     }
     downloaderShowProgress(version, expectedSize, expectedSize);
@@ -320,17 +318,19 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
 }
 
 [[noreturn]] static void runDownloaderMode(const pending_ota::Slot& slot) {
-    LOG_INFO("[Downloader] Entering for v%s (heap=%u, max_block=%u)",
-             slot.version, (unsigned)ESP.getFreeHeap(),
-             (unsigned)ESP.getMaxFreeBlockSize());
-    LOG_INFO("[Downloader] URL=%s", slot.url);
-
-    g_displayReady = display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE, DISPLAY_FLIPPED);
-    if (!g_displayReady) {
-        LOG_ERROR("[Downloader] Display init failed — rebooting to normal mode");
-        delay(200);
-        ESP.restart();
+    // DO NOT initialize Serial here! We need the 512 bytes of RX/TX buffers for BearSSL.
+    
+    // Use a local 1-page (128 bytes) display buffer instead of the global 1024-byte one
+    if (DISPLAY_TYPE == DisplayType::SH1106) {
+        static U8G2_SH1106_128X64_NONAME_1_HW_I2C sh1106(U8G2_R0, U8X8_PIN_NONE);
+        g_dlDisplay = &sh1106;
+    } else {
+        static U8G2_SSD1306_128X64_NONAME_1_HW_I2C ssd1306(U8G2_R0, U8X8_PIN_NONE);
+        g_dlDisplay = &ssd1306;
     }
+    g_dlDisplay->begin();
+    g_dlDisplay->setBusClock(400000);
+
     char installing[32];
     snprintf(installing, sizeof(installing), "Installing v%s", slot.version);
     downloaderShowStatus(installing, "Connecting Wi-Fi");
@@ -350,15 +350,12 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
         ledRing.update();
     }
     if (WiFi.status() != WL_CONNECTED) {
-        LOG_ERROR("[Downloader] Wi-Fi connect timeout — rebooting to normal mode");
         downloaderShowStatus("Wi-Fi failed", "Try again later");
         ledRing.solid(COLOR_ERROR);
         ledRing.finishTransition();
         delay(2500);
         ESP.restart();
     }
-    LOG_INFO("[Downloader] Wi-Fi connected (ip=%s, heap=%u)",
-             WiFi.localIP().toString().c_str(), (unsigned)ESP.getFreeHeap());
 
     downloaderShowStatus(installing, "Downloading...");
 
@@ -366,20 +363,15 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
     client.setInsecure();
     client.setBufferSizes(kDownloaderTlsRxBuffer, kDownloaderTlsTxBuffer);
 
-    LOG_INFO("[Downloader] Starting download (heap=%u, expected=%u bytes)",
-             (unsigned)ESP.getFreeHeap(), (unsigned)slot.expected_size);
     bool ok = downloaderStreamUpdate(client, slot.url, slot.version,
                                      (size_t)slot.expected_size, slot.md5_hex);
 
     if (ok) {
-        LOG_INFO("[Downloader] Flash successful — rebooting into new firmware");
         downloaderShowStatus("Success!", "Restarting...");
         ledRing.solid(COLOR_SUCCESS);
         ledRing.finishTransition();
         delay(1500);
     } else {
-        LOG_ERROR("[Downloader] Update failed (heap_at_exit=%u)",
-                  (unsigned)ESP.getFreeHeap());
         downloaderShowStatus("Update failed", "Will retry later");
         ledRing.solid(COLOR_ERROR);
         ledRing.finishTransition();
@@ -420,8 +412,6 @@ static void superviseHeap() {
 }
 
 void setup() {
-    Serial.begin(115200);
-
     // OTA downloader-mode trampoline: if the previous boot's normal-mode
     // firmware armed a pending OTA, hand the entire heap to the TLS download
     // by skipping all non-essential subsystem init. We clear the slot first so
@@ -433,6 +423,8 @@ void setup() {
         pending_ota::clear();
         runDownloaderMode(pending);  // [[noreturn]]
     }
+
+    Serial.begin(115200);
 
     // Bump boot-loop counter; cleared at end of setup() when system ready.
     uint16_t bootFailures = bootGuardReadFailures();
