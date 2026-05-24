@@ -4,19 +4,19 @@
       "version": "1.2.1",
       "url": "https://ir-hub.pages.dev/binaries/firmware_v3_v1.2.1.bin",
       "size": 808704,
-      "md5": "332e8ca5538369c9e6676cc7bb2502c7"
+      "md5": "e017ba593793601788d19e7e5efb7395"
     },
     "v0": {
       "version": "1.2.1",
       "url": "https://ir-hub.pages.dev/binaries/firmware_v0_v1.2.1.bin",
-      "size": 821152,
-      "md5": "7cfbbc035dfd0926ef5f8e6cf0d5f29d"
+      "size": 808704,
+      "md5": "6c4933abaea8d00bed20f0310b629297"
     },
     "v1": {
       "version": "1.2.1",
       "url": "https://ir-hub.pages.dev/binaries/firmware_v1_v1.2.1.bin",
-      "size": 821120,
-      "md5": "c271dec375f08377da5c33d876f52697"
+      "size": 808704,
+      "md5": "43e0d92f64c1732bf16314283749cb39"
     }
   }
 }
