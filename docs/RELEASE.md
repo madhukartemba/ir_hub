@@ -1,12 +1,11 @@
 # Releasing a new firmware version
 
 `scripts/release.py` is the single command that ships an OTA-deliverable
-firmware. It bumps the version, builds the binaries, attaches them to a
-GitHub Release (for human visibility), drops a versioned copy under
-`binaries/` (which is what the device actually downloads via jsDelivr's
-MFLN-friendly TLS edge), updates `ota/manifest.json`, commits + pushes,
-and purges the jsDelivr CDN cache — in the right order so that no device
-can ever see a manifest pointing at a binary that doesn't exist yet.
+firmware. It bumps the version, builds the binaries, drops a versioned
+copy under `binaries/` (which is what the device actually downloads via
+Cloudflare Pages), updates `ota/manifest.json`, and commits + pushes in
+the right order so that no device can ever see a manifest pointing at a
+binary that doesn't exist yet. GitHub Releases are optional and opt-in.
 
 For the underlying OTA mechanism (manifest schema, security model, what the
 device does on the wire), see [`OTA_RELEASES.md`](OTA_RELEASES.md). This
@@ -22,8 +21,9 @@ gh --version             # GitHub CLI
 gh auth login            # authenticate gh against github.com
 ```
 
-The script will refuse to run if any of `pio`, `gh`, or `git` is missing, or
-if `gh auth status` reports unauthenticated.
+The script will refuse to run if any of `pio` or `git` is missing.
+If you pass `--github-release`, it will also require `gh` and authenticated
+GitHub CLI access.
 
 You also need:
 
@@ -60,7 +60,7 @@ scripts/release.py 1.0.1 \
 Let GitHub generate notes from your commits since the last tag:
 
 ```bash
-scripts/release.py 1.0.1 --auto-notes
+scripts/release.py 1.0.1 --github-release --auto-notes
 ```
 
 Inspect what would happen, without doing anything:
@@ -78,11 +78,12 @@ scripts/release.py 1.0.1 --dry-run
 | `--notes` | Release notes as a string. Mutually exclusive with `--notes-file`. |
 | `--notes-file PATH` | Read release notes from a markdown file. |
 | `--auto-notes` | Let `gh` generate notes from commits since the last tag. |
+| `--github-release` | Also create/update a GitHub Release with uploaded binary assets (optional). |
 | `--draft` | Create the GitHub Release as a draft (publish manually). |
 | `--repo OWNER/REPO` | Override the auto-detected GitHub slug. |
 | `--no-push` | Commit locally but don't push (useful for reviewing the commit first). |
 | `--no-commit` | Skip the git add/commit/push entirely (the manifest still gets rewritten on disk). |
-| `--no-release` | Skip `gh release create` (build + stage + manifest only). |
+| `--no-release` | Deprecated alias; keeps GitHub Release creation disabled. |
 | `--dry-run` | Print every action it would take, then exit. |
 
 ## What it does, step by step
@@ -106,9 +107,10 @@ scripts/release.py 1.0.1 --dry-run
      is the file the device actually downloads, via jsDelivr's CDN.
    The variant is derived from the env name (`ir_hub_version_3` → `v3`) so
    it matches the device's `OTA_HW_VARIANT`.
-5. **Creates the GitHub Release** with `gh release create vX.Y.Z firmware_*.bin
-   --title vX.Y.Z`. If the tag already exists from a partial previous run,
-   falls back to `gh release upload --clobber` so re-runs are idempotent.
+5. **(Optional) Creates the GitHub Release** (only when `--github-release`
+   is set) with `gh release create vX.Y.Z firmware_*.bin --title vX.Y.Z`.
+   If the tag already exists from a partial previous run, falls back to
+   `gh release upload --clobber` so re-runs are idempotent.
 6. **Updates `ota/manifest.json`** with the new version and per-variant URLs
    pointing at jsDelivr:
 
@@ -128,15 +130,15 @@ scripts/release.py 1.0.1 --dry-run
 7. **Commits and pushes** `platformio.ini` + `ota/manifest.json` +
    `binaries/firmware_<variant>_v<version>.bin` with the message
    `chore(release): vX.Y.Z`.
-8. **Purges the jsDelivr cache** for the manifest path so devices see the
-   new version immediately rather than waiting up to ~12 h for jsDelivr's
-   default TTL. The binary path is fresh (new filename) so doesn't need
-   purging.
+8. **No manual CDN purge needed**. Cloudflare Pages deploys fresh content
+   for the new commit; the binary path is versioned (`..._vX.Y.Z.bin`)
+   so each release is a unique URL.
 
-The release goes live in step 5 *before* the manifest is published in
-step 7 — a device polling between those two steps either sees the old
-manifest (and does nothing) or sees the new manifest (and the binary URL
-already works). It can never see "new manifest → 404 binary".
+If `--github-release` is used, the release goes live in step 5 *before*
+the manifest is published in step 7 — a device polling between those two
+steps either sees the old manifest (and does nothing) or sees the new
+manifest (and the binary URL already works). It can never see
+"new manifest -> 404 binary".
 
 ## After running
 

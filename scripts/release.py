@@ -5,8 +5,8 @@ Workflow per invocation:
   1. Bump `custom_firmware_version` in platformio.ini.
   2. Build each requested PlatformIO env.
   3. Stage binaries as `release/firmware_<variant>.bin`.
-  4. Create the GitHub Release and upload the binaries.
-  5. Update `ota/manifest.json` to point at the new release URLs.
+  4. (Optional) Create the GitHub Release and upload the binaries.
+  5. Update `ota/manifest.json` to point at Cloudflare Pages URLs.
   6. Commit `platformio.ini` + `ota/manifest.json` and push.
 
 Order matters: we create the Release *before* publishing the manifest so a
@@ -18,11 +18,13 @@ Examples:
   scripts/release.py 1.0.1 --envs ir_hub_version_3
   scripts/release.py 1.0.1 --envs ir_hub_version_0 ir_hub_version_1 ir_hub_version_3
   scripts/release.py 1.0.1 --notes "Fix touch-button EMI during recording"
+  scripts/release.py 1.0.1 --github-release --auto-notes
   scripts/release.py 1.0.1 --dry-run
 
 Prerequisites:
   - PlatformIO CLI (`pio`) on PATH.
-  - GitHub CLI (`gh`) on PATH, authenticated (`gh auth status`).
+  - Git on PATH.
+  - GitHub CLI (`gh`) on PATH only when using `--github-release`.
   - Clean working tree on the branch you intend to release from.
 """
 
@@ -82,21 +84,25 @@ def run_quiet(cmd: List[str], cwd: Optional[Path] = None) -> subprocess.Complete
 # Preflight checks
 # ---------------------------------------------------------------------------
 
-def check_tools() -> None:
-    missing = [tool for tool in ("pio", "gh", "git") if shutil.which(tool) is None]
+def check_tools(require_gh: bool) -> None:
+    required_tools = ["pio", "git"]
+    if require_gh:
+        required_tools.append("gh")
+    missing = [tool for tool in required_tools if shutil.which(tool) is None]
     if missing:
         sys.exit(f"ERROR: required tools not found on PATH: {', '.join(missing)}")
 
-    # `gh auth status` exits non-zero for cosmetic warnings (missing scopes,
-    # stale GHES host, etc.) even when github.com auth is fine. Probe with an
-    # actual API call instead — if `gh api user` returns a login, we're good.
-    probe = run_quiet(["gh", "api", "user", "--jq", ".login"])
-    if probe.returncode != 0 or not probe.stdout.strip():
-        sys.stderr.write("ERROR: gh cannot make authenticated API calls.\n")
-        sys.stderr.write("Run `gh auth login` and confirm `gh api user` works.\n")
-        if probe.stderr.strip():
-            sys.stderr.write(f"gh said: {probe.stderr.strip()}\n")
-        sys.exit(1)
+    if require_gh:
+        # `gh auth status` exits non-zero for cosmetic warnings (missing scopes,
+        # stale GHES host, etc.) even when github.com auth is fine. Probe with an
+        # actual API call instead — if `gh api user` returns a login, we're good.
+        probe = run_quiet(["gh", "api", "user", "--jq", ".login"])
+        if probe.returncode != 0 or not probe.stdout.strip():
+            sys.stderr.write("ERROR: gh cannot make authenticated API calls.\n")
+            sys.stderr.write("Run `gh auth login` and confirm `gh api user` works.\n")
+            if probe.stderr.strip():
+                sys.stderr.write(f"gh said: {probe.stderr.strip()}\n")
+            sys.exit(1)
 
 
 def detect_repo_slug() -> str:
@@ -370,6 +376,8 @@ def main() -> None:
                         help="Let gh auto-generate release notes from commits since the last tag.")
     parser.add_argument("--draft", action="store_true",
                         help="Create the GitHub Release as a draft.")
+    parser.add_argument("--github-release", action="store_true",
+                        help="Also create/update a GitHub Release (optional human-facing artifact).")
     parser.add_argument("--repo", default=None,
                         help="Override the GitHub repo slug (default: parse `git remote origin`).")
     parser.add_argument("--no-push", action="store_true",
@@ -377,7 +385,7 @@ def main() -> None:
     parser.add_argument("--no-commit", action="store_true",
                         help="Skip git add/commit/push entirely.")
     parser.add_argument("--no-release", action="store_true",
-                        help="Skip `gh release create` (build + manifest only).")
+                        help="Deprecated alias; keeps GitHub Release creation disabled.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print every action without executing it.")
     args = parser.parse_args()
@@ -387,16 +395,18 @@ def main() -> None:
     if args.notes and args.notes_file:
         sys.exit("ERROR: pass --notes or --notes-file, not both.")
 
+    do_github_release = args.github_release and not args.no_release
+
     # Always validate tooling, even in dry-run, so the dry-run actually proves
     # a real run would proceed past preflight.
-    check_tools()
+    check_tools(require_gh=do_github_release)
 
     repo_slug = args.repo or detect_repo_slug()
     print(f"=== Releasing v{version} for {', '.join(args.envs)} to {repo_slug} ===")
 
     if not args.dry_run:
         assert_clean_worktree()
-        if not args.no_release:
+        if do_github_release:
             assert_tag_unused(version)
 
     update_platformio_version(version, args.dry_run)
@@ -412,7 +422,7 @@ def main() -> None:
 
     # Create the Release first so the manifest URL is live before any device
     # has a chance to read the bumped manifest.
-    if not args.no_release:
+    if do_github_release:
         create_release(
             version, args.notes, args.notes_file, binaries,
             generate_notes=args.auto_notes, draft=args.draft, dry_run=args.dry_run,
@@ -425,7 +435,7 @@ def main() -> None:
 
     # Purge cache for the manifest path so devices see the bump
     # without waiting on the default ~12 h TTL.
-    if not args.no_release:
+    if do_github_release:
         purge_jsdelivr(repo_slug, args.dry_run)
 
     print()
