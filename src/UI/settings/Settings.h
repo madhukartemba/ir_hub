@@ -4,6 +4,7 @@
 #include "../../utils/MenuUtils.h"
 #include "ClearDataConfirmation.h"
 #include "ContactQrScreen.h"
+#include "FactoryResetConfirmation.h"
 #include "UpdateCheckScreen.h"
 #include "UserPrefs.h"
 
@@ -23,10 +24,11 @@ class Settings : public Screen {
         RESTART,
         CLEAR_DATA,
         WIFI_WIPE,
+        FACTORY_RESET,
         BACK,
     };
 
-    static constexpr int kMaxItems = 12;
+    static constexpr int kMaxItems = 13;
     const char* menuItems[kMaxItems];
     Action menuActions[kMaxItems];
     int menuCount = 0;
@@ -108,6 +110,7 @@ class Settings : public Screen {
         addRow(Action::RESTART);
         addRow(Action::CLEAR_DATA);
         addRow(Action::WIFI_WIPE);
+        addRow(Action::FACTORY_RESET);
         addRow(Action::BACK);
     }
 
@@ -174,6 +177,8 @@ class Settings : public Screen {
                 return "Clear Data";
             case Action::WIFI_WIPE:
                 return "Wipe Wi-Fi";
+            case Action::FACTORY_RESET:
+                return "Factory Reset";
             case Action::BACK:
                 return "Back";
         }
@@ -222,6 +227,10 @@ class Settings : public Screen {
                 speaker.successBeep();
                 isRestarting = true;
                 restartStartTime = millis();
+                break;
+            case Action::FACTORY_RESET:
+                LOG_DEBUG("[Settings] onButtonLongPress FACTORY_RESET");
+                router.push(new FactoryResetConfirmation());
                 break;
             case Action::BACK:
                 LOG_DEBUG("[Settings] onButtonLongPress BACK");
