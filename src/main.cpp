@@ -223,99 +223,149 @@ static void downloaderLogSslError(WiFiClientSecure& client, const char* phase) {
 }
 
 /// Streams the firmware binary directly into the Update region.
-static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
+static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* initialUrl,
                                    const char* version, size_t expectedSize,
                                    const char* md5Hex) {
-    // Parse URL to avoid String allocations
-    const char* urlPath = url;
-    if (strncmp(urlPath, "https://", 8) == 0) urlPath += 8;
-    else if (strncmp(urlPath, "http://", 7) == 0) urlPath += 7;
-    
-    const char* slash = strchr(urlPath, '/');
-    if (!slash) slash = "/";
-    
-    char host[64];
-    size_t hostLen = slash > urlPath ? slash - urlPath : 0;
-    if (hostLen >= sizeof(host)) hostLen = sizeof(host) - 1;
-    strncpy(host, urlPath, hostLen);
-    host[hostLen] = '\0';
+    char currentUrl[256];
+    strncpy(currentUrl, initialUrl, sizeof(currentUrl) - 1);
+    currentUrl[sizeof(currentUrl) - 1] = ' ';
 
-    if (!client.connect(host, 443)) {
-        return false;
-    }
+    int redirects = 0;
+    const int MAX_REDIRECTS = 3;
 
-    client.print("GET ");
-    client.print(slash);
-    client.print(" HTTP/1.0\r\nHost: ");
-    client.print(host);
-    client.print("\r\nUser-Agent: IRHub-OTA/");
-    client.print(version);
-    client.print("\r\nConnection: close\r\n\r\n");
+    while (redirects <= MAX_REDIRECTS) {
+        const char* urlPath = currentUrl;
+        if (strncmp(urlPath, "https://", 8) == 0) urlPath += 8;
+        else if (strncmp(urlPath, "http://", 7) == 0) urlPath += 7;
+        
+        const char* slash = strchr(urlPath, '/');
+        if (!slash) slash = "/";
+        
+        char host[64];
+        size_t hostLen = slash > urlPath ? slash - urlPath : 0;
+        if (hostLen >= sizeof(host)) hostLen = sizeof(host) - 1;
+        strncpy(host, urlPath, hostLen);
+        host[hostLen] = ' ';
 
-    // Read headers manually to save HTTPClient overhead (~300 bytes)
-    char c;
-    int newlines = 0;
-    unsigned long timeout = millis() + 10000UL;
-    while (client.connected() || client.available()) {
-        if (millis() > timeout) return false;
-        if (!client.available()) { delay(1); continue; }
-        c = client.read();
-        if (c == '\n') newlines++;
-        else if (c != '\r') newlines = 0;
-        if (newlines == 2) break;
-    }
+        if (!client.connect(host, 443)) {
+            return false;
+        }
 
-    if (newlines != 2) return false;
+        client.print("GET ");
+        client.print(slash);
+        client.print(" HTTP/1.0\r\nHost: ");
+        client.print(host);
+        client.print("\r\nUser-Agent: IRHub-OTA/");
+        client.print(version);
+        client.print("\r\nConnection: close\r\n\r\n");
 
-    if (!Update.begin(expectedSize, U_FLASH)) {
-        return false;
-    }
-    if (md5Hex && *md5Hex) {
-        Update.setMD5(md5Hex);
-    }
+        unsigned long timeout = millis() + 10000UL;
+        char lineBuf[256];
+        size_t lineLen = 0;
+        int statusCode = 0;
+        bool isFirstLine = true;
+        bool foundLocation = false;
+        bool endOfHeaders = false;
 
-    uint8_t buf[512];
-    size_t written = 0;
-    unsigned long lastProgress = millis();
-    unsigned long lastByteAt = millis();
-    constexpr unsigned long kStreamIdleTimeoutMs = 20000UL;
+        while (client.connected() || client.available()) {
+            if (millis() > timeout) return false;
+            if (!client.available()) { delay(1); continue; }
+            
+            char c = client.read();
+            if (c == '\n') {
+                lineBuf[lineLen] = '\0';
+                
+                if (lineLen == 0) {
+                    endOfHeaders = true;
+                    break;
+                }
+                
+                if (isFirstLine) {
+                    isFirstLine = false;
+                    if (strncmp(lineBuf, "HTTP/1.", 7) == 0 && lineLen >= 12) {
+                        statusCode = (lineBuf[9] - '0') * 100 + (lineBuf[10] - '0') * 10 + (lineBuf[11] - '0');
+                    }
+                } else if (statusCode == 301 || statusCode == 302) {
+                    if (strncasecmp(lineBuf, "Location: ", 10) == 0) {
+                        const char* loc = lineBuf + 10;
+                        while (*loc == ' ') loc++;
+                        strncpy(currentUrl, loc, sizeof(currentUrl) - 1);
+                        currentUrl[sizeof(currentUrl) - 1] = '\0';
+                        foundLocation = true;
+                    }
+                }
+                
+                lineLen = 0;
+            } else if (c != '\r') {
+                if (lineLen < sizeof(lineBuf) - 1) {
+                    lineBuf[lineLen++] = c;
+                }
+            }
+        }
 
-    while (written < expectedSize) {
-        int avail = client.available();
-        if (avail <= 0) {
-            if (!client.connected() && client.available() <= 0) break;
-            if (millis() - lastByteAt > kStreamIdleTimeoutMs) break;
-            delay(1);
+        if (!endOfHeaders) return false;
+
+        if (statusCode == 301 || statusCode == 302) {
+            client.stop();
+            if (!foundLocation) return false;
+            redirects++;
             continue;
+        } else if (statusCode != 200) {
+            client.stop();
+            return false;
         }
-        size_t toRead = (size_t)avail < sizeof(buf) ? (size_t)avail : sizeof(buf);
-        if (toRead > expectedSize - written) {
-            toRead = expectedSize - written;
+
+        if (!Update.begin(expectedSize, U_FLASH)) {
+            return false;
         }
-        int n = client.readBytes(buf, toRead);
-        if (n <= 0) break;
-        if (Update.write(buf, (size_t)n) != (size_t)n) {
+        if (md5Hex && *md5Hex) {
+            Update.setMD5(md5Hex);
+        }
+
+        uint8_t buf[512];
+        size_t written = 0;
+        unsigned long lastProgress = millis();
+        unsigned long lastByteAt = millis();
+        constexpr unsigned long kStreamIdleTimeoutMs = 20000UL;
+
+        while (written < expectedSize) {
+            int avail = client.available();
+            if (avail <= 0) {
+                if (!client.connected() && client.available() <= 0) break;
+                if (millis() - lastByteAt > kStreamIdleTimeoutMs) break;
+                delay(1);
+                continue;
+            }
+            size_t toRead = (size_t)avail < sizeof(buf) ? (size_t)avail : sizeof(buf);
+            if (toRead > expectedSize - written) {
+                toRead = expectedSize - written;
+            }
+            int n = client.readBytes(buf, toRead);
+            if (n <= 0) break;
+            if (Update.write(buf, (size_t)n) != (size_t)n) {
+                Update.end(false);
+                return false;
+            }
+            written += (size_t)n;
+            lastByteAt = millis();
+            if (millis() - lastProgress > 250) {
+                downloaderShowProgress(version, written, expectedSize);
+                lastProgress = millis();
+            }
+        }
+
+        if (written != expectedSize) {
             Update.end(false);
             return false;
         }
-        written += (size_t)n;
-        lastByteAt = millis();
-        if (millis() - lastProgress > 250) {
-            downloaderShowProgress(version, written, expectedSize);
-            lastProgress = millis();
+
+        if (!Update.end(true)) {
+            return false;
         }
+        downloaderShowProgress(version, expectedSize, expectedSize);
+        return true;
     }
-
-    if (written != expectedSize) {
-        Update.end(false);
-        return false;
-    }
-
-    if (!Update.end(true)) {
-        return false;
-    }
-    downloaderShowProgress(version, expectedSize, expectedSize);
-    return true;
+    return false;
 }
 
 [[noreturn]] static void runDownloaderMode(const pending_ota::Slot& slot) {

@@ -214,14 +214,12 @@ def update_manifest(version: str, envs: Iterable[str], repo_slug: str,
     for env_name in envs:
         variant = env_to_variant(env_name)
         bin_path = BINARIES_DIR / f"firmware_{variant}_v{version}.bin"
-        # Cloudflare Pages URL pointing at the binary we committed under binaries/.
-        # The device's TLS budget can't handle a full-size record from
-        # objects.githubusercontent.com (where GitHub Release downloads
-        # land), so we deliberately route via Cloudflare Pages's MFLN-friendly edge.
-        project_name = repo_slug.split("/")[-1].replace("_", "-")
+        # GitHub Release URL. The device now has a 16KB TLS buffer + secondary heap
+        # so it can safely handle full-size TLS records from objects.githubusercontent.com
+        # without running out of memory.
         url = (
-            f"https://{project_name}.pages.dev/"
-            f"binaries/firmware_{variant}_v{version}.bin"
+            f"https://github.com/{repo_slug}/releases/download/"
+            f"v{version}/firmware_{variant}.bin"
         )
         # Stash size + md5 in the manifest so the device doesn't have to trust
         # the CDN's Content-Length header (some edges drop it on TLS streams),
