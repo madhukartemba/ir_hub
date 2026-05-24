@@ -12,3 +12,6 @@ include/secrets.h
 
 # OTA release staging — binaries are uploaded to GitHub Releases, not git
 release/
+
+# PyCache
+__pycache__/
