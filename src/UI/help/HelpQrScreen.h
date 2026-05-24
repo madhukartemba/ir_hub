@@ -4,7 +4,8 @@
 class HelpQrScreen : public Screen {
    private:
     static constexpr const char* kHelpUrl =
-        "https://github.com/madhukartemba/ir_hub/blob/main/docs/HELP.md";
+        "https://ir-hub.pages.dev/docs/HELP.md";
+    static constexpr uint8_t kQrVersion = 3;  // keep modules large for reliable scanning
     static constexpr uint8_t kQrQuietZone = 1;
 
    public:
@@ -33,23 +34,11 @@ class HelpQrScreen : public Screen {
     }
 
    private:
-    bool initQrForBestFit(QRCode& outQr, uint8_t* outBuf, size_t bufSize) {
-        (void)bufSize;
-        // Try smaller-to-larger versions; first one that fits payload wins.
-        for (uint8_t version = 3; version <= 10; version++) {
-            int8_t rc = qrcode_initText(&outQr, outBuf, version, ECC_LOW, kHelpUrl);
-            if (rc == 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     void drawQrCodeFullscreen() {
-        // Max temp buffer for version 10.
-        uint8_t qrcodeData[qrcode_getBufferSize(10)];
+        uint8_t qrcodeData[qrcode_getBufferSize(kQrVersion)];
         QRCode qrcode;
-        if (!initQrForBestFit(qrcode, qrcodeData, sizeof(qrcodeData))) {
+        int8_t rc = qrcode_initText(&qrcode, qrcodeData, kQrVersion, ECC_LOW, kHelpUrl);
+        if (rc != 0) {
             display.printCentered("Help QR failed", 28);
             return;
         }
