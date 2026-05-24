@@ -43,7 +43,7 @@
 
 // LED configuration
 #    define NUM_LEDS 27  // Number of LEDs in the circular strip
-#    define DISPLAY_DRIVER DisplayDriver::NEOPIXEL
+#    define DISPLAY_DRIVER DisplayDriver::FASTLED
 
 // WiFi configuration
 #    define WIFI_AP_NAME "IRHub V1 Setup"
