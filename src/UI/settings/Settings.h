@@ -19,6 +19,7 @@ class Settings : public Screen {
         FIRMWARE_INFO,
         LAST_CHECK_INFO,
         UPDATE_STATUS_INFO,
+        MQTT_STATUS_INFO,
         CHECK_UPDATE,
         AUTHOR_INFO,
         RESTART,
@@ -28,7 +29,7 @@ class Settings : public Screen {
         BACK,
     };
 
-    static constexpr int kMaxItems = 12;
+    static constexpr int kMaxItems = 13;
     const char* menuItems[kMaxItems];
     Action menuActions[kMaxItems];
     int menuCount = 0;
@@ -42,6 +43,7 @@ class Settings : public Screen {
     char firmwareLabel[28] = "Firmware: --";
     char lastCheckLabel[28] = "Last check: --";
     char updateStatusLabel[28] = "Status: Never checked";
+    char mqttStatusLabel[24] = "MQTT: --";
 
    public:
     void onEnter() override {
@@ -109,6 +111,7 @@ class Settings : public Screen {
             addRow(Action::LAST_CHECK_INFO);
             addRow(Action::UPDATE_STATUS_INFO);
         }
+        addRow(Action::MQTT_STATUS_INFO);
 
         // 3) About
         addRow(Action::AUTHOR_INFO);
@@ -137,6 +140,7 @@ class Settings : public Screen {
         if (hasOta) {
             refreshOtaInfoLabels();
         }
+        refreshMqttStatusLabel();
         for (int i = 0; i < menuCount; i++) {
             menuItems[i] = labelFor(menuActions[i]);
         }
@@ -162,6 +166,22 @@ class Settings : public Screen {
                  otaUpdater.lastCheckStatusText());
     }
 
+    void refreshMqttStatusLabel() {
+        if (!wifiManager.isConnected()) {
+            snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: No Wi-Fi");
+            return;
+        }
+        if (!mqttConnector.isEnabled()) {
+            snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: Disabled");
+            return;
+        }
+        if (mqttConnector.isConnected()) {
+            snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: Connected");
+            return;
+        }
+        snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: Connecting");
+    }
+
     const char* labelFor(Action action) {
         switch (action) {
             case Action::SOUND:
@@ -174,6 +194,8 @@ class Settings : public Screen {
                 return lastCheckLabel;
             case Action::UPDATE_STATUS_INFO:
                 return updateStatusLabel;
+            case Action::MQTT_STATUS_INFO:
+                return mqttStatusLabel;
             case Action::CHECK_UPDATE:
                 return "Check for Updates";
             case Action::AUTHOR_INFO:
@@ -203,6 +225,7 @@ class Settings : public Screen {
             case Action::FIRMWARE_INFO:
             case Action::LAST_CHECK_INFO:
             case Action::UPDATE_STATUS_INFO:
+            case Action::MQTT_STATUS_INFO:
                 // Read-only rows.
                 speaker.shortBeep();
                 break;

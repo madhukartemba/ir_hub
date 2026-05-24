@@ -350,4 +350,5 @@ class MQTTConnector {
     }
 
     bool isEnabled() const { return enabled; }
+    bool isConnected() { return enabled && mqttClient.connected(); }
 };
