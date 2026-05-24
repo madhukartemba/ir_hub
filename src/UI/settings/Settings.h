@@ -4,7 +4,6 @@
 #include "../../utils/MenuUtils.h"
 #include "AuthorEasterEggScreen.h"
 #include "ClearDataConfirmation.h"
-#include "ContactQrScreen.h"
 #include "FactoryResetConfirmation.h"
 #include "ResetWiFiConfirmation.h"
 #include "UpdateCheckScreen.h"
@@ -22,7 +21,6 @@ class Settings : public Screen {
         UPDATE_STATUS_INFO,
         CHECK_UPDATE,
         AUTHOR_INFO,
-        CONTACT_QR,
         RESTART,
         CLEAR_DATA,
         WIFI_WIPE,
@@ -30,7 +28,7 @@ class Settings : public Screen {
         BACK,
     };
 
-    static constexpr int kMaxItems = 13;
+    static constexpr int kMaxItems = 12;
     const char* menuItems[kMaxItems];
     Action menuActions[kMaxItems];
     int menuCount = 0;
@@ -112,8 +110,7 @@ class Settings : public Screen {
             addRow(Action::UPDATE_STATUS_INFO);
         }
 
-        // 3) Help/About
-        addRow(Action::CONTACT_QR);
+        // 3) About
         addRow(Action::AUTHOR_INFO);
 
         // 4) Device/system actions
@@ -181,8 +178,6 @@ class Settings : public Screen {
                 return "Check for Updates";
             case Action::AUTHOR_INFO:
                 return "By Madhukar Temba :)";
-            case Action::CONTACT_QR:
-                return "Help";
             case Action::RESTART:
                 return "Restart";
             case Action::CLEAR_DATA:
@@ -219,10 +214,6 @@ class Settings : public Screen {
             case Action::AUTHOR_INFO:
                 speaker.shortBeep();
                 router.push(new AuthorEasterEggScreen());
-                break;
-            case Action::CONTACT_QR:
-                speaker.shortBeep();
-                router.push(new ContactQrScreen());
                 break;
             case Action::RESTART:
                 LOG_DEBUG("[Settings] onButtonLongPress RESTART");

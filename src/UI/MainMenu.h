@@ -1,19 +1,21 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "../global/Global.h"
+#include "../ui/help/HelpQrScreen.h"
 #include "../preferences.h"
 #include "../ui/adddevice/AddDevice.h"
 #include "../ui/devices/Devices.h"
+#include "../ui/settings/ContactQrScreen.h"
 #include "../ui/settings/Settings.h"
 #include "../utils/MenuUtils.h"
 
 class MainMenu : public Screen {
    private:
-    enum class State { DEVICES, ADD_DEVICE, SETTINGS };
+    enum class State { DEVICES, ADD_DEVICE, SETTINGS, HELP, CONTACT };
 
     State currentState;
     int selectedIndex;
-    const char* menuItems[3] = {"Devices", "Add Device", "Settings"};
+    const char* menuItems[5] = {"Devices", "Add Device", "Settings", "Help", "Contact"};
 
    public:
     void onEnter() override {
@@ -26,7 +28,7 @@ class MainMenu : public Screen {
         button.setClickCallback([this]() {
             // Switch to next state using mod operator (now only 3 states)
             LOG_DEBUG("[MainMenu] onButtonClick");
-            selectedIndex = (selectedIndex + 1) % 3;
+            selectedIndex = (selectedIndex + 1) % 5;
             currentState = static_cast<State>(selectedIndex);
         });
 
@@ -39,6 +41,10 @@ class MainMenu : public Screen {
                 router.push(new AddDevice());
             } else if (currentState == State::SETTINGS) {
                 router.push(new Settings());
+            } else if (currentState == State::HELP) {
+                router.push(new HelpQrScreen());
+            } else if (currentState == State::CONTACT) {
+                router.push(new ContactQrScreen());
             }
         });
     }
@@ -66,6 +72,6 @@ class MainMenu : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Use the scrollable menu utility
-        MenuUtils::drawScrollableMenu(menuItems, 3, selectedIndex, 3, 20);
+        MenuUtils::drawScrollableMenu(menuItems, 5, selectedIndex, 3, 20);
     }
 };
