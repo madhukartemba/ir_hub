@@ -162,7 +162,10 @@ static bool mountLittleFsWithRecovery() {
 // maximum) would OOM in downloader mode (~14 KB transient breaks our budget),
 // and 1 KB was the size we tried first — it crashed mid-stream because some
 // edges emit records up to ~3 KB even with MTU-aware framing.
-static constexpr int kDownloaderTlsRxBuffer = 4096;
+// Note: Even with MFLN, some Cloudflare edges occasionally send slightly larger
+// records. Bumping the buffer to 8KB to be safe, since we have ~19KB free heap
+// in downloader mode.
+static constexpr int kDownloaderTlsRxBuffer = 8192;
 static constexpr int kDownloaderTlsTxBuffer = 512;
 
 static void downloaderShowStatus(const char* line1, const char* line2 = nullptr) {
