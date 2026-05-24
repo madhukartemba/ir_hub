@@ -87,9 +87,7 @@ class Settings : public Screen {
         display.update();
     }
 
-    void onExit() override {
-        LOG_DEBUG("[Settings] onExit");
-    }
+    void onExit() override { LOG_DEBUG("[Settings] onExit"); }
 
    private:
     void buildMenu() {
@@ -130,7 +128,7 @@ class Settings : public Screen {
             case Action::HAPTICS:
                 return userPrefsHapticsEnabled() ? "Haptics: On" : "Haptics: Off";
             case Action::CHECK_UPDATE:
-                return "Check Update";
+                return "Check for Updates";
             case Action::RESTART:
                 return "Restart";
             case Action::CLEAR_DATA:

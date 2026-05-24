@@ -23,9 +23,8 @@ namespace app {
 
 namespace {
 
-// 6-hour gap between manifest checks. Long enough to be polite to GitHub's
-// edge cache, short enough that a critical patch reaches the friend overnight.
-constexpr unsigned long kOtaCheckIntervalMs = 6UL * 60UL * 60UL * 1000UL;
+// 1-hour gap between manifest checks for faster OTA pickup.
+constexpr unsigned long kOtaCheckIntervalMs = 1UL * 60UL * 60UL * 1000UL;
 
 // Heap supervisor: logs trend + proactively restarts before fragmentation
 // causes a mid-MQTT/OTA crash. ESP8266 has ~30 KB usable heap.
