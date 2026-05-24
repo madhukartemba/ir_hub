@@ -4,7 +4,7 @@
 class HelpQrScreen : public Screen {
    private:
     static constexpr const char* kHelpUrl =
-        "https://ir-hub.pages.dev/docs/HELP.md";
+        "https://ir-hub.pages.dev/help";
     static constexpr uint8_t kQrVersion = 3;  // keep modules large for reliable scanning
     static constexpr uint8_t kQrQuietZone = 1;
 
