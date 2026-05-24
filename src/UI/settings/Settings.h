@@ -2,7 +2,6 @@
 #include "../../global/Global.h"
 #include "../../preferences.h"
 #include "../../utils/MenuUtils.h"
-#include "AuthorEasterEggScreen.h"
 #include "ClearDataConfirmation.h"
 #include "FactoryResetConfirmation.h"
 #include "ResetWiFiConfirmation.h"
@@ -21,7 +20,6 @@ class Settings : public Screen {
         UPDATE_STATUS_INFO,
         MQTT_STATUS_INFO,
         CHECK_UPDATE,
-        AUTHOR_INFO,
         RESTART,
         CLEAR_DATA,
         WIFI_WIPE,
@@ -113,16 +111,13 @@ class Settings : public Screen {
         }
         addRow(Action::MQTT_STATUS_INFO);
 
-        // 3) About
-        addRow(Action::AUTHOR_INFO);
-
-        // 4) Device/system actions
+        // 3) Device/system actions
         addRow(Action::RESTART);
         addRow(Action::WIFI_WIPE);
         addRow(Action::CLEAR_DATA);
         addRow(Action::FACTORY_RESET);
 
-        // 5) Navigation
+        // 4) Navigation
         addRow(Action::BACK);
     }
 
@@ -198,8 +193,6 @@ class Settings : public Screen {
                 return mqttStatusLabel;
             case Action::CHECK_UPDATE:
                 return "Check for Updates";
-            case Action::AUTHOR_INFO:
-                return "By Madhukar Temba :)";
             case Action::RESTART:
                 return "Restart";
             case Action::CLEAR_DATA:
@@ -233,10 +226,6 @@ class Settings : public Screen {
                 LOG_DEBUG("[Settings] onButtonLongPress CHECK_UPDATE");
                 speaker.shortBeep();
                 router.push(new UpdateCheckScreen());
-                break;
-            case Action::AUTHOR_INFO:
-                speaker.shortBeep();
-                router.push(new AuthorEasterEggScreen());
                 break;
             case Action::RESTART:
                 LOG_DEBUG("[Settings] onButtonLongPress RESTART");

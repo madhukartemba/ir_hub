@@ -159,7 +159,6 @@ From the Main Menu, open **Settings** to access:
 | **Reset Wi-Fi** | Forget your saved Wi-Fi (for moving to a new network) |
 | **Erase Saved Data** | Delete all saved remotes/devices |
 | **Factory Reset** | Wipe **everything** and start over |
-| **By Madhukar Temba :)** | The credit line… try long-pressing it 😉 |
 
 All destructive actions (reset / erase / factory reset) ask for a long-press confirmation, so you won't accidentally wipe your setup.
 

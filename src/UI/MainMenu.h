@@ -7,15 +7,16 @@
 #include "../ui/devices/Devices.h"
 #include "../ui/settings/ContactQrScreen.h"
 #include "../ui/settings/Settings.h"
+#include "../ui/settings/AuthorEasterEggScreen.h"
 #include "../utils/MenuUtils.h"
 
 class MainMenu : public Screen {
    private:
-    enum class State { DEVICES, ADD_DEVICE, SETTINGS, HELP, CONTACT };
+    enum class State { DEVICES, ADD_DEVICE, SETTINGS, HELP, CONTACT, AUTHOR };
 
     State currentState;
     int selectedIndex;
-    const char* menuItems[5] = {"Devices", "Add Device", "Settings", "Help", "Contact"};
+    const char* menuItems[6] = {"Devices", "Add Device", "Settings", "Help", "Contact", "By Madhukar Temba :)"};
 
    public:
     void onEnter() override {
@@ -26,9 +27,9 @@ class MainMenu : public Screen {
 
         // Change button behavior
         button.setClickCallback([this]() {
-            // Switch to next state using mod operator (now only 3 states)
+            // Switch to next state using mod operator.
             LOG_DEBUG("[MainMenu] onButtonClick");
-            selectedIndex = (selectedIndex + 1) % 5;
+            selectedIndex = (selectedIndex + 1) % 6;
             currentState = static_cast<State>(selectedIndex);
         });
 
@@ -45,6 +46,8 @@ class MainMenu : public Screen {
                 router.push(new HelpQrScreen());
             } else if (currentState == State::CONTACT) {
                 router.push(new ContactQrScreen());
+            } else if (currentState == State::AUTHOR) {
+                router.push(new AuthorEasterEggScreen());
             }
         });
     }
@@ -72,6 +75,6 @@ class MainMenu : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Use the scrollable menu utility
-        MenuUtils::drawScrollableMenu(menuItems, 5, selectedIndex, 3, 20);
+        MenuUtils::drawScrollableMenu(menuItems, 6, selectedIndex, 3, 20);
     }
 };
