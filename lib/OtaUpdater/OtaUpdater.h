@@ -106,7 +106,12 @@ class OtaUpdater {
         checkPending_ = false;
         lastCheck_ = now;
         lastCheckStatus_ = CheckStatus::CHECKING;
+        uint32_t heapBefore = ESP.getFreeHeap();
         CheckStatus status = performCheck(isManualCheck);
+        uint32_t heapAfter = ESP.getFreeHeap();
+        int32_t delta = (int32_t)heapAfter - (int32_t)heapBefore;
+        LOG_INFO("[OTA-HTTP] Heap after check: free=%u (delta=%+d)",
+                 (unsigned)heapAfter, (int)delta);
         markCheckComplete(status);
     }
 
@@ -143,13 +148,18 @@ class OtaUpdater {
     // simultaneously connecting to Wi-Fi, registering with HA, AND pulling TLS
     // — the heap spike would risk a boot-time crash on flaky networks.
     static constexpr unsigned long kBootDelayMs = 30UL * 1000UL;
-    // Manifest fetch needs ~11 KB transient (TLS RX buf 1 KB + BearSSL session
-    // state ~6 KB + lwIP TCP buffers ~3 KB + JSON parse). 14 KB free is the
-    // floor; below that the SYS task starts OOMing during the handshake.
+    // Manifest fetch measured peak: ~11 KB transient (BearSSL session ~6 KB,
+    // TLS RX buf 1 KB, lwIP TCP buffers ~3 KB, JSON parse ~0.5 KB).
+    // Free-heap floor is the *total* available. Background checks stay
+    // conservative; manual (user-tapped) checks are slightly more permissive
+    // so Settings -> Check for Updates still works on busy devices.
     static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
-    // Manual checks can be slightly more permissive so user-initiated checks
-    // in Settings still work in borderline conditions.
     static constexpr uint32_t kMinHeapForManualManifest = 13 * 1024;
+    // BearSSL session state needs a single contiguous block (~6 KB). On a
+    // fragmented heap the total free can look fine while the largest block is
+    // too small — that's the failure mode that crashes mid-handshake. Gate on
+    // max_block to refuse the check cleanly before BearSSL OOMs.
+    static constexpr uint16_t kMinMaxBlockForManifest = 7 * 1024;
     // Small TLS buffers only work when the server supports MFLN (RFC 6066).
     // Cloudflare Pages does; raw.githubusercontent.com (Fastly) and jsDelivr do not. See
     // docs/OTA_RELEASES.md for the recommended URL pattern.
@@ -176,13 +186,26 @@ class OtaUpdater {
     }
 
     CheckStatus performCheck(bool isManualCheck) {
-        LOG_INFO("[OTA-HTTP] Checking manifest at %s", manifestUrl_);
+        LOG_INFO("[OTA-HTTP] Checking manifest at %s (mode=%s)",
+                 manifestUrl_, isManualCheck ? "manual" : "auto");
 
         uint32_t minHeap = isManualCheck ? kMinHeapForManualManifest : kMinHeapForManifest;
         uint32_t freeHeap = ESP.getFreeHeap();
+        uint16_t maxBlock = ESP.getMaxFreeBlockSize();
+        uint8_t frag = ESP.getHeapFragmentation();
+        LOG_INFO("[OTA-HTTP] Heap before check: free=%u max_block=%u frag=%u%% (min_free=%u min_block=%u)",
+                 (unsigned)freeHeap, (unsigned)maxBlock, (unsigned)frag,
+                 (unsigned)minHeap, (unsigned)kMinMaxBlockForManifest);
         if (freeHeap < minHeap) {
-            LOG_WARN("[OTA-HTTP] Skipping check, low heap (%u < %u)",
+            LOG_WARN("[OTA-HTTP] Skipping check, low heap (free=%u < %u)",
                      (unsigned)freeHeap, (unsigned)minHeap);
+            return CheckStatus::LOW_HEAP;
+        }
+        if (maxBlock < kMinMaxBlockForManifest) {
+            LOG_WARN("[OTA-HTTP] Skipping check, heap too fragmented "
+                     "(max_block=%u < %u; total free=%u, frag=%u%%)",
+                     (unsigned)maxBlock, (unsigned)kMinMaxBlockForManifest,
+                     (unsigned)freeHeap, (unsigned)frag);
             return CheckStatus::LOW_HEAP;
         }
 
@@ -229,12 +252,25 @@ class OtaUpdater {
 
     bool fetchManifest(String& outUrl, String& outVersion,
                        uint32_t& outSize, String& outMd5) {
+        // Snapshot heap at each phase so we can see the real peak usage of a
+        // manifest fetch (TLS handshake is the spike; everything else fits in
+        // the steady-state buffers). Compare each line to the baseline above.
+        uint32_t hStart = ESP.getFreeHeap();
+        uint32_t hMin = hStart;
+        auto sample = [&](const char* tag) {
+            uint32_t h = ESP.getFreeHeap();
+            if (h < hMin) hMin = h;
+            LOG_INFO("[OTA-HTTP][heap] %-18s free=%u delta=%+d", tag,
+                     (unsigned)h, (int)((int32_t)h - (int32_t)hStart));
+        };
+
         bool isHttps = urlIsHttps(manifestUrl_);
         std::unique_ptr<WiFiClient> client = makeClient(isHttps);
         if (!client) {
             LOG_WARN("[OTA-HTTP] Failed to allocate HTTP client");
             return false;
         }
+        sample("after client");
 
         HTTPClient http;
         http.setTimeout(10000);
@@ -245,8 +281,10 @@ class OtaUpdater {
             LOG_WARN("[OTA-HTTP] http.begin failed for manifest");
             return false;
         }
+        sample("after http.begin");
 
         int code = http.GET();
+        sample("after http.GET");  // TLS handshake completes here — usually the spike
         if (code != HTTP_CODE_OK) {
             logHttpFailure("Manifest GET", code, isHttps, client.get());
             http.end();
@@ -254,14 +292,19 @@ class OtaUpdater {
         }
 
         String body = http.getString();
+        sample("after getString");
         http.end();
+        sample("after http.end");
 
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, body);
+        sample("after json parse");
         if (err) {
             LOG_WARN("[OTA-HTTP] Manifest JSON parse error: %s", err.c_str());
             return false;
         }
+        LOG_INFO("[OTA-HTTP][heap] PEAK usage: %u bytes (min free=%u)",
+                 (unsigned)(hStart - hMin), (unsigned)hMin);
 
         const char* version = doc["version"] | "";
         const char* url = doc["url"] | "";
