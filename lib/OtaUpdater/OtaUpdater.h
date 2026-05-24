@@ -31,6 +31,15 @@
 ///   }
 class OtaUpdater {
    public:
+    enum class CheckStatus : uint8_t {
+        NEVER,
+        CHECKING,
+        UP_TO_DATE,
+        UPDATE_PENDING,
+        NO_WIFI,
+        CHECK_FAILED,
+    };
+
     void begin(const char* manifestUrl,
                const char* currentVersion,
                const char* hwVariant,
@@ -41,6 +50,9 @@ class OtaUpdater {
         this->checkIntervalMs_ = checkIntervalMs;
         this->lastCheck_ = 0;
         this->bootDelayUntil_ = millis() + kBootDelayMs;
+        this->lastCheckStatus_ = CheckStatus::NEVER;
+        this->lastCheckCompletedAtMs_ = 0;
+        this->manualCheckPending_ = false;
 
         enabled_ = manifestUrl && *manifestUrl;
         if (!enabled_) {
@@ -60,6 +72,8 @@ class OtaUpdater {
         }
         LOG_INFO("[OTA-HTTP] Check requested via callback");
         checkPending_ = true;
+        manualCheckPending_ = true;
+        lastCheckStatus_ = CheckStatus::CHECKING;
         bootDelayUntil_ = 0;  // bypass the boot grace period for on-demand checks
     }
 
@@ -71,21 +85,54 @@ class OtaUpdater {
 
     void update() {
         if (!enabled_) return;
-        if (WiFi.status() != WL_CONNECTED) return;
-
         unsigned long now = millis();
         if (now < bootDelayUntil_) return;
+
+        if (WiFi.status() != WL_CONNECTED) {
+            if (manualCheckPending_) {
+                manualCheckPending_ = false;
+                checkPending_ = false;
+                markCheckComplete(CheckStatus::NO_WIFI);
+            }
+            return;
+        }
 
         bool intervalElapsed = (now - lastCheck_) >= checkIntervalMs_;
         if (!checkPending_ && !intervalElapsed) return;
 
+        manualCheckPending_ = false;
         checkPending_ = false;
         lastCheck_ = now;
-        performCheck();
+        lastCheckStatus_ = CheckStatus::CHECKING;
+        CheckStatus status = performCheck();
+        markCheckComplete(status);
     }
 
     bool isEnabled() const { return enabled_; }
     const char* currentVersion() const { return currentVersion_; }
+    CheckStatus lastCheckStatus() const { return lastCheckStatus_; }
+    bool hasCompletedCheck() const { return lastCheckCompletedAtMs_ != 0; }
+    unsigned long lastCheckAgeMs() const {
+        if (!hasCompletedCheck()) return 0;
+        return millis() - lastCheckCompletedAtMs_;
+    }
+    const char* lastCheckStatusText() const {
+        switch (lastCheckStatus_) {
+            case CheckStatus::NEVER:
+                return "Never checked";
+            case CheckStatus::CHECKING:
+                return "Checking...";
+            case CheckStatus::UP_TO_DATE:
+                return "Up to date";
+            case CheckStatus::UPDATE_PENDING:
+                return "Update found";
+            case CheckStatus::NO_WIFI:
+                return "No Wi-Fi";
+            case CheckStatus::CHECK_FAILED:
+                return "Check failed";
+        }
+        return "Unknown";
+    }
 
    private:
     // Wait a bit after boot before the first check so the device isn't
@@ -108,19 +155,27 @@ class OtaUpdater {
     unsigned long checkIntervalMs_ = 6UL * 60UL * 60UL * 1000UL;
     unsigned long lastCheck_ = 0;
     unsigned long bootDelayUntil_ = 0;
+    unsigned long lastCheckCompletedAtMs_ = 0;
     bool enabled_ = false;
     bool checkPending_ = false;
+    bool manualCheckPending_ = false;
+    CheckStatus lastCheckStatus_ = CheckStatus::NEVER;
 
     std::function<void(const char*, const char*)> onUpdatePending_;
 
-    void performCheck() {
+    void markCheckComplete(CheckStatus status) {
+        lastCheckStatus_ = status;
+        lastCheckCompletedAtMs_ = millis();
+    }
+
+    CheckStatus performCheck() {
         LOG_INFO("[OTA-HTTP] Checking manifest at %s", manifestUrl_);
 
         uint32_t freeHeap = ESP.getFreeHeap();
         if (freeHeap < kMinHeapForManifest) {
             LOG_WARN("[OTA-HTTP] Skipping check, low heap (%u < %u)",
                      (unsigned)freeHeap, (unsigned)kMinHeapForManifest);
-            return;
+            return CheckStatus::CHECK_FAILED;
         }
 
         String firmwareUrl;
@@ -128,13 +183,13 @@ class OtaUpdater {
         String firmwareMd5;
         uint32_t firmwareSize = 0;
         if (!fetchManifest(firmwareUrl, newVersion, firmwareSize, firmwareMd5)) {
-            return;
+            return CheckStatus::CHECK_FAILED;
         }
 
         if (compareVersions(newVersion.c_str(), currentVersion_) <= 0) {
             LOG_INFO("[OTA-HTTP] Up-to-date (current=%s, latest=%s)",
                      currentVersion_, newVersion.c_str());
-            return;
+            return CheckStatus::UP_TO_DATE;
         }
 
         LOG_INFO("[OTA-HTTP] New firmware available: %s -> %s (%u bytes)",
@@ -144,7 +199,7 @@ class OtaUpdater {
             LOG_ERROR("[OTA-HTTP] Manifest is missing 'size' for variant '%s' — "
                       "refusing to OTA (publish a release.py-produced manifest)",
                       hwVariant_);
-            return;
+            return CheckStatus::CHECK_FAILED;
         }
 
         // Stash the URL+size+md5 in RTC RAM and reboot into downloader mode.
@@ -153,13 +208,15 @@ class OtaUpdater {
         if (!pending_ota::arm(firmwareUrl.c_str(), newVersion.c_str(),
                               firmwareSize, firmwareMd5.c_str())) {
             LOG_ERROR("[OTA-HTTP] Failed to arm pending OTA (URL/version/md5 too long?)");
-            return;
+            return CheckStatus::CHECK_FAILED;
         }
+        markCheckComplete(CheckStatus::UPDATE_PENDING);
         if (onUpdatePending_) onUpdatePending_(newVersion.c_str(), firmwareUrl.c_str());
 
         LOG_INFO("[OTA-HTTP] Restarting into downloader mode...");
         delay(1500);  // let the UI message render before the reboot
         ESP.restart();
+        return CheckStatus::UPDATE_PENDING;
     }
 
     bool fetchManifest(String& outUrl, String& outVersion,

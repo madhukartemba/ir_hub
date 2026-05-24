@@ -12,14 +12,19 @@ class Settings : public Screen {
     enum class Action {
         SOUND,
         HAPTICS,
+        FIRMWARE_INFO,
+        LAST_CHECK_INFO,
+        UPDATE_STATUS_INFO,
         CHECK_UPDATE,
+        AUTHOR_INFO,
+        CONTACT_INFO,
         RESTART,
         CLEAR_DATA,
         WIFI_WIPE,
         BACK,
     };
 
-    static constexpr int kMaxItems = 7;
+    static constexpr int kMaxItems = 12;
     const char* menuItems[kMaxItems];
     Action menuActions[kMaxItems];
     int menuCount = 0;
@@ -30,9 +35,9 @@ class Settings : public Screen {
     bool hasHaptics = false;
     bool hasOta = false;
 
-    bool isCheckingUpdate = false;
-    unsigned long checkStartTime = 0;
-    static constexpr unsigned long kCheckUpdateHoldMs = 6000UL;
+    char firmwareLabel[28] = "Firmware: --";
+    char lastCheckLabel[28] = "Last check: --";
+    char updateStatusLabel[28] = "Status: Never checked";
 
    public:
     void onEnter() override {
@@ -45,13 +50,12 @@ class Settings : public Screen {
         buildMenu();
         selectedIndex = 0;
         isRestarting = false;
-        isCheckingUpdate = false;
 
         ledRing.breathe(COLOR_SETTINGS);
 
         button.setClickCallback([this]() {
             LOG_DEBUG("[Settings] onButtonClick");
-            if (isRestarting || isCheckingUpdate) {
+            if (isRestarting) {
                 return;
             }
             selectedIndex = (selectedIndex + 1) % menuCount;
@@ -59,7 +63,7 @@ class Settings : public Screen {
 
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[Settings] onButtonLongPress");
-            if (isRestarting || isCheckingUpdate) {
+            if (isRestarting) {
                 return;
             }
             handleAction(menuActions[selectedIndex]);
@@ -73,11 +77,6 @@ class Settings : public Screen {
             drawRestarting();
             if (millis() - restartStartTime > 2000) {
                 ESP.restart();
-            }
-        } else if (isCheckingUpdate) {
-            drawCheckingUpdate();
-            if (millis() - checkStartTime > kCheckUpdateHoldMs) {
-                isCheckingUpdate = false;
             }
         } else {
             refreshDynamicLabels();
@@ -97,8 +96,13 @@ class Settings : public Screen {
             addRow(Action::HAPTICS);
         }
         if (hasOta) {
+            addRow(Action::FIRMWARE_INFO);
+            addRow(Action::LAST_CHECK_INFO);
+            addRow(Action::UPDATE_STATUS_INFO);
             addRow(Action::CHECK_UPDATE);
         }
+        addRow(Action::AUTHOR_INFO);
+        addRow(Action::CONTACT_INFO);
         addRow(Action::RESTART);
         addRow(Action::CLEAR_DATA);
         addRow(Action::WIFI_WIPE);
@@ -116,19 +120,53 @@ class Settings : public Screen {
 
     // Re-resolve labels that change at runtime (the toggles).
     void refreshDynamicLabels() {
+        if (hasOta) {
+            refreshOtaInfoLabels();
+        }
         for (int i = 0; i < menuCount; i++) {
             menuItems[i] = labelFor(menuActions[i]);
         }
     }
 
-    static const char* labelFor(Action action) {
+    void refreshOtaInfoLabels() {
+        snprintf(firmwareLabel, sizeof(firmwareLabel), "Firmware: v%s", otaUpdater.currentVersion());
+
+        if (!otaUpdater.hasCompletedCheck()) {
+            snprintf(lastCheckLabel, sizeof(lastCheckLabel), "Last check: --");
+        } else {
+            unsigned long ageMin = otaUpdater.lastCheckAgeMs() / 60000UL;
+            if (ageMin < 60UL) {
+                snprintf(lastCheckLabel, sizeof(lastCheckLabel), "Last check: %lum ago",
+                         ageMin);
+            } else {
+                unsigned long ageHours = ageMin / 60UL;
+                snprintf(lastCheckLabel, sizeof(lastCheckLabel), "Last check: %luh ago",
+                         ageHours);
+            }
+        }
+
+        snprintf(updateStatusLabel, sizeof(updateStatusLabel), "Status: %s",
+                 otaUpdater.lastCheckStatusText());
+    }
+
+    const char* labelFor(Action action) {
         switch (action) {
             case Action::SOUND:
                 return userPrefsSoundEnabled() ? "Sound: On" : "Sound: Off";
             case Action::HAPTICS:
                 return userPrefsHapticsEnabled() ? "Haptics: On" : "Haptics: Off";
+            case Action::FIRMWARE_INFO:
+                return firmwareLabel;
+            case Action::LAST_CHECK_INFO:
+                return lastCheckLabel;
+            case Action::UPDATE_STATUS_INFO:
+                return updateStatusLabel;
             case Action::CHECK_UPDATE:
                 return "Check for Updates";
+            case Action::AUTHOR_INFO:
+                return "Author: Madhukar";
+            case Action::CONTACT_INFO:
+                return "Contact: @madhukar";
             case Action::RESTART:
                 return "Restart";
             case Action::CLEAR_DATA:
@@ -149,9 +187,20 @@ class Settings : public Screen {
             case Action::HAPTICS:
                 toggleHaptics();
                 break;
+            case Action::FIRMWARE_INFO:
+            case Action::LAST_CHECK_INFO:
+            case Action::UPDATE_STATUS_INFO:
+                // Read-only rows.
+                speaker.shortBeep();
+                break;
             case Action::CHECK_UPDATE:
                 LOG_DEBUG("[Settings] onButtonLongPress CHECK_UPDATE");
                 triggerUpdateCheck();
+                break;
+            case Action::AUTHOR_INFO:
+            case Action::CONTACT_INFO:
+                // Read-only rows.
+                speaker.shortBeep();
                 break;
             case Action::RESTART:
                 LOG_DEBUG("[Settings] onButtonLongPress RESTART");
@@ -177,13 +226,9 @@ class Settings : public Screen {
     }
 
     void triggerUpdateCheck() {
-        // Ask the OTA module to fetch the manifest on its next loop tick. If
-        // a new firmware is found it takes over the screen via its callbacks
-        // (see main.cpp). If nothing's found we drop back to the menu after
-        // kCheckUpdateHoldMs.
+        // Ask the OTA module to fetch the manifest on its next loop tick.
+        // Status rows in this menu show progress/result.
         otaUpdater.checkNow();
-        isCheckingUpdate = true;
-        checkStartTime = millis();
         speaker.shortBeep();
     }
 
@@ -240,13 +285,4 @@ class Settings : public Screen {
         display.printCentered("Please wait", 35);
     }
 
-    void drawCheckingUpdate() {
-        display.clear();
-        display.setTextSize(1);
-        display.printCentered("Checking for", 14);
-        display.printCentered("updates...", 26);
-        char line[32];
-        snprintf(line, sizeof(line), "Current: v%s", otaUpdater.currentVersion());
-        display.printCentered(line, 46);
-    }
 };
