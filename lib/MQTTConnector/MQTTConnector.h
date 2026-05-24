@@ -116,7 +116,9 @@ class MQTTConnector {
     }
 
     void applyCommandForDevice(int deviceId, bool turnOn) {
-        Device* device = deviceManager.getDeviceById(deviceId);
+        // DeviceManager is uncached: this hits LittleFS + JSON parse (~5–15 ms).
+        // Acceptable on the MQTT command path.
+        auto device = deviceManager.getDeviceById(deviceId);
         if (!device) {
             LOG_ERROR("[MQTT] Unknown device id %d", deviceId);
             return;

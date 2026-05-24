@@ -3,7 +3,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include <map>
+#include <functional>
+#include <optional>
 #include <vector>
 #include "IRCode.h"
 #include "IdGen.h"
@@ -23,15 +24,21 @@ struct Device {
     IRCode offCommand;
 };
 
+/// Stateless device store. Every lookup hits LittleFS — there is no in-RAM
+/// cache. This trades ~5–15 ms of disk + JSON-parse latency per lookup for
+/// keeping the steady-state heap free of duplicated Device data, which
+/// matters during the OTA manifest fetch (BearSSL needs a contiguous 6 KB
+/// session block on a tight ~16 KB free-heap budget).
+///
+/// Lookup APIs return `std::optional<Device>` by value. Callers that need
+/// to retain the Device must copy/move it; the returned object owns its
+/// own strings + state vector.
 class DeviceManager {
    public:
     using DeviceCallback = std::function<void(const Device&)>;
 
    private:
     const char* storageDir = "/devices";
-    std::map<String, Device> deviceCacheByName;
-    std::map<int, Device> deviceCacheById;
-    bool cacheLoaded = false;
     IdGen& idGen;
     DeviceCallback onDeviceAdded;
     DeviceCallback onDeviceRemoved;
@@ -128,9 +135,6 @@ class DeviceManager {
         serializeJson(doc, file);
         file.close();
 
-        deviceCacheByName.emplace(device.name, device);
-        deviceCacheById.emplace(device.id, device);
-
         if (onDeviceAdded) {
             LOG_DEBUG("[DeviceManager] Triggering onDeviceAdded callback for device %d", device.id);
             onDeviceAdded(device);
@@ -140,7 +144,7 @@ class DeviceManager {
     }
 
     bool removeDeviceById(int id) {
-        Device* device = getDeviceById(id);
+        auto device = getDeviceById(id);
         if (device) {
             return removeDevice(*device);
         }
@@ -148,17 +152,15 @@ class DeviceManager {
     }
 
     bool removeDevice(const Device& device) {
-        // Snapshot before mutating: `device` is often a reference into the
-        // cache we're about to erase from.
+        // Snapshot so the onDeviceRemoved callback still sees valid data
+        // even if `device` aliased a temporary that gets invalidated by
+        // LittleFS.remove (paranoia held over from the cached impl).
         Device snapshot = device;
 
         String filename = String(snapshot.id) + ".json";
         bool success = LittleFS.remove(String(storageDir) + "/" + filename);
         if (success) {
             LOG_INFO("[DeviceManager] Device removed from %s", filename.c_str());
-            deviceCacheByName.erase(snapshot.name);
-            deviceCacheById.erase(snapshot.id);
-
             if (onDeviceRemoved) {
                 LOG_DEBUG("[DeviceManager] Triggering onDeviceRemoved callback for device %d",
                           snapshot.id);
@@ -170,116 +172,106 @@ class DeviceManager {
         return success;
     }
 
-    Device* getDeviceById(int id) {
-        auto it = deviceCacheById.find(id);
-        if (it != deviceCacheById.end()) {
-            LOG_DEBUG("[DeviceManager] Found device %d in cache", id);
-            return &(it->second);
-        }
-
-        LOG_DEBUG("[DeviceManager] Device %d not found in cache, loading from storage", id);
-
-        String filename = String(id) + ".json";
-        File file = LittleFS.open(String(storageDir) + "/" + filename, "r");
-        if (!file) {
-            LOG_ERROR("[DeviceManager] Failed to open file for device %d", id);
-            return nullptr;
-        }
-        String json = file.readString();
-        file.close();
-
-        JsonDocument doc;
-        DeserializationError err = deserializeJson(doc, json);
-        if (err) {
-            LOG_ERROR("[DeviceManager] Failed to parse JSON for device %d: %s", id, err.c_str());
-            return nullptr;
-        }
-
-        Device device;
-        device.id = id;
-        device.type = (DeviceType)doc["type"];
-        device.name = doc["name"] | "";
-        device.protocolName = doc["protocolName"] | "";
-
-        device.onCommand = IRCode::fromJson(doc["onCommand"]);
-        device.offCommand = IRCode::fromJson(doc["offCommand"]);
-
-        // Insert into cache
-        auto [itById, inserted] = deviceCacheById.emplace(device.id, std::move(device));
-        deviceCacheByName.emplace(itById->second.name, itById->second);
-
-        return &(itById->second);
+    /// Each call hits LittleFS — returns std::nullopt if the device doesn't
+    /// exist. The returned Device owns its own data; the caller may keep it
+    /// for as long as needed.
+    std::optional<Device> getDeviceById(int id) {
+        return loadDeviceFromDisk(id);
     }
 
-    Device* getDeviceByName(const String& name) {
-        auto it = deviceCacheByName.find(name);
-        if (it != deviceCacheByName.end()) {
-            LOG_DEBUG("[DeviceManager] Found device %s in cache", name.c_str());
-            return &(it->second);
-        }
-
-        LOG_DEBUG("[DeviceManager] Device %s not found in cache, loading from storage",
-                  name.c_str());
-
-        for (Device& device : getDevices()) {
-            if (device.name == name) {
-                LOG_DEBUG("[DeviceManager] Loaded device %s from storage", name.c_str());
-                return &device;
+    /// O(N) directory scan + per-file parse. Used only by the Alexa command
+    /// path, which is rare enough that the linear scan doesn't matter.
+    std::optional<Device> getDeviceByName(const String& name) {
+        Dir dir = LittleFS.openDir(storageDir);
+        while (dir.next()) {
+            if (!dir.isFile()) continue;
+            String filename = String(dir.fileName());
+            if (!filename.endsWith(".json")) continue;
+            int id = filename.substring(0, filename.lastIndexOf('.')).toInt();
+            auto device = loadDeviceFromDisk(id);
+            if (device && device->name == name) {
+                return device;
             }
         }
-        LOG_ERROR("[DeviceManager] Device %s not found", name.c_str());
-        return nullptr;
+        LOG_DEBUG("[DeviceManager] Device %s not found", name.c_str());
+        return std::nullopt;
     }
 
     std::vector<Device> getDevices() {
-        loadAll();
         std::vector<Device> devices;
-        devices.reserve(deviceCacheById.size());
-        for (const auto& kv : deviceCacheById) {
-            devices.push_back(kv.second);
+        Dir dir = LittleFS.openDir(storageDir);
+        while (dir.next()) {
+            if (!dir.isFile()) continue;
+            String filename = String(dir.fileName());
+            if (!filename.endsWith(".json")) continue;
+            int id = filename.substring(0, filename.lastIndexOf('.')).toInt();
+            if (auto device = loadDeviceFromDisk(id)) {
+                devices.push_back(std::move(*device));
+            }
         }
         LOG_INFO("[DeviceManager] Loaded %d devices", devices.size());
         return devices;
     }
 
-    /// Iterate every device without allocating a vector copy.
+    /// Iterate every device. The Device passed to `fn` is a freshly-loaded
+    /// stack-local — it goes out of scope once `fn` returns, so the callback
+    /// must not retain the reference. (All current call sites — MQTT
+    /// discovery + Alexa registration — only use it synchronously.)
     template <typename Fn>
     void forEachDevice(Fn fn) {
-        loadAll();
-        for (auto& kv : deviceCacheById) {
-            fn(kv.second);
+        Dir dir = LittleFS.openDir(storageDir);
+        while (dir.next()) {
+            if (!dir.isFile()) continue;
+            String filename = String(dir.fileName());
+            if (!filename.endsWith(".json")) continue;
+            int id = filename.substring(0, filename.lastIndexOf('.')).toInt();
+            if (auto device = loadDeviceFromDisk(id)) {
+                fn(*device);
+            }
         }
     }
 
-    /// Number of known devices (cheap; uses the cache).
+    /// Number of stored devices. Counts JSON files without parsing them, so
+    /// this is cheap and safe to call from UI code.
     size_t deviceCount() {
-        loadAll();
-        return deviceCacheById.size();
+        size_t count = 0;
+        Dir dir = LittleFS.openDir(storageDir);
+        while (dir.next()) {
+            if (!dir.isFile()) continue;
+            if (String(dir.fileName()).endsWith(".json")) {
+                count++;
+            }
+        }
+        return count;
     }
 
    private:
-    /// Lazy one-shot scan; cache stays in sync via saveDevice/removeDevice.
-    void loadAll() {
-        if (cacheLoaded) {
-            return;
+    /// Stream-parses /devices/<id>.json. Returns std::nullopt on missing
+    /// file or malformed JSON. Stream parsing avoids materialising the
+    /// whole file as a String (~free fragmentation win vs file.readString()).
+    std::optional<Device> loadDeviceFromDisk(int id) {
+        String filename = String(id) + ".json";
+        File file = LittleFS.open(String(storageDir) + "/" + filename, "r");
+        if (!file) {
+            LOG_ERROR("[DeviceManager] Failed to open file for device %d", id);
+            return std::nullopt;
         }
-        cacheLoaded = true;  // set first so any failure isn't retried each call
 
-        Dir dir = LittleFS.openDir(storageDir);
-        while (dir.next()) {
-            if (!dir.isFile()) {
-                continue;
-            }
-            String filename = String(dir.fileName());
-            if (!filename.endsWith(".json")) {
-                continue;
-            }
-            int id = filename.substring(0, filename.lastIndexOf('.')).toInt();
-            if (!getDeviceById(id)) {
-                LOG_ERROR("[DeviceManager] Failed to load device from %s", filename.c_str());
-            }
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, file);
+        file.close();
+        if (err) {
+            LOG_ERROR("[DeviceManager] Failed to parse JSON for device %d: %s", id, err.c_str());
+            return std::nullopt;
         }
-        LOG_INFO("[DeviceManager] Cache primed with %u devices",
-                 (unsigned)deviceCacheById.size());
+
+        Device device;
+        device.id = id;
+        device.type = (DeviceType)doc["type"].as<int>();
+        device.name = doc["name"] | "";
+        device.protocolName = doc["protocolName"] | "";
+        device.onCommand = IRCode::fromJson(doc["onCommand"]);
+        device.offCommand = IRCode::fromJson(doc["offCommand"]);
+        return device;
     }
 };

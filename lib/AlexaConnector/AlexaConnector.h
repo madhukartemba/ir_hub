@@ -22,8 +22,10 @@ class AlexaConnector {
         LOG_DEBUG("[Alexa] Set state for device %s to %s with value %d", deviceName.c_str(),
                   state ? "ON" : "OFF", value);
 
-        // Look up the device from device manager
-        Device* device = deviceManager.getDeviceByName(deviceName);
+        // DeviceManager is uncached: this scans /devices and parses each JSON
+        // until it finds a match (~N * 10 ms). Acceptable on the rare Alexa
+        // command path.
+        auto device = deviceManager.getDeviceByName(deviceName);
         if (device) {
             if (onStateChangeCallback) {
                 onStateChangeCallback(*device, state);
