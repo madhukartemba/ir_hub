@@ -157,15 +157,12 @@ static bool mountLittleFsWithRecovery() {
 // BearSSL's TLS handshake. That's the only reliable way to fit the binary
 // download on an ESP8266.
 
-// TLS receive buffer for the firmware download. 4 KB easily fits Cloudflare's
-// HTTP/1.1 MSS-framed response records (~1.4 KB) plus margin. 16 KB (the TLS
-// maximum) would OOM in downloader mode (~14 KB transient breaks our budget),
-// and 1 KB was the size we tried first — it crashed mid-stream because some
-// edges emit records up to ~3 KB even with MTU-aware framing.
-// Note: Even with MFLN, some Cloudflare edges occasionally send slightly larger
-// records. Bumping the buffer to 8KB to be safe, since we have ~19KB free heap
-// in downloader mode.
-static constexpr int kDownloaderTlsRxBuffer = 8192;
+// TLS receive buffer for the firmware download. We must use 16KB (the TLS maximum)
+// because Cloudflare Pages does not reliably support MFLN (Max Fragment Length Negotiation)
+// and sends full 16KB records for large files. This fits in our ~27KB downloader-mode
+// heap because the BearSSL handshake transient memory (~4KB) is freed before Update.begin()
+// allocates its flash buffer (~4KB).
+static constexpr int kDownloaderTlsRxBuffer = 16384;
 static constexpr int kDownloaderTlsTxBuffer = 512;
 
 static void downloaderShowStatus(const char* line1, const char* line2 = nullptr) {
