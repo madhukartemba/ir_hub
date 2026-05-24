@@ -54,7 +54,8 @@ def build_firmware_once(env_name):
 def find_espota_script():
     """Locate espota.py from common PlatformIO package paths."""
     candidates = [
-        Path.home() / ".platformio/packages/framework-arduinoespressif8266/tools/espota.py",
+        Path.home()
+        / ".platformio/packages/framework-arduinoespressif8266/tools/espota.py",
         Path.home() / ".platformio/packages/tool-esptoolpy/espota.py",
     ]
     for path in candidates:
@@ -77,7 +78,9 @@ def read_ota_password(secrets_file):
     return match.group(1)
 
 
-def upload_firmware_to_ip(ip_address, firmware_path, espota_path, ota_port, ota_password, lock):
+def upload_firmware_to_ip(
+    ip_address, firmware_path, espota_path, ota_port, ota_password, lock
+):
     """Upload pre-built firmware to a specific IP address"""
     with lock:
         print(f"📡 Uploading firmware to {ip_address}...")
@@ -139,7 +142,11 @@ class OtaMdnsListener(ServiceListener):
 
         server = (info.server or "").lower().rstrip(".")
         service_name = (info.name or "").lower()
-        if self.name_prefix and self.name_prefix not in server and self.name_prefix not in service_name:
+        if (
+            self.name_prefix
+            and self.name_prefix not in server
+            and self.name_prefix not in service_name
+        ):
             return
 
         addresses = []
@@ -273,7 +280,9 @@ Examples:
     if args.discover:
         discovered = discover_ota_devices(args.discover_timeout, args.discover_prefix)
         if discovered:
-            print(f"✅ Discovered {len(discovered)} OTA device(s): {', '.join(discovered)}")
+            print(
+                f"✅ Discovered {len(discovered)} OTA device(s): {', '.join(discovered)}"
+            )
             ip_list.extend(discovered)
         else:
             print("⚠️  No OTA devices discovered over mDNS")
@@ -335,7 +344,12 @@ Examples:
         ip = ip_list[0]
         print(f"📡 Uploading to {ip}...")
         if upload_firmware_to_ip(
-            ip, firmware_path, espota_path, args.ota_port, ota_password, threading.Lock()
+            ip,
+            firmware_path,
+            espota_path,
+            args.ota_port,
+            ota_password,
+            threading.Lock(),
         ):
             successful += 1
         else:
