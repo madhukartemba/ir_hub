@@ -37,6 +37,7 @@ class OtaUpdater {
         UP_TO_DATE,
         UPDATE_PENDING,
         NO_WIFI,
+        LOW_HEAP,
         CHECK_FAILED,
     };
 
@@ -100,11 +101,12 @@ class OtaUpdater {
         bool intervalElapsed = (now - lastCheck_) >= checkIntervalMs_;
         if (!checkPending_ && !intervalElapsed) return;
 
+        bool isManualCheck = manualCheckPending_;
         manualCheckPending_ = false;
         checkPending_ = false;
         lastCheck_ = now;
         lastCheckStatus_ = CheckStatus::CHECKING;
-        CheckStatus status = performCheck();
+        CheckStatus status = performCheck(isManualCheck);
         markCheckComplete(status);
     }
 
@@ -128,6 +130,8 @@ class OtaUpdater {
                 return "Update found";
             case CheckStatus::NO_WIFI:
                 return "No Wi-Fi";
+            case CheckStatus::LOW_HEAP:
+                return "Low heap";
             case CheckStatus::CHECK_FAILED:
                 return "Check failed";
         }
@@ -143,6 +147,9 @@ class OtaUpdater {
     // state ~6 KB + lwIP TCP buffers ~3 KB + JSON parse). 14 KB free is the
     // floor; below that the SYS task starts OOMing during the handshake.
     static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
+    // Manual checks can be slightly more permissive so user-initiated checks
+    // in Settings still work in borderline conditions.
+    static constexpr uint32_t kMinHeapForManualManifest = 13 * 1024;
     // Small TLS buffers only work when the server supports MFLN (RFC 6066).
     // Cloudflare Pages does; raw.githubusercontent.com (Fastly) and jsDelivr do not. See
     // docs/OTA_RELEASES.md for the recommended URL pattern.
@@ -168,14 +175,15 @@ class OtaUpdater {
         lastCheckCompletedAtMs_ = millis();
     }
 
-    CheckStatus performCheck() {
+    CheckStatus performCheck(bool isManualCheck) {
         LOG_INFO("[OTA-HTTP] Checking manifest at %s", manifestUrl_);
 
+        uint32_t minHeap = isManualCheck ? kMinHeapForManualManifest : kMinHeapForManifest;
         uint32_t freeHeap = ESP.getFreeHeap();
-        if (freeHeap < kMinHeapForManifest) {
+        if (freeHeap < minHeap) {
             LOG_WARN("[OTA-HTTP] Skipping check, low heap (%u < %u)",
-                     (unsigned)freeHeap, (unsigned)kMinHeapForManifest);
-            return CheckStatus::CHECK_FAILED;
+                     (unsigned)freeHeap, (unsigned)minHeap);
+            return CheckStatus::LOW_HEAP;
         }
 
         String firmwareUrl;
