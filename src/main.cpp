@@ -4,6 +4,7 @@
 #include <LittleFS.h>
 #include <Updater.h>
 #include <WiFiClientSecure.h>
+#include <Wire.h>
 #include "NeoRing.h"
 #include "PendingOta.h"
 #include "UserPrefs.h"
@@ -318,7 +319,10 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
 }
 
 [[noreturn]] static void runDownloaderMode(const pending_ota::Slot& slot) {
-    // DO NOT initialize Serial here! We need the 512 bytes of RX/TX buffers for BearSSL.
+    // We need every byte of heap for the 16KB TLS buffer.
+    // Keep Serial disabled to save 512 bytes of RX/TX buffers.
+    
+    Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
     
     // Use a local 1-page (128 bytes) display buffer instead of the global 1024-byte one
     if (DISPLAY_TYPE == DisplayType::SH1106) {
