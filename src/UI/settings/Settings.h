@@ -3,6 +3,7 @@
 #include "../../preferences.h"
 #include "../../utils/MenuUtils.h"
 #include "ClearDataConfirmation.h"
+#include "ContactQrScreen.h"
 #include "UserPrefs.h"
 
 class Settings : public Screen {
@@ -18,13 +19,14 @@ class Settings : public Screen {
         CHECK_UPDATE,
         AUTHOR_INFO,
         CONTACT_INFO,
+        CONTACT_QR,
         RESTART,
         CLEAR_DATA,
         WIFI_WIPE,
         BACK,
     };
 
-    static constexpr int kMaxItems = 12;
+    static constexpr int kMaxItems = 13;
     const char* menuItems[kMaxItems];
     Action menuActions[kMaxItems];
     int menuCount = 0;
@@ -103,6 +105,7 @@ class Settings : public Screen {
         }
         addRow(Action::AUTHOR_INFO);
         addRow(Action::CONTACT_INFO);
+        addRow(Action::CONTACT_QR);
         addRow(Action::RESTART);
         addRow(Action::CLEAR_DATA);
         addRow(Action::WIFI_WIPE);
@@ -167,6 +170,8 @@ class Settings : public Screen {
                 return "Author: Madhukar";
             case Action::CONTACT_INFO:
                 return "Contact: @madhukar";
+            case Action::CONTACT_QR:
+                return "Show Contact QR";
             case Action::RESTART:
                 return "Restart";
             case Action::CLEAR_DATA:
@@ -201,6 +206,10 @@ class Settings : public Screen {
             case Action::CONTACT_INFO:
                 // Read-only rows.
                 speaker.shortBeep();
+                break;
+            case Action::CONTACT_QR:
+                speaker.shortBeep();
+                router.push(new ContactQrScreen());
                 break;
             case Action::RESTART:
                 LOG_DEBUG("[Settings] onButtonLongPress RESTART");
