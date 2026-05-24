@@ -1,10 +1,10 @@
 {
   "variants": {
     "v3": {
-      "version": "1.1.0",
-      "url": "https://ir-hub.pages.dev/binaries/firmware_v3_v1.1.0.bin",
+      "version": "1.1.1",
+      "url": "https://ir-hub.pages.dev/binaries/firmware_v3_v1.1.1.bin",
       "size": 810080,
-      "md5": "7de16ceaedf842f01ef83ce20d0f5f61"
+      "md5": "0a0498e12a07ad78ed673e23b0a20ad9"
     }
   }
 }
