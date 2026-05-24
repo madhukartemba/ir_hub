@@ -172,7 +172,7 @@ static void downloaderShowStatus(const char* line1, const char* line2 = nullptr)
     if (!g_dlDisplay) return;
     g_dlDisplay->firstPage();
     do {
-        g_dlDisplay->setFont(u8g2_font_ncenB08_tr);
+        g_dlDisplay->setFont(u8g2_font_helvR08_tr);
         int w = g_dlDisplay->getStrWidth("Firmware Update");
         g_dlDisplay->drawStr((128 - w) / 2, 12, "Firmware Update");
         g_dlDisplay->drawLine(0, 18, 128, 18);
@@ -199,7 +199,7 @@ static void downloaderShowProgress(const char* version, size_t cur, size_t total
 
     g_dlDisplay->firstPage();
     do {
-        g_dlDisplay->setFont(u8g2_font_ncenB08_tr);
+        g_dlDisplay->setFont(u8g2_font_helvR08_tr);
         int w = g_dlDisplay->getStrWidth(title);
         g_dlDisplay->drawStr((128 - w) / 2, 12, title);
         g_dlDisplay->drawLine(0, 20, 128, 20);
