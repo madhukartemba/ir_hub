@@ -64,9 +64,15 @@ class AuthorEasterEggScreen : public Screen {
 
         display.clear();
         display.setTextSize(1);
-        display.printCentered("Made with", 14);
-        drawPixelHeart(display.getWidth() / 2, 26, 2);
-        display.printCentered("by Madhukar", 44);
+        const int textH = display.getTextHeight();
+        const int heartH = 6 * 2;   // 6 rows at scale 2
+        const int gap = 4;          // even spacing between each block
+        const int totalH = textH + gap + heartH + gap + textH;
+        const int startY = (display.getHeight() - totalH) / 2;
+
+        display.printCentered("Made with", startY);
+        drawPixelHeart(display.getWidth() / 2, startY + textH + gap, 2);
+        display.printCentered("by Madhukar", startY + textH + gap + heartH + gap);
         display.update();
     }
 

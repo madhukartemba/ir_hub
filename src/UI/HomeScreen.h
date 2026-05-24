@@ -103,7 +103,11 @@ class HomeScreen : public Screen {
 
     void onExit() override {
         LOG_DEBUG("[HomeScreen] onExit");
-        ledRing.blank();
+        // Keep current ring color when leaving Home so the next screen can
+        // transition smoothly instead of flashing through black.
+        if (isBlanked) {
+            ledRing.blank();
+        }
         // Restore display FPS to default
         display.resetFPS();
         // Make sure display is turned on when exiting
