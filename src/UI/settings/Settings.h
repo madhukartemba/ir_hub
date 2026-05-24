@@ -4,6 +4,7 @@
 #include "../../utils/MenuUtils.h"
 #include "ClearDataConfirmation.h"
 #include "ContactQrScreen.h"
+#include "UpdateCheckScreen.h"
 #include "UserPrefs.h"
 
 class Settings : public Screen {
@@ -195,7 +196,8 @@ class Settings : public Screen {
                 break;
             case Action::CHECK_UPDATE:
                 LOG_DEBUG("[Settings] onButtonLongPress CHECK_UPDATE");
-                triggerUpdateCheck();
+                speaker.shortBeep();
+                router.push(new UpdateCheckScreen());
                 break;
             case Action::AUTHOR_INFO:
                 // Read-only rows.
@@ -226,13 +228,6 @@ class Settings : public Screen {
                 router.pop();
                 break;
         }
-    }
-
-    void triggerUpdateCheck() {
-        // Ask the OTA module to fetch the manifest on its next loop tick.
-        // Status rows in this menu show progress/result.
-        otaUpdater.checkNow();
-        speaker.shortBeep();
     }
 
     void toggleSound() {
