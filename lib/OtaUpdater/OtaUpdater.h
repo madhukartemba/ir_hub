@@ -125,7 +125,9 @@ class OtaUpdater {
 
         String firmwareUrl;
         String newVersion;
-        if (!fetchManifest(firmwareUrl, newVersion)) {
+        String firmwareMd5;
+        uint32_t firmwareSize = 0;
+        if (!fetchManifest(firmwareUrl, newVersion, firmwareSize, firmwareMd5)) {
             return;
         }
 
@@ -135,14 +137,22 @@ class OtaUpdater {
             return;
         }
 
-        LOG_INFO("[OTA-HTTP] New firmware available: %s -> %s",
-                 currentVersion_, newVersion.c_str());
+        LOG_INFO("[OTA-HTTP] New firmware available: %s -> %s (%u bytes)",
+                 currentVersion_, newVersion.c_str(), (unsigned)firmwareSize);
 
-        // Stash the URL in RTC RAM and reboot into downloader mode. We don't
-        // download in-process because BearSSL needs more transient heap than
-        // we have once Alexa + device cache + UI are loaded.
-        if (!pending_ota::arm(firmwareUrl.c_str(), newVersion.c_str())) {
-            LOG_ERROR("[OTA-HTTP] Failed to arm pending OTA (URL or version too long)");
+        if (firmwareSize == 0) {
+            LOG_ERROR("[OTA-HTTP] Manifest is missing 'size' for variant '%s' — "
+                      "refusing to OTA (publish a release.py-produced manifest)",
+                      hwVariant_);
+            return;
+        }
+
+        // Stash the URL+size+md5 in RTC RAM and reboot into downloader mode.
+        // We don't download in-process because BearSSL needs more transient
+        // heap than we have once Alexa + device cache + UI are loaded.
+        if (!pending_ota::arm(firmwareUrl.c_str(), newVersion.c_str(),
+                              firmwareSize, firmwareMd5.c_str())) {
+            LOG_ERROR("[OTA-HTTP] Failed to arm pending OTA (URL/version/md5 too long?)");
             return;
         }
         if (onUpdatePending_) onUpdatePending_(newVersion.c_str(), firmwareUrl.c_str());
@@ -152,7 +162,8 @@ class OtaUpdater {
         ESP.restart();
     }
 
-    bool fetchManifest(String& outUrl, String& outVersion) {
+    bool fetchManifest(String& outUrl, String& outVersion,
+                       uint32_t& outSize, String& outMd5) {
         bool isHttps = urlIsHttps(manifestUrl_);
         std::unique_ptr<WiFiClient> client = makeClient(isHttps);
         if (!client) {
@@ -189,6 +200,8 @@ class OtaUpdater {
 
         const char* version = doc["version"] | "";
         const char* url = doc["url"] | "";
+        const char* md5 = doc["md5"] | "";
+        uint32_t size = doc["size"] | 0u;
 
         // Per-variant entry takes precedence so a single manifest can target
         // multiple PCB revisions with one bump.
@@ -197,6 +210,8 @@ class OtaUpdater {
             if (!v.isNull()) {
                 version = v["version"] | version;
                 url = v["url"] | url;
+                md5 = v["md5"] | md5;
+                size = v["size"] | size;
             }
         }
 
@@ -208,6 +223,8 @@ class OtaUpdater {
 
         outVersion = version;
         outUrl = url;
+        outMd5 = md5;
+        outSize = size;
         return true;
     }
 

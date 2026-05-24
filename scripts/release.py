@@ -29,6 +29,7 @@ Prerequisites:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -212,6 +213,7 @@ def update_manifest(version: str, envs: Iterable[str], repo_slug: str,
 
     for env_name in envs:
         variant = env_to_variant(env_name)
+        bin_path = BINARIES_DIR / f"firmware_{variant}_v{version}.bin"
         # jsDelivr URL pointing at the binary we committed under binaries/.
         # The device's TLS budget can't handle a full-size record from
         # objects.githubusercontent.com (where GitHub Release downloads
@@ -220,7 +222,20 @@ def update_manifest(version: str, envs: Iterable[str], repo_slug: str,
             f"https://cdn.jsdelivr.net/gh/{repo_slug}@main/"
             f"binaries/firmware_{variant}_v{version}.bin"
         )
-        manifest["variants"][variant] = {"version": version, "url": url}
+        # Stash size + md5 in the manifest so the device doesn't have to trust
+        # the CDN's Content-Length header (some edges drop it on TLS streams),
+        # and so the flashed binary can be integrity-checked end-to-end.
+        if dry_run and not bin_path.exists():
+            size, md5 = 0, "dryrun-md5-placeholder"
+        else:
+            size = bin_path.stat().st_size
+            md5 = hashlib.md5(bin_path.read_bytes()).hexdigest()
+        manifest["variants"][variant] = {
+            "version": version,
+            "url": url,
+            "size": size,
+            "md5": md5,
+        }
 
     serialized = json.dumps(manifest, indent=2) + "\n"
     if dry_run:

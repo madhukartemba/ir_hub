@@ -202,8 +202,15 @@ static void downloaderLogSslError(WiFiClientSecure& client, const char* phase) {
 /// ESPhttpUpdate so we (a) reuse the exact HTTPClient setup that worked for
 /// the manifest fetch and (b) skip the x-ESP8266-* request headers that some
 /// edges/WAFs reject under load.
+///
+/// `expectedSize` and `md5Hex` come from the manifest (carried through the
+/// pending-OTA RTC slot) so we don't have to trust the response's
+/// Content-Length header — empirically some CDN edges drop it on long-lived
+/// TLS streams to embedded clients. md5Hex may be empty to skip integrity
+/// verification.
 static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
-                                   const char* version) {
+                                   const char* version, size_t expectedSize,
+                                   const char* md5Hex) {
     HTTPClient http;
     http.setTimeout(20000);
     http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
@@ -221,18 +228,28 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
         return false;
     }
 
-    int totalLen = http.getSize();
-    if (totalLen <= 0) {
-        LOG_ERROR("[Downloader] Missing/invalid Content-Length: %d", totalLen);
-        http.end();
-        return false;
+    int headerLen = http.getSize();
+    if (headerLen > 0 && (size_t)headerLen != expectedSize) {
+        LOG_WARN("[Downloader] Content-Length (%d) != manifest size (%u) — "
+                 "trusting manifest", headerLen, (unsigned)expectedSize);
+    } else if (headerLen <= 0) {
+        LOG_INFO("[Downloader] No Content-Length in response; using manifest size %u",
+                 (unsigned)expectedSize);
     }
-    LOG_INFO("[Downloader] Binary is %d bytes; beginning Update", totalLen);
+    LOG_INFO("[Downloader] Binary is %u bytes; beginning Update", (unsigned)expectedSize);
 
-    if (!Update.begin((size_t)totalLen, U_FLASH)) {
+    if (!Update.begin(expectedSize, U_FLASH)) {
         LOG_ERROR("[Downloader] Update.begin failed (err=%d)", Update.getError());
         http.end();
         return false;
+    }
+    if (md5Hex && *md5Hex) {
+        if (!Update.setMD5(md5Hex)) {
+            LOG_WARN("[Downloader] setMD5(%s) rejected — skipping integrity check",
+                     md5Hex);
+        } else {
+            LOG_INFO("[Downloader] Verifying against MD5 %s", md5Hex);
+        }
     }
 
     WiFiClient* stream = http.getStreamPtr();
@@ -242,28 +259,31 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
     unsigned long lastByteAt = millis();
     constexpr unsigned long kStreamIdleTimeoutMs = 20000UL;
 
-    while (written < (size_t)totalLen) {
+    while (written < expectedSize) {
         int avail = stream->available();
         if (avail <= 0) {
             if (!http.connected() && stream->available() <= 0) {
-                LOG_ERROR("[Downloader] Stream closed early at %u/%d",
-                          (unsigned)written, totalLen);
+                LOG_ERROR("[Downloader] Stream closed early at %u/%u",
+                          (unsigned)written, (unsigned)expectedSize);
                 downloaderLogSslError(client, "read");
                 break;
             }
             if (millis() - lastByteAt > kStreamIdleTimeoutMs) {
-                LOG_ERROR("[Downloader] Stream idle timeout at %u/%d",
-                          (unsigned)written, totalLen);
+                LOG_ERROR("[Downloader] Stream idle timeout at %u/%u",
+                          (unsigned)written, (unsigned)expectedSize);
                 break;
             }
             delay(1);
             continue;
         }
         size_t toRead = (size_t)avail < sizeof(buf) ? (size_t)avail : sizeof(buf);
+        if (toRead > expectedSize - written) {
+            toRead = expectedSize - written;
+        }
         int n = stream->readBytes(buf, toRead);
         if (n <= 0) {
-            LOG_ERROR("[Downloader] readBytes returned %d at %u/%d",
-                      n, (unsigned)written, totalLen);
+            LOG_ERROR("[Downloader] readBytes returned %d at %u/%u",
+                      n, (unsigned)written, (unsigned)expectedSize);
             downloaderLogSslError(client, "read");
             break;
         }
@@ -277,23 +297,25 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
         written += (size_t)n;
         lastByteAt = millis();
         if (millis() - lastProgress > 250) {
-            downloaderShowProgress(version, written, (size_t)totalLen);
+            downloaderShowProgress(version, written, expectedSize);
             lastProgress = millis();
         }
     }
     http.end();
 
-    if (written != (size_t)totalLen) {
-        LOG_ERROR("[Downloader] Truncated download: %u/%d", (unsigned)written, totalLen);
+    if (written != expectedSize) {
+        LOG_ERROR("[Downloader] Truncated download: %u/%u",
+                  (unsigned)written, (unsigned)expectedSize);
         Update.end(false);
         return false;
     }
 
     if (!Update.end(true)) {
-        LOG_ERROR("[Downloader] Update.end failed (err=%d)", Update.getError());
+        LOG_ERROR("[Downloader] Update.end failed (err=%d) — likely MD5 mismatch",
+                  Update.getError());
         return false;
     }
-    downloaderShowProgress(version, (size_t)totalLen, (size_t)totalLen);
+    downloaderShowProgress(version, expectedSize, expectedSize);
     return true;
 }
 
@@ -344,8 +366,10 @@ static bool downloaderStreamUpdate(WiFiClientSecure& client, const char* url,
     client.setInsecure();
     client.setBufferSizes(kDownloaderTlsRxBuffer, kDownloaderTlsTxBuffer);
 
-    LOG_INFO("[Downloader] Starting download (heap=%u)", (unsigned)ESP.getFreeHeap());
-    bool ok = downloaderStreamUpdate(client, slot.url, slot.version);
+    LOG_INFO("[Downloader] Starting download (heap=%u, expected=%u bytes)",
+             (unsigned)ESP.getFreeHeap(), (unsigned)slot.expected_size);
+    bool ok = downloaderStreamUpdate(client, slot.url, slot.version,
+                                     (size_t)slot.expected_size, slot.md5_hex);
 
     if (ok) {
         LOG_INFO("[Downloader] Flash successful — rebooting into new firmware");
