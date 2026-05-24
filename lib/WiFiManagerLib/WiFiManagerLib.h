@@ -243,7 +243,13 @@ class WiFiManagerLib {
         display.printCentered("Setting up OTA...", 40);
         display.update();
 
-        ArduinoOTA.setHostname("ir-hub");
+        String mac = WiFi.macAddress();
+        mac.replace(":", "");
+        String suffix = mac.length() >= 6 ? mac.substring(mac.length() - 6) : mac;
+        suffix.toLowerCase();
+        String otaHost = "ir-hub-" + suffix;
+        ArduinoOTA.setHostname(otaHost.c_str());
+        LOG_INFO("[OTA] Hostname: %s", otaHost.c_str());
         if (OTA_PASSWORD[0] != '\0') {
             ArduinoOTA.setPassword(OTA_PASSWORD);
             LOG_INFO("[OTA] LAN push protected by password");

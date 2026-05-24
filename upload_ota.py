@@ -11,6 +11,14 @@ import os
 import concurrent.futures
 import threading
 import time
+import socket
+
+try:
+    from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
+except ImportError:
+    Zeroconf = None
+    ServiceBrowser = None
+    ServiceListener = object
 
 
 def build_firmware_once(env_name):
@@ -75,12 +83,75 @@ def upload_firmware_to_ip(env_name, ip_address, firmware_path, lock):
         return False
 
 
+class OtaMdnsListener(ServiceListener):
+    """Collect ArduinoOTA mDNS services and resolve IP addresses."""
+
+    def __init__(self, name_prefix):
+        self.name_prefix = (name_prefix or "").lower()
+        self._ips = set()
+        self._lock = threading.Lock()
+
+    @property
+    def ips(self):
+        with self._lock:
+            return sorted(self._ips)
+
+    def remove_service(self, zeroconf, type_, name):
+        return
+
+    def update_service(self, zeroconf, type_, name):
+        self.add_service(zeroconf, type_, name)
+
+    def add_service(self, zeroconf, type_, name):
+        info = zeroconf.get_service_info(type_, name, timeout=1000)
+        if not info:
+            return
+
+        server = (info.server or "").lower().rstrip(".")
+        service_name = (info.name or "").lower()
+        if self.name_prefix and self.name_prefix not in server and self.name_prefix not in service_name:
+            return
+
+        addresses = []
+        if hasattr(info, "parsed_addresses"):
+            addresses = info.parsed_addresses()
+        if not addresses:
+            addresses = [socket.inet_ntoa(addr) for addr in (info.addresses or [])]
+
+        with self._lock:
+            for ip in addresses:
+                if ip and "." in ip and ":" not in ip:
+                    self._ips.add(ip)
+
+
+def discover_ota_devices(timeout_sec, name_prefix):
+    """Discover ArduinoOTA endpoints via mDNS (_arduino._tcp.local.)."""
+    if Zeroconf is None:
+        print("❌ mDNS discovery requires zeroconf package.")
+        print("   Install with: python3 -m pip install zeroconf")
+        return []
+
+    listener = OtaMdnsListener(name_prefix)
+    zc = Zeroconf()
+    try:
+        ServiceBrowser(zc, "_arduino._tcp.local.", listener)
+        print(f"🔎 Discovering OTA devices via mDNS for {timeout_sec:.1f}s...")
+        time.sleep(timeout_sec)
+        return listener.ips
+    finally:
+        zc.close()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Upload IR Hub firmware to multiple boards via OTA",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Auto-discover IR Hubs by mDNS hostname prefix (recommended with unique hostnames)
+  python upload_ota.py -e ir_hub_version_3 --discover
+  python upload_ota.py -e ir_hub_version_3 --discover --discover-timeout 8
+
   # Upload to multiple devices (builds once, uploads in parallel)
   python upload_ota.py -e ir_hub_version_0 -i 192.168.1.100 192.168.1.101
   python upload_ota.py -e ir_hub_version_1 -i 192.168.0.183 192.168.0.110 192.168.0.25 192.168.0.161
@@ -103,9 +174,25 @@ Examples:
     parser.add_argument(
         "-i",
         "--ips",
-        required=True,
+        required=False,
         nargs="+",
         help="IP addresses to upload to (space-separated or comma-separated)",
+    )
+    parser.add_argument(
+        "--discover",
+        action="store_true",
+        help="Discover ArduinoOTA devices over mDNS and upload to all matching hosts.",
+    )
+    parser.add_argument(
+        "--discover-timeout",
+        type=float,
+        default=5.0,
+        help="Seconds to wait for mDNS discovery (default: 5.0).",
+    )
+    parser.add_argument(
+        "--discover-prefix",
+        default="ir-hub-",
+        help="mDNS hostname/service prefix filter for discovery (default: ir-hub-).",
     )
     parser.add_argument(
         "--dry-run",
@@ -121,16 +208,33 @@ Examples:
 
     args = parser.parse_args()
 
+    if not args.ips and not args.discover:
+        parser.error("Provide --ips and/or --discover.")
+
     # Parse IP addresses (handle both space and comma separated)
     ip_list = []
-    for ip_group in args.ips:
+    for ip_group in args.ips or []:
         if "," in ip_group:
-            ip_list.extend([ip.strip() for ip in ip_group.split(",")])
+            ip_list.extend([ip.strip() for ip in ip_group.split(",") if ip.strip()])
         else:
-            ip_list.append(ip_group.strip())
+            ip = ip_group.strip()
+            if ip:
+                ip_list.append(ip)
+
+    if args.discover:
+        discovered = discover_ota_devices(args.discover_timeout, args.discover_prefix)
+        if discovered:
+            print(f"✅ Discovered {len(discovered)} OTA device(s): {', '.join(discovered)}")
+            ip_list.extend(discovered)
+        else:
+            print("⚠️  No OTA devices discovered over mDNS")
 
     # Remove duplicates while preserving order
     ip_list = list(dict.fromkeys(ip_list))
+
+    if not ip_list:
+        print("❌ No target devices found (via --ips or --discover).")
+        sys.exit(1)
 
     print("🚀 IR Hub OTA Upload Script")
     print("=" * 30)
