@@ -49,6 +49,7 @@ RELEASE_DIR = REPO_ROOT / "release"
 BINARIES_DIR = REPO_ROOT / "binaries"
 
 DEFAULT_ENVS = ["ir_hub_version_3"]
+SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(-[\w.]+)?$")
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +134,41 @@ def assert_tag_unused(version: str) -> None:
     if res.returncode == 0:
         sys.exit(f"ERROR: git tag v{version} already exists locally. "
                  f"Pick a new version or delete the tag with `git tag -d v{version}`.")
+
+
+def read_current_platformio_version() -> str:
+    text = PLATFORMIO_INI.read_text()
+    match = re.search(r"^custom_firmware_version\s*=\s*(\S+)\s*$", text, re.M)
+    if not match:
+        sys.exit("ERROR: `custom_firmware_version` not found in platformio.ini")
+    return match.group(1).strip()
+
+
+def resolve_release_version(requested_version: Optional[str]) -> str:
+    if requested_version:
+        if not SEMVER_RE.match(requested_version):
+            sys.exit(
+                f"ERROR: version must be semver (X.Y.Z or X.Y.Z-suffix), got '{requested_version}'"
+            )
+        return requested_version
+
+    current = read_current_platformio_version()
+    match = SEMVER_RE.match(current)
+    if not match:
+        sys.exit(
+            "ERROR: cannot auto-bump because platformio.ini has a non-semver "
+            f"`custom_firmware_version` ('{current}'). Pass an explicit version."
+        )
+    if match.group(4):
+        sys.exit(
+            "ERROR: cannot auto-bump a pre-release version "
+            f"('{current}'). Pass an explicit stable version."
+        )
+
+    major, minor, patch = (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+    bumped = f"{major}.{minor}.{patch + 1}"
+    print(f"No version provided, auto-bumping patch: {current} -> {bumped}")
+    return bumped
 
 
 # ---------------------------------------------------------------------------
@@ -318,7 +354,12 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("version", help="Semantic version, e.g. 1.0.1 (no leading 'v')")
+    parser.add_argument(
+        "version",
+        nargs="?",
+        default=None,
+        help="Optional semantic version (e.g. 1.0.1). If omitted, patch auto-bumps from platformio.ini.",
+    )
     parser.add_argument("--envs", nargs="+", default=DEFAULT_ENVS,
                         help=f"PlatformIO envs to build (default: {DEFAULT_ENVS})")
     parser.add_argument("--notes", default=None,
@@ -341,8 +382,7 @@ def main() -> None:
                         help="Print every action without executing it.")
     args = parser.parse_args()
 
-    if not re.match(r"^\d+\.\d+\.\d+(-[\w.]+)?$", args.version):
-        sys.exit(f"ERROR: version must be semver (X.Y.Z or X.Y.Z-suffix), got '{args.version}'")
+    version = resolve_release_version(args.version)
 
     if args.notes and args.notes_file:
         sys.exit("ERROR: pass --notes or --notes-file, not both.")
@@ -352,14 +392,14 @@ def main() -> None:
     check_tools()
 
     repo_slug = args.repo or detect_repo_slug()
-    print(f"=== Releasing v{args.version} for {', '.join(args.envs)} to {repo_slug} ===")
+    print(f"=== Releasing v{version} for {', '.join(args.envs)} to {repo_slug} ===")
 
     if not args.dry_run:
         assert_clean_worktree()
         if not args.no_release:
-            assert_tag_unused(args.version)
+            assert_tag_unused(version)
 
-    update_platformio_version(args.version, args.dry_run)
+    update_platformio_version(version, args.dry_run)
 
     binaries: List[Path] = []
     for env_name in args.envs:
@@ -368,20 +408,20 @@ def main() -> None:
         # Also drop a versioned copy under binaries/ so jsDelivr can serve
         # it. This is the URL the device actually downloads from — the
         # gh-release asset is just for human visibility.
-        commit_binary_for_cdn(env_name, args.version, src, args.dry_run)
+        commit_binary_for_cdn(env_name, version, src, args.dry_run)
 
     # Create the Release first so the manifest URL is live before any device
     # has a chance to read the bumped manifest.
     if not args.no_release:
         create_release(
-            args.version, args.notes, args.notes_file, binaries,
+            version, args.notes, args.notes_file, binaries,
             generate_notes=args.auto_notes, draft=args.draft, dry_run=args.dry_run,
         )
 
-    update_manifest(args.version, args.envs, repo_slug, args.dry_run)
+    update_manifest(version, args.envs, repo_slug, args.dry_run)
 
     if not args.no_commit:
-        commit_and_push(args.version, do_push=not args.no_push, dry_run=args.dry_run)
+        commit_and_push(version, do_push=not args.no_push, dry_run=args.dry_run)
 
     # Purge cache for the manifest path so devices see the bump
     # without waiting on the default ~12 h TTL.
@@ -392,7 +432,7 @@ def main() -> None:
     if args.dry_run:
         print("Dry run complete. Re-run without --dry-run to actually release.")
     else:
-        print(f"Done. Devices will pick up v{args.version} on their next 6h poll.")
+        print(f"Done. Devices will pick up v{version} on their next 6h poll.")
         print(f"For an immediate push, publish an empty MQTT message to:")
         print(f"  ir_hub/<mac>/ota/check")
 

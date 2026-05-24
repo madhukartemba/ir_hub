@@ -36,6 +36,13 @@ You also need:
 
 ## Quick start
 
+Cut a release with automatic patch bump (uses `platformio.ini`'s current
+`custom_firmware_version`, increments patch by 1):
+
+```bash
+scripts/release.py --notes "Fix touch-button EMI during recording"
+```
+
 Cut a v3-only release with manual notes:
 
 ```bash
@@ -66,7 +73,7 @@ scripts/release.py 1.0.1 --dry-run
 
 | Flag | Purpose |
 | --- | --- |
-| `version` (positional) | New semver, e.g. `1.0.1` or `1.0.1-rc1`. No leading `v`. |
+| `version` (positional, optional) | New semver, e.g. `1.0.1` or `1.0.1-rc1` (no leading `v`). If omitted, script auto-bumps patch from `platformio.ini` (for example `1.0.13 -> 1.0.14`). |
 | `--envs` | PlatformIO envs to build. Default: `ir_hub_version_3`. |
 | `--notes` | Release notes as a string. Mutually exclusive with `--notes-file`. |
 | `--notes-file PATH` | Read release notes from a markdown file. |
@@ -85,8 +92,12 @@ scripts/release.py 1.0.1 --dry-run
    - `gh auth status` returns success.
    - Working tree is clean (excluding the two files about to be rewritten).
    - The `vX.Y.Z` tag doesn't exist yet locally.
-2. **Bumps `custom_firmware_version`** in `platformio.ini` so the next build
-   compiles in the new `FIRMWARE_VERSION` macro.
+2. **Resolves release version**:
+   - Uses the provided positional `version` when passed, or
+   - auto-bumps patch from `platformio.ini`'s `custom_firmware_version`
+     when omitted.
+   Then **bumps `custom_firmware_version`** in `platformio.ini` so the next
+   build compiles in the new `FIRMWARE_VERSION` macro.
 3. **Builds** each env in `--envs` via `pio run -e <env>`.
 4. **Stages binaries** in two places:
    - `release/firmware_<variant>.bin` — gitignored, used only as the asset
@@ -176,6 +187,10 @@ files staged for a release.
 **"git tag vX.Y.Z already exists locally"** — You've already run a release
 for this version. Either pick a new version (recommended) or delete the
 old tag (`git tag -d vX.Y.Z`) if you really want to overwrite.
+
+**"cannot auto-bump ... pre-release/non-semver"** — Auto-bump only works for
+stable semver in `platformio.ini` (`X.Y.Z`). If current value is something
+like `1.0.1-rc1` (or non-semver), pass an explicit positional version.
 
 **`gh auth status` failed** — Run `gh auth login` and follow the prompts.
 
