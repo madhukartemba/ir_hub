@@ -31,7 +31,7 @@ class FactoryResetConfirmation : public Screen {
         display.printCentered("+ all saved data", 30);
         display.printCentered("+ pending OTA", 40);
 
-        display.printCentered("Long press confirm", 52);
+        display.printCentered("Long press confirm", 50);
         display.update();
     }
 

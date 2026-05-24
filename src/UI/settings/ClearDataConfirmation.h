@@ -37,8 +37,8 @@ class ClearDataConfirmation : public Screen {
 
         // Draw instructions
         display.setTextSize(1);
-        display.printCentered("Long press to confirm", 55);
-        display.printCentered("Click to exit", 65);
+        display.printCentered("Long press to confirm", 48);
+        display.printCentered("Click to exit", 54);
 
         display.update();
     }

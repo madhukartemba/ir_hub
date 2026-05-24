@@ -28,7 +28,7 @@ class ResetWiFiConfirmation : public Screen {
         display.printCentered("This removes saved", 22);
         display.printCentered("Wi-Fi credentials", 32);
         display.printCentered("and restarts", 42);
-        display.printCentered("Long press confirm", 54);
+        display.printCentered("Long press confirm", 50);
         display.update();
     }
 
