@@ -105,12 +105,12 @@ class MainMenu : public Screen {
         menuCount = 0;
         addMenuItem(State::DEVICES, "Devices");
         addMenuItem(State::ADD_DEVICE, "Add Device");
-        addMenuItem(State::SETTINGS, "Settings");
-        addMenuItem(State::HELP, "Help");
-        addMenuItem(State::CONTACT, "Contact");
         if (userPrefsSkipWiFiSetup()) {
             addMenuItem(State::CONNECT_WIFI, "Connect to Wi-Fi");
         }
+        addMenuItem(State::SETTINGS, "Settings");
+        addMenuItem(State::HELP, "Help");
+        addMenuItem(State::CONTACT, "Contact");
         addMenuItem(State::AUTHOR, "By Madhukar Temba :)");
     }
 };
