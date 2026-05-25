@@ -29,7 +29,7 @@ class MQTTConnector {
     String hubMacHex;
     unsigned long lastReconnectAttempt;
     static constexpr unsigned long kReconnectIntervalMs = 5000;
-    static constexpr unsigned long kInfoPublishIntervalMs = 30000;
+    static constexpr unsigned long kInfoPublishIntervalMs = 60000;
     unsigned long lastInfoPublishMs;
 
     std::function<void(const Device& device, bool state)> onStateChangeCallback;
@@ -78,6 +78,75 @@ class MQTTConnector {
 
     size_t infoTopic(char* out, size_t outSize) const {
         return snprintf(out, outSize, "ir_hub/%s/info", hubMacHex.c_str());
+    }
+
+    size_t infoDiscoveryTopic(const char* key, char* out, size_t outSize) const {
+        return snprintf(out, outSize, "homeassistant/sensor/ir_hub_%s_%s/config",
+                        hubMacHex.c_str(), key);
+    }
+
+    bool publishInfoDiscoverySensor(const char* key, const char* name, const char* valueTemplate,
+                                    const char* unit = nullptr, const char* deviceClass = nullptr,
+                                    const char* icon = nullptr) {
+        char stateTopic[kTopicBufSize];
+        infoTopic(stateTopic, sizeof(stateTopic));
+
+        char uniqueId[56];
+        snprintf(uniqueId, sizeof(uniqueId), "ir_hub_%s_%s", hubMacHex.c_str(), key);
+        char identifier[24];
+        snprintf(identifier, sizeof(identifier), "ir_hub_%s", hubMacHex.c_str());
+
+        JsonDocument doc;
+        doc["name"] = name;
+        doc["state_topic"] = stateTopic;
+        doc["value_template"] = valueTemplate;
+        doc["unique_id"] = uniqueId;
+        doc["entity_category"] = "diagnostic";
+        if (unit && *unit) {
+            doc["unit_of_measurement"] = unit;
+        }
+        if (deviceClass && *deviceClass) {
+            doc["device_class"] = deviceClass;
+        }
+        if (icon && *icon) {
+            doc["icon"] = icon;
+        }
+
+        JsonObject dev = doc["device"].to<JsonObject>();
+        JsonArray ids = dev["identifiers"].to<JsonArray>();
+        ids.add(identifier);
+        dev["name"] = "IR Hub";
+        dev["model"] = "ESP8266 IR Hub";
+        dev["manufacturer"] = "IR Hub";
+
+        char payload[560];
+        size_t n = serializeJson(doc, payload, sizeof(payload));
+        if (n >= sizeof(payload)) {
+            LOG_ERROR("[MQTT] Info discovery JSON too large for %s", key);
+            return false;
+        }
+
+        char topic[kTopicBufSize];
+        infoDiscoveryTopic(key, topic, sizeof(topic));
+        if (!mqttClient.publish(topic, payload, true)) {
+            LOG_WARN("[MQTT] Failed to publish info discovery for %s", key);
+            return false;
+        }
+        return true;
+    }
+
+    void publishHubInfoDiscovery() {
+        publishInfoDiscoverySensor("firmware", "Firmware Version", "{{ value_json.firmware }}");
+        publishInfoDiscoverySensor("ip", "IP Address", "{{ value_json.ip }}");
+        publishInfoDiscoverySensor("ssid", "WiFi SSID", "{{ value_json.ssid }}");
+        publishInfoDiscoverySensor("rssi", "WiFi RSSI", "{{ value_json.rssi }}", "dBm",
+                                   "signal_strength");
+        publishInfoDiscoverySensor("uptime", "Uptime", "{{ value_json.uptime_s }}", "s", "duration");
+        publishInfoDiscoverySensor("free_heap", "Free Heap", "{{ value_json.free_heap }}", "B");
+        publishInfoDiscoverySensor("max_block", "Max Heap Block", "{{ value_json.max_block }}", "B");
+        publishInfoDiscoverySensor("heap_frag", "Heap Fragmentation",
+                                   "{{ value_json.heap_frag }}", "%", nullptr,
+                                   "mdi:memory");
     }
 
     bool publishHubInfo() {
@@ -301,6 +370,7 @@ class MQTTConnector {
                 publishDiscovery(d);
                 publishState(d.id, false);
             });
+            publishHubInfoDiscovery();
             publishHubInfo();
             lastInfoPublishMs = millis();
             return true;
