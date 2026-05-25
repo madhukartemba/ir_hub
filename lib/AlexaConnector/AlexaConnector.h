@@ -162,6 +162,26 @@ class AlexaConnector {
         wifiEnabled = true;
         WiFi.mode(WIFI_STA);
 
+        // IRHUB: tell our vendored Espalexa to advertise a UNIQUE
+        // friendlyName before begin() so the bridge identity is set on
+        // the very first description.xml / /api/config response Alexa
+        // fetches. Otherwise multiple IR Hubs on the same LAN all show
+        // up as "Espalexa (192.168.0.x:80)" in the Alexa app, which makes
+        // it impossible for the user to tell them apart — and at least
+        // some Echo gens dedupe bridges by friendlyName, causing 4 of 5
+        // to silently disappear from discovery. The name we pick mirrors
+        // the WiFi hostname (`ir-hub-<last6mac>`) so router / OTA tools
+        // and the Alexa app agree on what to call each hub.
+        {
+            String mac = WiFi.macAddress();
+            mac.replace(":", "");
+            String suffix = mac.length() >= 6 ? mac.substring(mac.length() - 6) : mac;
+            suffix.toLowerCase();
+            String friendly = "IR Hub " + suffix;
+            espalexa.setFriendlyName(friendly);
+            LOG_INFO("[Alexa] Bridge friendlyName='%s'", friendly.c_str());
+        }
+
         // Register all existing devices (add/remove callbacks are set in main.cpp)
         deviceManager.forEachDevice([this](Device& device) { registerDevice(device); });
 
@@ -178,14 +198,19 @@ class AlexaConnector {
                  WiFi.localIP().toString().c_str());
     }
 
-    /// Release Espalexa-adjacent network resources. Espalexa itself does
-    /// not expose a teardown API, so this only stops our auxiliary NOTIFY
-    /// socket and flips the enable flag. Used before ESP.restart() to avoid
-    /// half-sent UDP frames flying off during the reboot path.
+    /// Release Espalexa-adjacent network resources. Used before
+    /// ESP.restart() so we don't leave stale UDP/TCP sockets dangling in
+    /// lwIP across the reboot AND so Alexa receives `ssdp:byebye` frames
+    /// (via our vendored Espalexa::stop) — that prompts Alexa to expire
+    /// its cached bridge entry instead of holding stale uniqueid mappings
+    /// across the restart.
     void shutdown() {
         if (ssdpNotifyReady) {
             ssdpNotifyUdp.stop();
             ssdpNotifyReady = false;
+        }
+        if (wifiEnabled) {
+            espalexa.stop();
         }
         wifiEnabled = false;
     }
@@ -195,14 +220,45 @@ class AlexaConnector {
     }
 
     void registerDevice(const Device& device) {
-        if (wifiEnabled) {
-            espalexa.addDevice(
-                device.name.c_str(),
-                [this, deviceName = device.name](EspalexaDevice* d) {
-                    handleDeviceCallback(deviceName, d->getValue());
-                },
-                EspalexaDeviceType::onoff);
+        if (!wifiEnabled) {
+            return;
         }
+        // We run on a vendored Espalexa (lib/Espalexa/) that exposes
+        // EspalexaDevice::setStableId(). Register as an `onoff` plug (real
+        // LOM001 model in our fork — no fake brightness slider in the
+        // Alexa app), then pin the Hue uniqueid to our DeviceManager id so
+        // Alexa's cloud cache keeps pointing at the right physical IR
+        // command regardless of registration order, add/remove churn, or
+        // reboots.
+        uint8_t alexaIdx = espalexa.addDevice(
+            device.name.c_str(),
+            [this, deviceName = device.name](EspalexaDevice* d) {
+                handleDeviceCallback(deviceName, d->getValue());
+            },
+            EspalexaDeviceType::onoff);
+        if (alexaIdx == 0) {
+            // addDevice returns 0 when the ESPALEXA_MAXDEVICES (10) cap is
+            // hit. Surface loudly — symptom is silent "Alexa is missing
+            // some of my devices".
+            LOG_ERROR("[Alexa] addDevice failed for '%s' — likely at "
+                      "ESPALEXA_MAXDEVICES cap",
+                      device.name.c_str());
+            return;
+        }
+
+        // device.id from IdGen is a monotonically increasing int (0, 1, 2,
+        // ...). Clamp to 16-bit before handing to Espalexa — anything above
+        // 0xFFFE is far beyond realistic IR Hub lifetimes and 0xFFFF is the
+        // "unset" sentinel.
+        uint16_t stable = (device.id >= 0 && device.id <= 0xFFFE)
+                              ? (uint16_t)device.id
+                              : (uint16_t)(device.id & 0x7FFF);
+        EspalexaDevice* d = espalexa.getDevice((uint8_t)(alexaIdx - 1));
+        if (d != nullptr) {
+            d->setStableId(stable);
+        }
+        LOG_INFO("[Alexa] Registered '%s' as Hue smart-plug, slot=%u stableId=%u",
+                 device.name.c_str(), (unsigned)alexaIdx, (unsigned)stable);
     }
 
     void unregisterDevice(const Device& device) {
