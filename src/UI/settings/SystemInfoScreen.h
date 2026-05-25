@@ -26,25 +26,23 @@ class SystemInfoScreen : public Screen {
 
         char line[32];
         snprintf(line, sizeof(line), "FW: v%s", FIRMWARE_VERSION);
-        display.print(line, 0, 18);
+        display.print(line, 0, 19);
 
         if (WiFi.status() == WL_CONNECTED) {
             snprintf(line, sizeof(line), "WiFi: %d dBm", WiFi.RSSI());
         } else {
             snprintf(line, sizeof(line), "WiFi: Disconnected");
         }
-        display.print(line, 0, 28);
+        display.print(line, 0, 30);
 
         snprintf(line, sizeof(line), "MQTT: %s",
                  mqttConnector.isConnected() ? "Connected"
                                              : (mqttConnector.isEnabled() ? "Connecting"
                                                                           : "Disabled"));
-        display.print(line, 0, 38);
+        display.print(line, 0, 41);
 
         snprintf(line, sizeof(line), "Heap: %lu", (unsigned long)ESP.getFreeHeap());
-        display.print(line, 0, 48);
-
-        display.printCentered("Click/hold: Back", 56);
+        display.print(line, 0, 52);
         display.update();
     }
 
