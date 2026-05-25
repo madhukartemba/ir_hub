@@ -36,6 +36,10 @@ class WiFiManagerLib {
     bool setupFlowFinished = false;
     bool hasSavedCredentials = false;
     char setupApName_[33]{};
+    /// `ir-hub-<last6mac>`. Cached so WiFi.hostname() (pre-connect) and the
+    /// ArduinoOTA hostname (post-connect) stay in sync without re-formatting
+    /// the MAC each time.
+    char stableHostname_[24]{};
     bool isOtaSetup = false;
     uint32_t otaColor = 0x0000FF;
     uint32_t otaSuccessColor = 0x00FF00;
@@ -63,6 +67,28 @@ class WiFiManagerLib {
     WiFiManagerParameter mqttPassToggle_;
     /// Final hint paragraph below the MQTT block.
     WiFiManagerParameter mqttFooterHint_;
+
+    /// Populate `stableHostname_` from the STA MAC. Idempotent and cheap;
+    /// safe to call multiple times. Returns a pointer to the cached buffer.
+    const char* computeStableHostname() {
+        if (stableHostname_[0] != '\0') {
+            return stableHostname_;
+        }
+        String mac = WiFi.macAddress();
+        mac.replace(":", "");
+        String suffix = mac.length() >= 6 ? mac.substring(mac.length() - 6) : mac;
+        suffix.toLowerCase();
+        snprintf(stableHostname_, sizeof(stableHostname_), "ir-hub-%s", suffix.c_str());
+        return stableHostname_;
+    }
+
+    /// Pin the radio so it never enters MODEM_SLEEP. Most consumer APs do not
+    /// buffer multicast for sleeping clients — DTIM-window drops are a major
+    /// source of "Alexa sometimes can't discover my device" reports. Safe to
+    /// call repeatedly; the SDK just overwrites the current sleep mode.
+    void pinRadioAwakeForMulticast() {
+        WiFi.setSleepMode(WIFI_NONE_SLEEP);
+    }
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
         // Configure timeout (in seconds)
@@ -195,6 +221,16 @@ class WiFiManagerLib {
 
         setupWiFiManager(apName, apTimeout, connectTimeout);
 
+        // Set the STA hostname BEFORE WiFi.begin() so the DHCP DISCOVER
+        // includes Option 12. This makes the device show up as
+        // "ir-hub-XXXXXX" on the router's client list (which helps the user
+        // confirm the device joined) and gives Alexa/mDNS a stable name to
+        // bind to. autoConnect() below ultimately calls WiFi.begin(), so
+        // this must run first.
+        const char* hostname = computeStableHostname();
+        WiFi.hostname(hostname);
+        LOG_INFO("[WiFi] Hostname: %s", hostname);
+
         // Check if WiFi credentials exist using WiFiManager
         hasSavedCredentials = wifiManager.getWiFiIsSaved();
 
@@ -219,6 +255,7 @@ class WiFiManagerLib {
         if (wifiConnected) {
             setupState = SetupState::CONNECTED;
             setupFlowFinished = true;
+            pinRadioAwakeForMulticast();
             LOG_INFO("[WiFi] Connection successful!");
             LOG_DEBUG("[WiFi] IP Address: %s", WiFi.localIP().toString().c_str());
             LOG_DEBUG("[WiFi] SSID: %s", WiFi.SSID().c_str());
@@ -256,13 +293,9 @@ class WiFiManagerLib {
         display.printCentered("Setting up OTA...", 40);
         display.update();
 
-        String mac = WiFi.macAddress();
-        mac.replace(":", "");
-        String suffix = mac.length() >= 6 ? mac.substring(mac.length() - 6) : mac;
-        suffix.toLowerCase();
-        String otaHost = "ir-hub-" + suffix;
-        ArduinoOTA.setHostname(otaHost.c_str());
-        LOG_INFO("[OTA] Hostname: %s", otaHost.c_str());
+        const char* otaHost = computeStableHostname();
+        ArduinoOTA.setHostname(otaHost);
+        LOG_INFO("[OTA] Hostname: %s", otaHost);
         if (OTA_PASSWORD[0] != '\0') {
             ArduinoOTA.setPassword(OTA_PASSWORD);
             LOG_INFO("[OTA] LAN push protected by password");
@@ -335,6 +368,12 @@ class WiFiManagerLib {
     bool isConnected() const { return wifiConnected && WiFi.status() == WL_CONNECTED; }
     bool isOtaReady() const { return isOtaSetup; }
 
+    /// Re-pin the radio out of MODEM_SLEEP. Call this after every detected
+    /// reconnect; the ESP8266 SDK occasionally resets the sleep mode when
+    /// the STA transitions WL_DISCONNECTED -> WL_CONNECTED, which would
+    /// resume dropping multicast (SSDP/M-SEARCH) packets during DTIM idle.
+    void reapplyNoSleep() { WiFi.setSleepMode(WIFI_NONE_SLEEP); }
+
     bool isSetupFlowFinished() const { return setupFlowFinished; }
 
     bool isSetupPortalActive() { return wifiManager.getConfigPortalActive(); }
@@ -364,6 +403,7 @@ class WiFiManagerLib {
                 wifiConnected = true;
                 setupState = SetupState::CONNECTED;
                 setupFlowFinished = true;
+                pinRadioAwakeForMulticast();
                 LOG_INFO("[WiFi] Connected while processing setup flow");
                 LOG_DEBUG("[WiFi] IP Address: %s", WiFi.localIP().toString().c_str());
             } else if (wifiManager.getConfigPortalActive()) {

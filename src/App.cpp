@@ -37,6 +37,49 @@ constexpr uint8_t kHeapFragPanicPct = 80;
 unsigned long lastHeapLog = 0;
 bool wasWifiConnected = false;
 
+// --- Wi-Fi outage recovery -------------------------------------------------
+//
+// Espalexa joins the SSDP multicast group inside Espalexa::begin() and never
+// re-joins. After a real Wi-Fi outage (the AP rebooted, DHCP renewed with a
+// different IP, mesh roaming hopped APs) the IGMP membership is gone and the
+// device becomes silently invisible to Alexa — Espalexa::loop() keeps polling
+// a socket that will never receive another M-SEARCH. The library does not
+// expose a teardown API, so the only durable fix is to restart the device
+// when we detect a meaningful outage. Sub-second blips are tolerated.
+constexpr unsigned long kWifiOutageRebootThresholdMs = 5UL * 1000UL;
+constexpr unsigned long kPostReconnectRebootDelayMs = 2UL * 1000UL;
+unsigned long wifiLostAtMs = 0;
+bool wifiRebootPending = false;
+unsigned long wifiRebootAtMs = 0;
+// Limit our patience for DHCP after the link comes up: if WiFi.localIP()
+// hasn't become non-zero within this window we just reboot — same recovery,
+// no need to try to differentiate "slow DHCP" from "stuck DHCP".
+constexpr unsigned long kPostLinkUpDhcpWaitMs = 10UL * 1000UL;
+unsigned long linkUpAtMs = 0;
+
+void performWifiRecoveryReboot() {
+    LOG_WARN("[WiFi] Wi-Fi outage exceeded recovery threshold — restarting to "
+             "refresh Espalexa multicast socket");
+    if (!display.isDisplayOn()) {
+        display.turnOn();
+    }
+    ledRing.solid(COLOR_INFO);
+    ledRing.finishTransition();
+    display.clear();
+    display.printCentered("Wi-Fi recovered", 16);
+    display.printCentered("Restarting to", 36);
+    display.printCentered("re-link Alexa...", 50);
+    display.update();
+
+    // Tidy up the network sockets we own so we don't ship half-baked UDP/TCP
+    // frames into the lwIP queues on the way out.
+    alexaConnector.shutdown();
+    mqttConnector.shutdown();
+
+    delay(250);
+    ESP.restart();
+}
+
 void superviseHeap() {
     unsigned long now = millis();
     if (now - lastHeapLog < kHeapLogIntervalMs) {
@@ -277,20 +320,74 @@ void loop() {
     // NeoRing's internal 60 fps gate makes extra calls free.
     ledRing.update();
     wifiManager.update();
+
     bool wifiConnectedNow = wifiManager.isConnected();
+    unsigned long nowMs = millis();
+
+    // --- Falling edge: link just went down ---------------------------------
+    if (!wifiConnectedNow && wasWifiConnected) {
+        wifiLostAtMs = nowMs;
+        LOG_WARN("[WiFi] Link dropped");
+    }
+
+    // --- Rising edge: link just came back --------------------------------
     if (wifiConnectedNow && !wasWifiConnected) {
-        LOG_INFO("[WiFi] Link is up — enabling network services");
-        if (!wifiManager.isOtaReady()) {
-            wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
-        }
-        if (!alexaConnector.isEnabled()) {
-            alexaConnector.begin();
-        }
-        if (!mqttConnector.isEnabled()) {
-            mqttConnector.begin();
+        linkUpAtMs = nowMs;
+        unsigned long outageMs = (wifiLostAtMs > 0) ? (nowMs - wifiLostAtMs) : 0;
+        LOG_INFO("[WiFi] Link is up (outage=%lums)", outageMs);
+
+        // The SDK occasionally resets MODEM_SLEEP back to default across a
+        // reconnect, which would start dropping multicast again. Reapply.
+        wifiManager.reapplyNoSleep();
+
+        if (outageMs > kWifiOutageRebootThresholdMs && !wifiRebootPending) {
+            // Real outage — Espalexa's multicast subscription is almost
+            // certainly stale. Schedule a clean reboot in a moment so the
+            // user sees a status flash and pending IR/MQTT work can drain.
+            wifiRebootPending = true;
+            wifiRebootAtMs = nowMs + kPostReconnectRebootDelayMs;
+        } else {
+            // Brief blip (sub-5s): the lwIP/IGMP state is usually intact, so
+            // we just refresh the lazy-started services that were skipped at
+            // boot because Wi-Fi wasn't up yet.
+            if (!wifiManager.isOtaReady()) {
+                wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
+            }
+            if (!alexaConnector.isEnabled() &&
+                WiFi.localIP() != IPAddress(0, 0, 0, 0)) {
+                alexaConnector.begin();
+            }
+            if (!mqttConnector.isEnabled()) {
+                mqttConnector.begin();
+            }
         }
     }
+
+    // --- Lazy Alexa start: link is up but begin() was deferred -----------
+    //
+    // If alexaConnector.begin() was called too early (DHCP hadn't issued an
+    // IP yet) it parked itself disabled. Retry once an IP appears. If DHCP
+    // never produces one within our patience window, just reboot — same
+    // outcome as the long-outage path.
+    if (wifiConnectedNow && !alexaConnector.isEnabled() && !wifiRebootPending) {
+        if (WiFi.localIP() != IPAddress(0, 0, 0, 0)) {
+            alexaConnector.begin();
+        } else if (linkUpAtMs > 0 && (nowMs - linkUpAtMs) > kPostLinkUpDhcpWaitMs) {
+            LOG_WARN("[WiFi] DHCP did not produce an IP within %lu ms — rebooting",
+                     kPostLinkUpDhcpWaitMs);
+            wifiRebootPending = true;
+            wifiRebootAtMs = nowMs + kPostReconnectRebootDelayMs;
+        }
+    }
+
     wasWifiConnected = wifiConnectedNow;
+
+    // --- Execute pending reboot ---------------------------------------
+    if (wifiRebootPending && nowMs >= wifiRebootAtMs) {
+        performWifiRecoveryReboot();
+        return;  // unreachable
+    }
+
     router.update();
     ledRing.update();
     button.update();
