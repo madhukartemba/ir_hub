@@ -177,17 +177,16 @@ class SetupOnboardingScreen : public Screen {
 
     void drawTimedOut() {
         drawHeader("Setup Paused");
-        display.printCentered("Proceed without Wi-Fi?", 16);
-        display.printCentered("No", 28);
-        display.printCentered("Yes", 40);
-        display.printCentered("Click: Change  Hold: Ok", 50);
+        display.printCentered("Proceed without Wi-Fi?", 18);
+        display.printCentered("No", 34);
+        display.printCentered("Yes", 48);
 
         if (timeoutProceedSelected) {
             // Highlight "Yes"
-            display.drawRect(50, 38, 28, 11);
+            display.drawRect(46, 46, 36, 13);
         } else {
             // Highlight "No" (default)
-            display.drawRect(52, 26, 24, 11);
+            display.drawRect(49, 32, 30, 13);
         }
     }
 

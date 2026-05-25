@@ -121,13 +121,14 @@ void showReadyScreen(bool wifiConnected) {
     delay(500);
 }
 
-void initializeRouter() {
-    router.setDefaultScreen(new HomeScreen());  // Status screen is now the default
+void configureRouter() {
     router.setTimeoutDuration(TIMEOUT_DURATION);
     router.enableTimeout(true);
     // Set up activity callback to reset timeout on button interactions
     router.setActivityCallback([]() -> unsigned long { return button.getLastInteractionTime(); });
 }
+
+void attachHomeAsDefaultScreen() { router.setDefaultScreen(new HomeScreen()); }
 
 }  // namespace
 
@@ -218,16 +219,21 @@ void setup() {
 
     speaker.playStartupSound();
 
-    initializeRouter();
+    configureRouter();
     bool wifiConnected = false;
     bool skipWiFiSetup = userPrefsSkipWiFiSetup();
     if (skipWiFiSetup) {
         wifiManager.skipSetupFlow();
         LOG_INFO("[WiFi] Setup/connect skipped by user preference");
+        attachHomeAsDefaultScreen();
     } else {
         wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
         if (!wifiConnected) {
             router.push(new SetupOnboardingScreen());
+            // Set default after onboarding is on stack to avoid flashing HomeScreen first.
+            attachHomeAsDefaultScreen();
+        } else {
+            attachHomeAsDefaultScreen();
         }
         wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
     }

@@ -80,13 +80,9 @@ class WiFiManagerLib {
         wifiManager.setClass("invert");
 
         // Set custom callbacks for better user experience
-        wifiManager.setAPCallback([this, apName](WiFiManager* myWiFiManager) {
-            display.clear();
-            display.printCentered("WiFi Setup Mode", 6);
-            display.printCentered("Connect to AP", 20);
-            display.printCentered(apName, 35);
-            display.printCentered("IP: 192.168.4.1", 50);
-            display.update();
+        wifiManager.setAPCallback([apName](WiFiManager* myWiFiManager) {
+            (void)myWiFiManager;
+            LOG_INFO("[WiFi] Config portal active (AP: %s)", apName);
         });
 
         wifiManager.setSaveConfigCallback([this]() {
