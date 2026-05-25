@@ -333,6 +333,7 @@ class WiFiManagerLib {
     }
 
     bool isConnected() const { return wifiConnected && WiFi.status() == WL_CONNECTED; }
+    bool isOtaReady() const { return isOtaSetup; }
 
     bool isSetupFlowFinished() const { return setupFlowFinished; }
 

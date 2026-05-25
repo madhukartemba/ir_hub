@@ -35,6 +35,7 @@ constexpr uint16_t kHeapBlockPanicBytes = 2048;
 constexpr uint8_t kHeapFragPanicPct = 80;
 
 unsigned long lastHeapLog = 0;
+bool wasWifiConnected = false;
 
 void superviseHeap() {
     unsigned long now = millis();
@@ -268,6 +269,7 @@ void setup() {
     LOG_INFO("[Heap] startup free=%u max_block=%u frag=%u%%", (unsigned)ESP.getFreeHeap(),
              (unsigned)ESP.getMaxFreeBlockSize(), (unsigned)ESP.getHeapFragmentation());
     lastHeapLog = millis();
+    wasWifiConnected = wifiManager.isConnected();
 }
 
 void loop() {
@@ -275,6 +277,20 @@ void loop() {
     // NeoRing's internal 60 fps gate makes extra calls free.
     ledRing.update();
     wifiManager.update();
+    bool wifiConnectedNow = wifiManager.isConnected();
+    if (wifiConnectedNow && !wasWifiConnected) {
+        LOG_INFO("[WiFi] Link is up — enabling network services");
+        if (!wifiManager.isOtaReady()) {
+            wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
+        }
+        if (!alexaConnector.isEnabled()) {
+            alexaConnector.begin();
+        }
+        if (!mqttConnector.isEnabled()) {
+            mqttConnector.begin();
+        }
+    }
+    wasWifiConnected = wifiConnectedNow;
     router.update();
     ledRing.update();
     button.update();
