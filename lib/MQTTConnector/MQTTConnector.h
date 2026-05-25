@@ -10,6 +10,10 @@
 #include "Log.h"
 #include "MqttCredentials.h"
 
+#ifndef FIRMWARE_VERSION
+#  define FIRMWARE_VERSION "0.0.0"
+#endif
+
 class MQTTConnector {
    private:
     static MQTTConnector* instance;
@@ -25,6 +29,8 @@ class MQTTConnector {
     String hubMacHex;
     unsigned long lastReconnectAttempt;
     static constexpr unsigned long kReconnectIntervalMs = 5000;
+    static constexpr unsigned long kInfoPublishIntervalMs = 30000;
+    unsigned long lastInfoPublishMs;
 
     std::function<void(const Device& device, bool state)> onStateChangeCallback;
     std::function<void()> onOtaCheckCallback;
@@ -68,6 +74,41 @@ class MQTTConnector {
 
     size_t otaCheckTopic(char* out, size_t outSize) const {
         return snprintf(out, outSize, "ir_hub/%s/ota/check", hubMacHex.c_str());
+    }
+
+    size_t infoTopic(char* out, size_t outSize) const {
+        return snprintf(out, outSize, "ir_hub/%s/info", hubMacHex.c_str());
+    }
+
+    bool publishHubInfo() {
+        if (!mqttClient.connected()) {
+            return false;
+        }
+
+        JsonDocument doc;
+        doc["firmware"] = FIRMWARE_VERSION;
+        doc["ssid"] = WiFi.SSID();
+        doc["ip"] = WiFi.localIP().toString();
+        doc["rssi"] = WiFi.RSSI();
+        doc["uptime_s"] = millis() / 1000UL;
+        doc["free_heap"] = ESP.getFreeHeap();
+        doc["max_block"] = ESP.getMaxFreeBlockSize();
+        doc["heap_frag"] = ESP.getHeapFragmentation();
+
+        char payload[320];
+        size_t n = serializeJson(doc, payload, sizeof(payload));
+        if (n >= sizeof(payload)) {
+            LOG_ERROR("[MQTT] Hub info JSON too large");
+            return false;
+        }
+
+        char topic[kTopicBufSize];
+        infoTopic(topic, sizeof(topic));
+        bool ok = mqttClient.publish(topic, payload, true);
+        if (!ok) {
+            LOG_WARN("[MQTT] Failed to publish hub info");
+        }
+        return ok;
     }
 
     bool publishDiscovery(const Device& device) {
@@ -260,6 +301,8 @@ class MQTTConnector {
                 publishDiscovery(d);
                 publishState(d.id, false);
             });
+            publishHubInfo();
+            lastInfoPublishMs = millis();
             return true;
         }
 
@@ -290,7 +333,8 @@ class MQTTConnector {
           irManager(irManager),
           mqttClient(wifiClient),
           enabled(false),
-          lastReconnectAttempt(0) {
+          lastReconnectAttempt(0),
+          lastInfoPublishMs(0) {
         // 768 B holds our worst-case discovery packet (~470 B JSON +
         // ~60 B topic + headers) with comfortable margin. Saves 256 B of
         // permanent heap vs the previous 1024 B. Keep in sync with the
@@ -380,6 +424,11 @@ class MQTTConnector {
             return;
         }
         mqttClient.loop();
+        unsigned long now = millis();
+        if (now - lastInfoPublishMs >= kInfoPublishIntervalMs) {
+            publishHubInfo();
+            lastInfoPublishMs = now;
+        }
     }
 
     /// Disconnect from the broker and stop attempting reconnects. Use this

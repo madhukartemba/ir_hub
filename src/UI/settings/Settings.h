@@ -5,6 +5,7 @@
 #include "ClearDataConfirmation.h"
 #include "FactoryResetConfirmation.h"
 #include "ResetWiFiConfirmation.h"
+#include "SystemInfoScreen.h"
 #include "UpdateCheckScreen.h"
 #include "UserPrefs.h"
 
@@ -19,6 +20,7 @@ class Settings : public Screen {
         LAST_CHECK_INFO,
         UPDATE_STATUS_INFO,
         MQTT_STATUS_INFO,
+        INFO_SCREEN,
         CHECK_UPDATE,
         RESTART,
         CLEAR_DATA,
@@ -27,7 +29,7 @@ class Settings : public Screen {
         BACK,
     };
 
-    static constexpr int kMaxItems = 13;
+    static constexpr int kMaxItems = 14;
     const char* menuItems[kMaxItems];
     Action menuActions[kMaxItems];
     int menuCount = 0;
@@ -110,6 +112,7 @@ class Settings : public Screen {
             addRow(Action::UPDATE_STATUS_INFO);
         }
         addRow(Action::MQTT_STATUS_INFO);
+        addRow(Action::INFO_SCREEN);
 
         // 3) Device/system actions
         addRow(Action::RESTART);
@@ -193,6 +196,8 @@ class Settings : public Screen {
                 return updateStatusLabel;
             case Action::MQTT_STATUS_INFO:
                 return mqttStatusLabel;
+            case Action::INFO_SCREEN:
+                return "Info";
             case Action::CHECK_UPDATE:
                 return "Check for Updates";
             case Action::RESTART:
@@ -223,6 +228,11 @@ class Settings : public Screen {
             case Action::MQTT_STATUS_INFO:
                 // Read-only rows.
                 speaker.shortBeep();
+                break;
+            case Action::INFO_SCREEN:
+                LOG_DEBUG("[Settings] onButtonLongPress INFO_SCREEN");
+                speaker.shortBeep();
+                router.push(new SystemInfoScreen());
                 break;
             case Action::CHECK_UPDATE:
                 LOG_DEBUG("[Settings] onButtonLongPress CHECK_UPDATE");
