@@ -189,6 +189,13 @@ class Router {
             // Check for activity and reset timeout if needed
             checkActivity();
 
+            // Screens that intentionally pause navigation (e.g. onboarding/setup)
+            // should not be forced through timeout-to-default logic.
+            if (screenStack.top()->isNavigationPaused()) {
+                screenStack.top()->onUpdate();
+                return;
+            }
+
             // Check for timeout
             if (timeoutEnabled && !isDefaultScreen && defaultScreen != nullptr) {
                 unsigned long currentTime = millis();

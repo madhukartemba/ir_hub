@@ -72,7 +72,7 @@ When you first power your Hub on, here's what to expect:
 
 1. **Plug it in.** The screen will say `IR Hub — Initializing...`, then the ring will light up.
 2. **Connect to the setup network.** Take your phone and look for a Wi-Fi network named **`IRHub V3 Setup`**. Join it.
-3. **Captive portal opens.** Your phone should automatically pop open a setup page. (If it doesn't, just open any website in your browser and it'll redirect you.)
+3. **Open the setup page.** Your phone may open the setup page automatically. If it doesn't, open **`http://192.168.4.1`** in your browser.
 4. **Pick your Wi-Fi.** Choose your home Wi-Fi network from the list and enter the password.
 5. *(Optional)* **Enter your MQTT details** if you want to connect to Home Assistant — see [Smart Home Integration](#smart-home-integration) below.
 6. **Done!** The Hub will reboot, connect to your network, and show `Ready!` on the screen.
@@ -214,7 +214,7 @@ The Hub dims the screen after a few seconds of inactivity to save power. **Click
 - If you've already set it up before, it won't broadcast `IRHub V3 Setup` again. Use **Settings -> Reset Wi-Fi** to get back to setup mode.
 
 ### Captive portal doesn't open on my phone
-- Open any non-secure website (e.g. `http://example.com`) in your browser — that usually forces the portal to appear.
+- Open **`http://192.168.4.1`** directly in your browser.
 - Some Android phones need you to tap the network and choose *"Sign in to Wi-Fi network"*.
 
 ### My appliance doesn't respond after I added it

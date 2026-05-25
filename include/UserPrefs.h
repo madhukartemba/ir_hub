@@ -15,3 +15,8 @@ void userPrefsSetSoundEnabled(bool enabled);
 /// Default: true. Ignored at runtime if the driver isn't present.
 bool userPrefsHapticsEnabled();
 void userPrefsSetHapticsEnabled(bool enabled);
+
+/// If true, boot skips Wi-Fi connect/setup until the user explicitly re-enables it.
+/// Default: false.
+bool userPrefsSkipWiFiSetup();
+void userPrefsSetSkipWiFiSetup(bool enabled);

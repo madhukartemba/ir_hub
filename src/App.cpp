@@ -11,6 +11,7 @@
 #include "preferences.h"
 #include "secrets.h"
 #include "UI/HomeScreen.h"
+#include "UI/setup/SetupOnboardingScreen.h"
 
 #ifndef FIRMWARE_VERSION
 #    define FIRMWARE_VERSION "0.0.0"
@@ -217,15 +218,29 @@ void setup() {
 
     speaker.playStartupSound();
 
-    bool wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
-    wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
+    initializeRouter();
+    bool wifiConnected = false;
+    bool skipWiFiSetup = userPrefsSkipWiFiSetup();
+    if (skipWiFiSetup) {
+        wifiManager.skipSetupFlow();
+        LOG_INFO("[WiFi] Setup/connect skipped by user preference");
+    } else {
+        wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
+        if (!wifiConnected) {
+            router.push(new SetupOnboardingScreen());
+        }
+        wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
+    }
 
     alexaConnector.begin();
     mqttConnector.begin();
 
     configureRuntimeCallbacks();
-    showReadyScreen(wifiConnected);
-    initializeRouter();
+    if (wifiConnected) {
+        showReadyScreen(true);
+    } else if (skipWiFiSetup) {
+        showReadyScreen(false);
+    }
 
     boot_safety::clearBootFailures();
 

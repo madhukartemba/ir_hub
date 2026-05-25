@@ -113,7 +113,9 @@ class Settings : public Screen {
 
         // 3) Device/system actions
         addRow(Action::RESTART);
-        addRow(Action::WIFI_WIPE);
+        if (!userPrefsSkipWiFiSetup()) {
+            addRow(Action::WIFI_WIPE);
+        }
         addRow(Action::CLEAR_DATA);
         addRow(Action::FACTORY_RESET);
 

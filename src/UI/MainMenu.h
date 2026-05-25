@@ -1,7 +1,9 @@
 #include <Arduino.h>
+#include <ESP.h>
 #include <ESP8266WiFi.h>
 #include "../global/Global.h"
 #include "../ui/help/HelpQrScreen.h"
+#include "UserPrefs.h"
 #include "../preferences.h"
 #include "../ui/adddevice/AddDevice.h"
 #include "../ui/devices/Devices.h"
@@ -12,25 +14,29 @@
 
 class MainMenu : public Screen {
    private:
-    enum class State { DEVICES, ADD_DEVICE, SETTINGS, HELP, CONTACT, AUTHOR };
+    enum class State { DEVICES, ADD_DEVICE, SETTINGS, HELP, CONTACT, CONNECT_WIFI, AUTHOR };
 
-    State currentState;
-    int selectedIndex;
-    const char* menuItems[6] = {"Devices", "Add Device", "Settings", "Help", "Contact", "By Madhukar Temba :)"};
+    static constexpr int kMaxMenuItems = 7;
+    State currentState = State::DEVICES;
+    int selectedIndex = 0;
+    int menuCount = 0;
+    const char* menuItems[kMaxMenuItems];
+    State menuStates[kMaxMenuItems];
 
    public:
     void onEnter() override {
         LOG_DEBUG("[MainMenu] onEnter");
-        currentState = State::DEVICES;
+        buildMenu();
         selectedIndex = 0;
+        currentState = menuStates[0];
         ledRing.breathe(COLOR_INFO_DARK);
 
         // Change button behavior
         button.setClickCallback([this]() {
             // Switch to next state using mod operator.
             LOG_DEBUG("[MainMenu] onButtonClick");
-            selectedIndex = (selectedIndex + 1) % 6;
-            currentState = static_cast<State>(selectedIndex);
+            selectedIndex = (selectedIndex + 1) % menuCount;
+            currentState = menuStates[selectedIndex];
         });
 
         // Change button long press behavior
@@ -46,6 +52,14 @@ class MainMenu : public Screen {
                 router.push(new HelpQrScreen());
             } else if (currentState == State::CONTACT) {
                 router.push(new ContactQrScreen());
+            } else if (currentState == State::CONNECT_WIFI) {
+                userPrefsSetSkipWiFiSetup(false);
+                display.clear();
+                display.printCentered("Connect to Wi-Fi", 20);
+                display.printCentered("Restarting...", 38);
+                display.update();
+                delay(700);
+                ESP.restart();
             } else if (currentState == State::AUTHOR) {
                 router.push(new AuthorEasterEggScreen());
             }
@@ -75,6 +89,28 @@ class MainMenu : public Screen {
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Use the scrollable menu utility
-        MenuUtils::drawScrollableMenu(menuItems, 6, selectedIndex, 3, 20);
+        MenuUtils::drawScrollableMenu(menuItems, menuCount, selectedIndex, 3, 20);
+    }
+
+    void addMenuItem(State state, const char* label) {
+        if (menuCount >= kMaxMenuItems) {
+            return;
+        }
+        menuStates[menuCount] = state;
+        menuItems[menuCount] = label;
+        menuCount++;
+    }
+
+    void buildMenu() {
+        menuCount = 0;
+        addMenuItem(State::DEVICES, "Devices");
+        addMenuItem(State::ADD_DEVICE, "Add Device");
+        addMenuItem(State::SETTINGS, "Settings");
+        addMenuItem(State::HELP, "Help");
+        addMenuItem(State::CONTACT, "Contact");
+        if (userPrefsSkipWiFiSetup()) {
+            addMenuItem(State::CONNECT_WIFI, "Connect to Wi-Fi");
+        }
+        addMenuItem(State::AUTHOR, "By Madhukar Temba :)");
     }
 };

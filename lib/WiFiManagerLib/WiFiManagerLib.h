@@ -19,11 +19,23 @@
 
 class WiFiManagerLib {
    private:
+    enum class SetupState {
+        IDLE,
+        CONNECTING,
+        PORTAL_ACTIVE,
+        CONNECTED,
+        TIMED_OUT,
+    };
+
     WiFiManager wifiManager;
     Display& display;
     NeoRing& ledRing;
     Speaker& speaker;
     bool wifiConnected;
+    SetupState setupState = SetupState::IDLE;
+    bool setupFlowFinished = false;
+    bool hasSavedCredentials = false;
+    char setupApName_[33]{};
     bool isOtaSetup = false;
     uint32_t otaColor = 0x0000FF;
     uint32_t otaSuccessColor = 0x00FF00;
@@ -61,6 +73,7 @@ class WiFiManagerLib {
         wifiManager.setBreakAfterConfig(true);    // Exit after configuration
         wifiManager.setRemoveDuplicateAPs(true);  // Remove duplicate APs
         wifiManager.setMinimumSignalQuality(30);  // Minimum signal quality
+        wifiManager.setConfigPortalBlocking(false);
 
         // Customize the portal appearance
         wifiManager.setTitle("IR Hub Wi-Fi Setup");
@@ -165,6 +178,8 @@ class WiFiManagerLib {
 
     bool begin(const char* apName = "IRHub Setup", int apTimeout = 180, int connectTimeout = 60) {
         mqttCredentialsLoad();
+        strncpy(setupApName_, apName ? apName : "IRHub Setup", sizeof(setupApName_) - 1);
+        setupApName_[sizeof(setupApName_) - 1] = '\0';
 
         memset(mqttHostBuf_, 0, sizeof(mqttHostBuf_));
         memset(mqttPortBuf_, 0, sizeof(mqttPortBuf_));
@@ -185,9 +200,9 @@ class WiFiManagerLib {
         setupWiFiManager(apName, apTimeout, connectTimeout);
 
         // Check if WiFi credentials exist using WiFiManager
-        bool hasCredentials = wifiManager.getWiFiIsSaved();
+        hasSavedCredentials = wifiManager.getWiFiIsSaved();
 
-        if (hasCredentials) {
+        if (hasSavedCredentials) {
             display.clear();
             display.printCentered("IR Hub", 20);
             display.printCentered("Connecting...", 40);
@@ -201,9 +216,13 @@ class WiFiManagerLib {
         LOG_DEBUG("[WiFi] Timeout set to %d seconds", connectTimeout);
 
         // Try to connect to WiFi
-        wifiConnected = wifiManager.autoConnect(apName);
+        setupFlowFinished = false;
+        setupState = SetupState::CONNECTING;
+        wifiConnected = wifiManager.autoConnect(setupApName_);
 
         if (wifiConnected) {
+            setupState = SetupState::CONNECTED;
+            setupFlowFinished = true;
             LOG_INFO("[WiFi] Connection successful!");
             LOG_DEBUG("[WiFi] IP Address: %s", WiFi.localIP().toString().c_str());
             LOG_DEBUG("[WiFi] SSID: %s", WiFi.SSID().c_str());
@@ -213,19 +232,17 @@ class WiFiManagerLib {
             display.printCentered("IR Hub", 20);
             display.printCentered("WiFi Connected!", 40);
             display.update();
-            delay(1000);
-
         } else {
-            LOG_WARN("[WiFi] Connection failed - continuing in offline mode");
-            LOG_DEBUG("[WiFi] Status: %d", WiFi.status());
-            LOG_DEBUG("[WiFi] No saved credentials or connection timeout");
-
-            display.clear();
-            display.printCentered("IR Hub", 20);
-            display.printCentered("WiFi Failed", 30);
-            display.printCentered("Offline Mode", 40);
-            display.update();
-            delay(2000);
+            if (wifiManager.getConfigPortalActive()) {
+                setupState = SetupState::PORTAL_ACTIVE;
+                LOG_INFO("[WiFi] Config portal active (AP: %s)", setupApName_);
+            } else {
+                setupState = SetupState::TIMED_OUT;
+                setupFlowFinished = true;
+                LOG_WARN("[WiFi] Connection failed - continuing in offline mode");
+                LOG_DEBUG("[WiFi] Status: %d", WiFi.status());
+                LOG_DEBUG("[WiFi] No saved credentials or connection timeout");
+            }
         }
 
         return wifiConnected;
@@ -321,7 +338,47 @@ class WiFiManagerLib {
 
     bool isConnected() const { return wifiConnected && WiFi.status() == WL_CONNECTED; }
 
+    bool isSetupFlowFinished() const { return setupFlowFinished; }
+
+    bool isSetupPortalActive() { return wifiManager.getConfigPortalActive(); }
+
+    bool hasSavedWiFiCredentials() const { return hasSavedCredentials; }
+
+    bool didSetupTimeout() const { return setupState == SetupState::TIMED_OUT; }
+
+    bool isSetupInProgress() const {
+        return !setupFlowFinished &&
+               (setupState == SetupState::CONNECTING || setupState == SetupState::PORTAL_ACTIVE);
+    }
+
+    const char* setupApName() const { return setupApName_; }
+
+    void skipSetupFlow() {
+        wifiConnected = false;
+        setupState = SetupState::IDLE;
+        setupFlowFinished = true;
+    }
+
     void update() {
+        if (!setupFlowFinished) {
+            wifiManager.process();
+
+            if (WiFi.status() == WL_CONNECTED) {
+                wifiConnected = true;
+                setupState = SetupState::CONNECTED;
+                setupFlowFinished = true;
+                LOG_INFO("[WiFi] Connected while processing setup flow");
+                LOG_DEBUG("[WiFi] IP Address: %s", WiFi.localIP().toString().c_str());
+            } else if (wifiManager.getConfigPortalActive()) {
+                setupState = SetupState::PORTAL_ACTIVE;
+            } else if (setupState == SetupState::PORTAL_ACTIVE ||
+                       setupState == SetupState::CONNECTING) {
+                setupState = SetupState::TIMED_OUT;
+                setupFlowFinished = true;
+                LOG_WARN("[WiFi] Setup portal closed without connection (offline mode)");
+            }
+        }
+
         if (isConnected()) {
             if (isOtaSetup) {
                 ArduinoOTA.handle();  // Handle OTA updates only if WiFi is connected

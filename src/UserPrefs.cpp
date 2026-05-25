@@ -8,11 +8,13 @@ static constexpr const char* kPrefsPath = "/prefs.json";
 
 static bool g_soundEnabled = true;
 static bool g_hapticsEnabled = true;
+static bool g_skipWiFiSetup = false;
 
 static void writeBack() {
     JsonDocument doc;
     doc["sound"] = g_soundEnabled;
     doc["haptics"] = g_hapticsEnabled;
+    doc["skip_wifi_setup"] = g_skipWiFiSetup;
 
     File f = LittleFS.open(kPrefsPath, "w");
     if (!f) {
@@ -28,6 +30,7 @@ static void writeBack() {
 void userPrefsLoad() {
     g_soundEnabled = true;  // defaults
     g_hapticsEnabled = true;
+    g_skipWiFiSetup = false;
 
     if (!LittleFS.exists(kPrefsPath)) {
         LOG_INFO("[Prefs] No %s yet — using defaults", kPrefsPath);
@@ -54,6 +57,9 @@ void userPrefsLoad() {
     if (!doc["haptics"].isNull()) {
         g_hapticsEnabled = doc["haptics"].as<bool>();
     }
+    if (!doc["skip_wifi_setup"].isNull()) {
+        g_skipWiFiSetup = doc["skip_wifi_setup"].as<bool>();
+    }
     LOG_INFO("[Prefs] Loaded: sound=%s haptics=%s", g_soundEnabled ? "on" : "off",
              g_hapticsEnabled ? "on" : "off");
 }
@@ -78,4 +84,15 @@ void userPrefsSetHapticsEnabled(bool enabled) {
     g_hapticsEnabled = enabled;
     writeBack();
     LOG_INFO("[Prefs] haptics=%s", g_hapticsEnabled ? "on" : "off");
+}
+
+bool userPrefsSkipWiFiSetup() { return g_skipWiFiSetup; }
+
+void userPrefsSetSkipWiFiSetup(bool enabled) {
+    if (g_skipWiFiSetup == enabled) {
+        return;
+    }
+    g_skipWiFiSetup = enabled;
+    writeBack();
+    LOG_INFO("[Prefs] skip_wifi_setup=%s", g_skipWiFiSetup ? "on" : "off");
 }
