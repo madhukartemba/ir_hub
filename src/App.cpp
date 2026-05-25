@@ -162,8 +162,22 @@ void setup() {
     }
 
     display.clear();
-    display.printCentered("IR Hub", 20);
-    display.printCentered("Initializing...", 40);
+    if (U8G2* raw = display.getDisplay()) {
+        // Startup splash: bold brand title + subtle author credit.
+        raw->setFont(u8g2_font_helvB10_tr);
+        const char* title = "IR Hub";
+        int titleW = raw->getStrWidth(title);
+        raw->drawStr((display.getWidth() - titleW) / 2, 28, title);
+
+        raw->setFont(u8g2_font_helvR08_tr);
+        const char* credit = "By Madhukar";
+        int creditW = raw->getStrWidth(credit);
+        raw->drawStr((display.getWidth() - creditW) / 2, 60, credit);
+    } else {
+        // Defensive fallback; should not happen after successful display.begin().
+        display.printCentered("IR Hub", 20);
+        display.printCentered("By Madhukar", 44);
+    }
     display.update();
 
     // Probe only; defer calibration until after we know the user's haptics
@@ -234,8 +248,8 @@ void setup() {
             attachHomeAsDefaultScreen();
         } else {
             attachHomeAsDefaultScreen();
+            wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
         }
-        wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
     }
 
     alexaConnector.begin();
