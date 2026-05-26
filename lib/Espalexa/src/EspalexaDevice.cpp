@@ -285,6 +285,24 @@ bool EspalexaDevice::hasStableId() const
   return _stableId != 0xFFFF;
 }
 
+// IRHUB: per-device 6-byte EUI-48 for Hue `uniqueid` (see EspalexaDevice.h).
+void EspalexaDevice::setUniqueIdMac(const uint8_t mac[6])
+{
+  if (mac == nullptr) { _hasUidMac = false; return; }
+  for (uint8_t i = 0; i < 6; i++) _uidMac[i] = mac[i];
+  _hasUidMac = true;
+}
+
+bool EspalexaDevice::hasUniqueIdMac() const
+{
+  return _hasUidMac;
+}
+
+const uint8_t* EspalexaDevice::getUniqueIdMac() const
+{
+  return _uidMac;
+}
+
 //you need to re-discover the device for the Alexa name to change
 void EspalexaDevice::setName(String name)
 {

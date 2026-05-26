@@ -25,7 +25,15 @@
 //#define ESPALEXA_NO_SUBPAGE
 
 #ifndef ESPALEXA_MAXDEVICES
- #define ESPALEXA_MAXDEVICES 10 //this limit only has memory reasons, set it higher should you need to, max 128
+ // IRHUB: 20 chosen as the practical sweet-spot for ESP8266: at 10 devices
+ // the firmware uses ~67% of the static RAM segment, each extra device
+ // costs ~500-700 B of runtime heap (EspalexaDevice + JSON), so 20 sits
+ // comfortably under the heap headroom required for WiFi, MQTT, IR send
+ // buffers, and HTTP-server scratch space without risking fragmentation
+ // mid-session. Hard ceiling is 128 (enforced by static_assert on
+ // encodeLightKey), but the '8266 will run out of heap well before that.
+ // Bump cautiously and re-check `pio run` memory report after changing.
+ #define ESPALEXA_MAXDEVICES 20 //this limit only has memory reasons, set it higher should you need to, max 128
 #endif
 
 //#define ESPALEXA_DEBUG
@@ -82,8 +90,8 @@ private:
   
   WiFiUDP espalexaUdp;
   IPAddress ipMulti;
-  uint32_t mac24; //bottom 24 bits of mac
-  String escapedMac=""; //lowercase mac address
+  uint32_t mac24; //bottom 24 bits of (effective) bridge mac
+  String escapedMac=""; //lowercase 12-char hex of (effective) bridge mac
 
   // IRHUB: caller-overridable friendlyName / serial / bridge-id.
   // Defaults match upstream (Espalexa (IP:80) / lowercase 12-char MAC) so
@@ -94,6 +102,23 @@ private:
   // 16-char uppercase bridge id in Hue's `<MAC1-3>FFFE<MAC4-6>` format.
   // Computed once in begin().
   String bridgeIdHex_ = "";
+
+  // IRHUB: caller-overridable 6-byte EUI-48 "bridge MAC". When set
+  // (via setBridgeMac() before begin()) it replaces the WiFi MAC as the
+  // input to:
+  //   - SSDP USN / description.xml UDN suffix (12 hex)
+  //   - escapedMac (12 hex lowercase)
+  //   - bridgeIdHex (16 hex uppercase, with literal FFFE injected)
+  //   - dict-key encoding (bottom 24 bits → mac24)
+  //   - light uniqueid prefix (EUI-64 derived in encodeLightId)
+  //   - /api/<user>/config "mac" field
+  // …i.e. *every* place a real Hue bridge would expose its hardware MAC.
+  // Persisting this across boots in LittleFS and rotating it on factory
+  // reset is how the IR Hub forces Alexa to treat a wiped hub as a
+  // brand-new bridge with zero cloud-cache carry-over. Sentinel
+  // (all-zero) means "fall back to WiFi.macAddress()".
+  uint8_t bridgeMac_[6] = {0, 0, 0, 0, 0, 0};
+  bool bridgeMacSet_ = false;
   
   //private member functions
   const char* modeString(EspalexaColorMode m)
@@ -132,6 +157,63 @@ private:
       default: return "";
     }
   }
+
+  // IRHUB: per-device modelid variation. Live capture (see
+  // terminals/11.txt analysis) proved the Alexa app's smart-home UI
+  // collapses cards into one when two lights share bridge + modelid +
+  // productname + friendly-name-first-word. With every IR-Hub-emulated
+  // light defaulting to "LWB010 / Hue white lamp / SONY ...", the second
+  // device disappears from the UI — even though Alexa's cloud has both
+  // entities and routes commands correctly. Picking from a pool of 8
+  // real Hue white-lamp/plug modelids (all of which Alexa recognises as
+  // the same physical class) hashed by stableId forces the UI to treat
+  // each entry as a distinct product and renders one card per light.
+  // The hash is sub-byte-deterministic so a given stableId always picks
+  // the same modelid → Alexa's cloud doesn't see a model flip-flop on
+  // re-poll.
+  const char* perDeviceModelId(EspalexaDevice* dev, EspalexaDeviceType t)
+  {
+    // 8 real Hue white-lamp modelids — every one is in Philips' public
+    // device catalogue and renders as a white-only on/off+brightness
+    // card in Alexa. Order is unimportant; just need >= 2 distinct ids
+    // so two devices on the same bridge can't collide.
+    // IRHUB: pools widened from 8 → 16 entries to keep modelid distinct
+    // across the full ESPALEXA_MAXDEVICES (20) range; with 8 entries,
+    // devices 8..15 would collide on modelid with devices 0..7. The
+    // uniqueid prefix is still the actual dedup key (so collisions here
+    // would be cosmetic), but widening is essentially free and hardens
+    // against any future Alexa heuristic that also keys on modelid.
+    static const char* const kWhitePool[] = {
+      "LWB006", "LWB007", "LWB010", "LWB014",
+      "LWB022", "LWA001", "LWA003", "LWA009",
+      "LWA017", "LWA019", "LWB004", "LWB015",
+      "LWE001", "LWE002", "LWO001", "LWO002"
+    };
+    static const char* const kPlugPool[] = {
+      "LOM001", "LOM002", "LOM003", "LOM004",
+      "LOM005", "LOM006", "LOM007", "LOM008",
+      "LOM009", "LOM010", "LOM011", "LOM012",
+      "LOM013", "LOM014", "LOM015", "LOM016"
+    };
+    static const char* const kColorPool[] = {
+      "LCT001", "LCT007", "LCT010", "LCT011",
+      "LCT012", "LCT014", "LCT015", "LCT016",
+      "LCT021", "LCT024", "LCA001", "LCA002",
+      "LCA003", "LCA004", "LCA005", "LCA006"
+    };
+    uint16_t sub = (dev != nullptr && dev->hasStableId())
+                       ? dev->getStableId()
+                       : (dev != nullptr ? dev->getId() : 0);
+    uint8_t idx = (uint8_t)(sub & 0x0F);
+    switch (t) {
+      case EspalexaDeviceType::onoff:         return kPlugPool[idx];
+      case EspalexaDeviceType::dimmable:      return kWhitePool[idx];
+      case EspalexaDeviceType::whitespectrum: return kWhitePool[idx];
+      case EspalexaDeviceType::color:         return kColorPool[idx];
+      case EspalexaDeviceType::extendedcolor: return kColorPool[idx];
+      default: return modelidString(t);
+    }
+  }
   
   // IRHUB: pick the per-device sub-key for both uniqueid and dict key.
   // Returns the device's stableId+1 when set (so the on-wire form is 1-based
@@ -149,8 +231,18 @@ private:
 
   void encodeLightId(uint8_t arrayIdx, char* out)
   {
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
+    // IRHUB: prefer the PER-DEVICE EUI-48 when the caller installed one
+    // (via EspalexaDevice::setUniqueIdMac()). Each Hue uniqueid then
+    // looks like it belongs to a physically distinct Zigbee device,
+    // which prevents Alexa's app UI from collapsing two cards by
+    // shared uniqueid-prefix match. Falls back to the effective
+    // bridge MAC when the caller hasn't set one (preserving upstream
+    // behaviour for callers that don't care).
+    const uint8_t* mac = bridgeMac_;
+    if (arrayIdx < currentDeviceCount && devices[arrayIdx] != nullptr &&
+        devices[arrayIdx]->hasUniqueIdMac()) {
+      mac = devices[arrayIdx]->getUniqueIdMac();
+    }
     uint16_t sub = lightSubkey(arrayIdx);
     // IRHUB: canonical real-Hue uniqueid format is 8 colon-separated hex
     // bytes (EUI-64) + dash + 2-hex endpoint, e.g. "00:17:88:01:0b:1d:cd:c5-0b".
@@ -159,7 +251,7 @@ private:
     // observed rejecting our previous 4-hex endpoint (`-%04X`) — the
     // discovery loop kept retrying handshake+/lights endlessly. Truncating
     // the endpoint to 2 hex digits caps stableId<=255 which is well within
-    // ESPALEXA_MAXDEVICES (10).
+    // ESPALEXA_MAXDEVICES (20).
     sprintf_P(out, PSTR("%02x:%02x:%02x:ff:fe:%02x:%02x:%02x-%02x"),
               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
               (unsigned)(sub & 0xFFU));
@@ -208,6 +300,91 @@ private:
     }
   }
 
+  // IRHUB: per-device variation pools. All entries are still recognised
+  // by Alexa as Hue-family lights/plugs (same device category, same
+  // renderer), but the fields below differ between any two devices on
+  // the same bridge — defeating Alexa's UI dedupe (which we observed
+  // collapsing two cards that shared *any* of bridge / modelid /
+  // productname / manufacturername / friendly-name-first-word).
+  //
+  // Indices are derived from `stableId & 7` so a given device always
+  // gets the same combination → Alexa's cloud never sees a field
+  // flip-flop on re-poll, and the same uuid+slot pair always presents
+  // the same product face to Alexa.
+  const char* perDeviceManufacturer(EspalexaDevice* dev)
+  {
+    // IRHUB: 16-entry pool keeps manufacturer distinct across 20-device
+    // cap. All strings are Hue-family vendor names Alexa already accepts.
+    static const char* const kPool[] = {
+      "Philips",
+      "Signify Netherlands B.V.",
+      "Philips Hue",
+      "Signify",
+      "Philips Lighting",
+      "Hue",
+      "PhilipsHue",
+      "Signify N.V.",
+      "Philips B.V.",
+      "Signify B.V.",
+      "Philips Consumer Lifestyle",
+      "Hue by Signify",
+      "Signify Hue",
+      "Philips Signify",
+      "PHL",
+      "Philips Color & Light"
+    };
+    uint16_t sub = (dev != nullptr && dev->hasStableId())
+                       ? dev->getStableId()
+                       : (dev != nullptr ? dev->getId() : 0);
+    return kPool[sub & 0x0F];
+  }
+
+  const char* perDeviceProductName(EspalexaDevice* dev, EspalexaDeviceType t)
+  {
+    // IRHUB: 16-entry pools keep productname distinct across 20-device
+    // cap; same rationale as the modelid pool.
+    static const char* const kWhitePool[] = {
+      "Hue white lamp",   "Hue white A19",     "Hue white bulb",
+      "Hue ambient",      "Hue white",         "Hue A19",
+      "Hue dim",          "Hue lamp",
+      "Hue white E27",    "Hue white E26",     "Hue white candle",
+      "Hue white spot",   "Hue filament",      "Hue dim bulb",
+      "Hue desk lamp",    "Hue bedside lamp"
+    };
+    static const char* const kPlugPool[] = {
+      "Hue Smart plug",      "Hue Smart outlet",  "Hue plug",
+      "Hue wall plug",       "Hue Smart adapter", "Hue mini plug",
+      "Hue switched outlet", "Hue power",
+      "Hue outlet",          "Hue power strip",   "Hue floor plug",
+      "Hue desk plug",       "Hue Smart switch",  "Hue mains plug",
+      "Hue compact plug",    "Hue inline plug"
+    };
+    uint16_t sub = (dev != nullptr && dev->hasStableId())
+                       ? dev->getStableId()
+                       : (dev != nullptr ? dev->getId() : 0);
+    uint8_t idx = (uint8_t)(sub & 0x0F);
+    switch (t) {
+      case EspalexaDeviceType::onoff:    return kPlugPool[idx];
+      case EspalexaDeviceType::dimmable: return kWhitePool[idx];
+      default: return productNameString(t);
+    }
+  }
+
+  const char* perDeviceSwVersion(EspalexaDevice* dev)
+  {
+    // IRHUB: 16-entry pool of plausible Hue firmware versions.
+    static const char* const kPool[] = {
+      "1.104.2", "1.105.0", "1.106.3", "1.107.0",
+      "1.108.1", "1.109.0", "1.110.5", "1.111.0",
+      "1.112.4", "1.113.0", "1.114.2", "1.115.6",
+      "1.116.1", "1.117.0", "1.118.3", "1.119.0"
+    };
+    uint16_t sub = (dev != nullptr && dev->hasStableId())
+                       ? dev->getStableId()
+                       : (dev != nullptr ? dev->getId() : 0);
+    return kPool[sub & 0x0F];
+  }
+
   //device JSON string: color+temperature device emulates LCT015, dimmable device LWB010, on/off plug LOM001
   // IRHUB: onoff plugs and dimmable lights now generate distinct JSON
   // bodies that match real Hue payloads exactly. Live capture of the
@@ -229,29 +406,38 @@ private:
     encodeLightId(dev->getId(), buf_lightid);
 
     const EspalexaDeviceType t = dev->getType();
-    const char* prod = productNameString(t);
+    // IRHUB: every field below that isn't strictly type-determined is
+    // now varied per-device (see perDevice* pools above) to defeat
+    // Alexa's app-side UI dedupe.
+    const char* devModel   = perDeviceModelId(dev, t);
+    const char* devProd    = perDeviceProductName(dev, t);
+    const char* devMfg     = perDeviceManufacturer(dev);
+    const char* devSwVer   = perDeviceSwVersion(dev);
 
     if (t == EspalexaDeviceType::onoff) {
       // Real Hue Smart Plug JSON: no `bri`, alert "select", config block
-      // present, modelid LOM001, manufacturername "Signify Netherlands
-      // B.V." (post-2019 Hue), Zigbee-style uniqueid.
+      // present, all distinguishing identity fields varied per-device.
       sprintf_P(buf, PSTR(
         "{\"state\":{\"on\":%s,\"alert\":\"select\",\"mode\":\"homeautomation\",\"reachable\":true},"
         "\"type\":\"On/Off plug-in unit\","
         "\"name\":\"%s\","
-        "\"modelid\":\"LOM001\","
-        "\"manufacturername\":\"Signify Netherlands B.V.\","
+        "\"modelid\":\"%s\","
+        "\"manufacturername\":\"%s\","
         "\"productname\":\"%s\","
         "\"capabilities\":{\"certified\":true,\"control\":{},\"streaming\":{\"renderer\":false,\"proxy\":false}},"
         "\"config\":{\"archetype\":\"plug\",\"function\":\"functional\",\"direction\":\"omnidirectional\","
         "\"startup\":{\"mode\":\"safety\",\"configured\":true}},"
         "\"uniqueid\":\"%s\","
-        "\"swversion\":\"1.104.2\","
-        "\"productid\":\"Philips-LOM001-1-PLUGSUNV1\"}"),
+        "\"swversion\":\"%s\","
+        "\"productid\":\"Philips-%s-1-PLUGSUNV1\"}"),
         (dev->getValue()) ? "true" : "false",
         dev->getName().c_str(),
-        prod,
-        buf_lightid);
+        devModel,
+        devMfg,
+        devProd,
+        buf_lightid,
+        devSwVer,
+        devModel);
       return;
     }
 
@@ -284,18 +470,20 @@ private:
         "\"type\":\"%s\","
         "\"name\":\"%s\","
         "\"modelid\":\"%s\","
-        "\"manufacturername\":\"Philips\","
+        "\"manufacturername\":\"%s\","
         "\"productname\":\"%s\","
         "\"uniqueid\":\"%s\","
-        "\"swversion\":\"1.104.2\"}"),
+        "\"swversion\":\"%s\"}"),
       (dev->getValue()) ? "true" : "false",
       dev->getLastValue() - 1,
       buf_col, buf_ct, buf_cm,
       typeString(t),
       dev->getName().c_str(),
-      modelidString(t),
-      prod,
-      buf_lightid);
+      devModel,
+      devMfg,
+      devProd,
+      buf_lightid,
+      devSwVer);
   }
   
   //Espalexa status page /espalexa
@@ -435,12 +623,11 @@ private:
     snprintf(ipStr, sizeof(ipStr), "%u.%u.%u.%u",
              localIP[0], localIP[1], localIP[2], localIP[3]);
 
-    uint8_t macBytes[6];
-    WiFi.macAddress(macBytes);
+    // IRHUB: use the EFFECTIVE bridge MAC (see bridgeMac_ docs above).
     char macStr[18];
     snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-             macBytes[0], macBytes[1], macBytes[2],
-             macBytes[3], macBytes[4], macBytes[5]);
+             bridgeMac_[0], bridgeMac_[1], bridgeMac_[2],
+             bridgeMac_[3], bridgeMac_[4], bridgeMac_[5]);
 
     const char* nameForJson = (customFriendlyName_.length() > 0)
                                   ? customFriendlyName_.c_str()
@@ -584,9 +771,19 @@ public:
     EA_DEBUGLN("Espalexa Begin...");
     EA_DEBUG("MAXDEVICES ");
     EA_DEBUGLN(ESPALEXA_MAXDEVICES);
-    escapedMac = WiFi.macAddress();
-    escapedMac.replace(":", "");
-    escapedMac.toLowerCase();
+
+    // IRHUB: pick the effective bridge MAC. If the caller hasn't
+    // installed one via setBridgeMac() we fall back to WiFi's real MAC,
+    // preserving upstream-equivalent behaviour for non-IR-Hub callers.
+    if (!bridgeMacSet_) {
+      WiFi.macAddress(bridgeMac_);
+    }
+
+    char macHex[13];
+    snprintf(macHex, sizeof(macHex), "%02x%02x%02x%02x%02x%02x",
+             bridgeMac_[0], bridgeMac_[1], bridgeMac_[2],
+             bridgeMac_[3], bridgeMac_[4], bridgeMac_[5]);
+    escapedMac = String(macHex);
 
     String macSubStr = escapedMac.substring(6, 12);
     mac24 = strtol(macSubStr.c_str(), 0, 16);
@@ -880,6 +1077,21 @@ public:
   void setFriendlyName(const String& name)
   {
     customFriendlyName_ = name;
+  }
+
+  // IRHUB: install a caller-managed 6-byte EUI-48 to use as the bridge
+  // identity instead of the WiFi MAC. MUST be called BEFORE begin() —
+  // begin() snapshots this into escapedMac / mac24 / bridgeIdHex and
+  // those derived values are read by every subsequent SSDP / HTTP /
+  // uniqueid emit. Pass a random locally-administered MAC (bit 1 of
+  // byte 0 set, bit 0 of byte 0 clear) that you re-roll on factory
+  // reset; that's the mechanism that gives the IR Hub a fresh Alexa
+  // identity post-wipe and prevents Amazon's cloud cache from
+  // re-attaching stale entities to the rebuilt device list.
+  void setBridgeMac(const uint8_t mac[6])
+  {
+    for (uint8_t i = 0; i < 6; i++) bridgeMac_[i] = mac[i];
+    bridgeMacSet_ = true;
   }
 
   // IRHUB: canonical 16-char Hue bridge id (e.g. "308398FFFE80B5FE").

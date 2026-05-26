@@ -3,9 +3,13 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <Espalexa.h>
+#include <LittleFS.h>
 #include <WiFiUdp.h>
 #include <functional>
 #include <vector>
+extern "C" {
+#include <user_interface.h>
+}
 #include "DeviceManager.h"
 #include "IRManager.h"
 #include "Log.h"
@@ -38,17 +42,88 @@ class AlexaConnector {
     static constexpr uint8_t kSsdpStartupBurstCount = 5;
     static constexpr unsigned long kSsdpStartupBurstIntervalMs = 2UL * 1000UL;
     uint8_t ssdpStartupBurstRemaining = 0;
-    /// Cached lowercase MAC (no colons). Matches the format Espalexa uses in
-    /// its M-SEARCH responses so Alexa treats our NOTIFY as the same bridge.
+    /// Cached lowercase 12-hex of the EFFECTIVE bridge MAC (the persistent
+    /// random EUI-48 we generated in begin(), NOT the hardware WiFi MAC).
+    /// Matches the format Espalexa uses in its M-SEARCH responses so Alexa
+    /// treats our NOTIFY as the same bridge.
     String escapedMacCached;
+    /// Raw 6-byte form of the same value. Persisted to LittleFS at
+    /// `/alexa_bridge_id.bin`; regenerated whenever the file is missing
+    /// (i.e. on first boot ever, and on every factory reset since
+    /// LittleFS.format() wipes it). Rotating this is the whole reason
+    /// this class persists anything at all — Alexa's cloud cache keys
+    /// off this value as the bridge identity, so a fresh random EUI-48
+    /// after a wipe makes Amazon see us as a brand-new bridge and
+    /// prevents stale entities from re-attaching.
+    uint8_t bridgeMacBytes_[6] = {0, 0, 0, 0, 0, 0};
+    static constexpr const char* kBridgeIdPath = "/alexa_bridge_id.bin";
+
+    /// Load `bridgeMacBytes_` from LittleFS, or generate + persist a new
+    /// random locally-administered EUI-48 if no file exists / it's the
+    /// wrong size. Called once from begin() before we touch Espalexa.
+    void loadOrGenerateBridgeMac() {
+        File f = LittleFS.open(kBridgeIdPath, "r");
+        if (f && f.size() == 6) {
+            f.read(bridgeMacBytes_, 6);
+            f.close();
+            LOG_INFO("[Alexa] Loaded persisted bridge MAC %02x:%02x:%02x:%02x:%02x:%02x",
+                     bridgeMacBytes_[0], bridgeMacBytes_[1], bridgeMacBytes_[2],
+                     bridgeMacBytes_[3], bridgeMacBytes_[4], bridgeMacBytes_[5]);
+            return;
+        }
+        if (f) {
+            f.close();
+            LittleFS.remove(kBridgeIdPath);
+        }
+
+        // Generate a fresh locally-administered EUI-48. `os_random()` is
+        // the ESP8266 SDK's hardware RNG; we draw two 32-bit words to
+        // fill 6 bytes with random data. Setting byte0 bit 1 (LAA) and
+        // clearing byte0 bit 0 (unicast) makes this a well-formed,
+        // routable MAC that cannot collide with any IEEE-OUI-assigned
+        // hardware MAC and is therefore guaranteed disjoint from any
+        // previous bridge identity Alexa might still hold in cache.
+        uint32_t r0 = os_random();
+        uint32_t r1 = os_random();
+        bridgeMacBytes_[0] = (uint8_t)((r0 >> 0) & 0xFE) | 0x02;
+        bridgeMacBytes_[1] = (uint8_t)((r0 >> 8) & 0xFF);
+        bridgeMacBytes_[2] = (uint8_t)((r0 >> 16) & 0xFF);
+        bridgeMacBytes_[3] = (uint8_t)((r1 >> 0) & 0xFF);
+        bridgeMacBytes_[4] = (uint8_t)((r1 >> 8) & 0xFF);
+        bridgeMacBytes_[5] = (uint8_t)((r1 >> 16) & 0xFF);
+
+        File w = LittleFS.open(kBridgeIdPath, "w");
+        if (!w) {
+            LOG_ERROR("[Alexa] Failed to open %s for write — bridge ID will "
+                      "re-roll on next boot, Alexa will need to rediscover",
+                      kBridgeIdPath);
+            return;
+        }
+        size_t n = w.write(bridgeMacBytes_, 6);
+        w.close();
+        if (n != 6) {
+            LOG_ERROR("[Alexa] Wrote only %u/6 bytes to %s; bridge ID "
+                      "will not survive reboot",
+                      (unsigned)n, kBridgeIdPath);
+            LittleFS.remove(kBridgeIdPath);
+            return;
+        }
+        LOG_INFO("[Alexa] Generated NEW bridge MAC %02x:%02x:%02x:%02x:%02x:%02x "
+                 "(persisted to %s)",
+                 bridgeMacBytes_[0], bridgeMacBytes_[1], bridgeMacBytes_[2],
+                 bridgeMacBytes_[3], bridgeMacBytes_[4], bridgeMacBytes_[5],
+                 kBridgeIdPath);
+    }
 
     void cacheEscapedMac() {
         if (!escapedMacCached.isEmpty()) {
             return;
         }
-        escapedMacCached = WiFi.macAddress();
-        escapedMacCached.replace(":", "");
-        escapedMacCached.toLowerCase();
+        char buf[13];
+        snprintf(buf, sizeof(buf), "%02x%02x%02x%02x%02x%02x",
+                 bridgeMacBytes_[0], bridgeMacBytes_[1], bridgeMacBytes_[2],
+                 bridgeMacBytes_[3], bridgeMacBytes_[4], bridgeMacBytes_[5]);
+        escapedMacCached = String(buf);
     }
 
     /// Build and multicast one SSDP NOTIFY frame. `nt` is the Notification
@@ -109,28 +184,28 @@ class AlexaConnector {
                        "::urn:schemas-upnp-org:device:basic:1");
     }
 
-    void handleDeviceCallback(const String& deviceName, uint8_t value) {
+    void handleDeviceCallback(const String& uuid, const String& displayName, uint8_t value) {
         bool state = value > 0;
-        LOG_DEBUG("[Alexa] Set state for device %s to %s with value %d", deviceName.c_str(),
-                  state ? "ON" : "OFF", value);
+        LOG_DEBUG("[Alexa] Set state for '%s' (uuid=%s) to %s with value %d",
+                  displayName.c_str(), uuid.c_str(), state ? "ON" : "OFF", value);
 
-        // DeviceManager is uncached: this scans /devices and parses each JSON
-        // until it finds a match (~N * 10 ms). Acceptable on the rare Alexa
-        // command path.
-        auto device = deviceManager.getDeviceByName(deviceName);
+        // Direct uuid lookup — single LittleFS open instead of the
+        // O(N) directory scan the old getDeviceByName path did.
+        auto device = deviceManager.getDeviceByUuid(uuid);
         if (device) {
             if (onStateChangeCallback) {
                 onStateChangeCallback(*device, state);
             }
             if (state) {
                 irManager.sendProtocol(device->onCommand);
-                LOG_INFO("[Alexa] Turning ON device %s", deviceName.c_str());
+                LOG_INFO("[Alexa] Turning ON '%s' (uuid=%s)", displayName.c_str(), uuid.c_str());
             } else {
                 irManager.sendProtocol(device->offCommand);
-                LOG_INFO("[Alexa] Turning OFF device %s", deviceName.c_str());
+                LOG_INFO("[Alexa] Turning OFF '%s' (uuid=%s)", displayName.c_str(), uuid.c_str());
             }
         } else {
-            LOG_ERROR("[Alexa] Device %s not found in device manager", deviceName.c_str());
+            LOG_ERROR("[Alexa] Device uuid=%s ('%s') not found in device manager", uuid.c_str(),
+                      displayName.c_str());
         }
     }
 
@@ -162,6 +237,14 @@ class AlexaConnector {
         wifiEnabled = true;
         WiFi.mode(WIFI_STA);
 
+        // IRHUB: load (or, on first boot / after factory reset, generate)
+        // the persistent random EUI-48 that uniquely identifies this hub
+        // to Alexa. Rotating this on factory reset is what guarantees
+        // Amazon's cloud cache cannot re-attach stale entities to our
+        // rebuilt device list. Must run BEFORE espalexa.setBridgeMac().
+        loadOrGenerateBridgeMac();
+        espalexa.setBridgeMac(bridgeMacBytes_);
+
         // IRHUB: tell our vendored Espalexa to advertise a UNIQUE
         // friendlyName before begin() so the bridge identity is set on
         // the very first description.xml / /api/config response Alexa
@@ -169,15 +252,18 @@ class AlexaConnector {
         // up as "Espalexa (192.168.0.x:80)" in the Alexa app, which makes
         // it impossible for the user to tell them apart — and at least
         // some Echo gens dedupe bridges by friendlyName, causing 4 of 5
-        // to silently disappear from discovery. The name we pick mirrors
-        // the WiFi hostname (`ir-hub-<last6mac>`) so router / OTA tools
-        // and the Alexa app agree on what to call each hub.
+        // to silently disappear from discovery.
+        //
+        // Suffix is the LAST 6 HEX of the persistent random bridge MAC
+        // (not the WiFi MAC). Tying it to the rotated identity means
+        // every factory reset gives the user a visibly-different bridge
+        // name in the Alexa app — a clear "this is a new bridge" signal
+        // that helps users tell whether their cleanup worked.
         {
-            String mac = WiFi.macAddress();
-            mac.replace(":", "");
-            String suffix = mac.length() >= 6 ? mac.substring(mac.length() - 6) : mac;
-            suffix.toLowerCase();
-            String friendly = "IR Hub " + suffix;
+            char suffixBuf[7];
+            snprintf(suffixBuf, sizeof(suffixBuf), "%02x%02x%02x",
+                     bridgeMacBytes_[3], bridgeMacBytes_[4], bridgeMacBytes_[5]);
+            String friendly = String("IR Hub ") + suffixBuf;
             espalexa.setFriendlyName(friendly);
             LOG_INFO("[Alexa] Bridge friendlyName='%s'", friendly.c_str());
         }
@@ -231,23 +317,40 @@ class AlexaConnector {
         // slider this exposes is harmless: handleDeviceCallback() treats
         // any value > 0 as ON, so nudging the slider just re-sends the
         // recorded "on" IR command (which is idempotent for the typical
-        // TV/STB/AC remote). We pin the Hue uniqueid to `device.alexaSlot`
-        // — a 1..255 byte assigned at creation time by DeviceManager — so
-        // Alexa's cloud cache keeps pointing at the right physical IR
-        // command regardless of registration order or add/remove churn.
+        // TV/STB/AC remote).
+        //
+        // Friendly-name strategy: PREPEND the 6-char uuid prefix
+        // ("0a850a SONY 1"). The first word matters: Alexa's app dedupes
+        // smart-home cards that share the same friendly-name first word
+        // (so "SONY 1 0a850a" and "SONY 2 abc715" collapsed into one
+        // visible card — even though both entities existed in Alexa's
+        // cloud and both routed commands correctly per serial logs).
+        // Putting the per-device-unique uuid prefix as the first token
+        // bypasses that grouping. Users are expected to rename the card
+        // inside the Alexa app to whatever they want for voice control
+        // (e.g. "Bedroom TV"); the rename stays Alexa-side and never
+        // reaches the hub, so our internal identity stays stable.
+        //
+        // The Hue uniqueid is pinned to `device.alexaSlot` — a 1..255
+        // byte assigned at creation time by DeviceManager — so Alexa's
+        // cloud cache keeps pointing at the right physical IR command
+        // regardless of registration order or add/remove churn.
+        String uuidSuffix = device.uuid.substring(0, 6);
+        String alexaName = uuidSuffix + " " + device.name;
+
         uint8_t alexaIdx = espalexa.addDevice(
-            device.name.c_str(),
-            [this, deviceName = device.name](EspalexaDevice* d) {
-                handleDeviceCallback(deviceName, d->getValue());
+            alexaName.c_str(),
+            [this, uuid = device.uuid, displayName = alexaName](EspalexaDevice* d) {
+                handleDeviceCallback(uuid, displayName, d->getValue());
             },
             EspalexaDeviceType::dimmable);
         if (alexaIdx == 0) {
-            // addDevice returns 0 when the ESPALEXA_MAXDEVICES (10) cap is
+            // addDevice returns 0 when the ESPALEXA_MAXDEVICES (20) cap is
             // hit. Surface loudly — symptom is silent "Alexa is missing
             // some of my devices".
             LOG_ERROR("[Alexa] addDevice failed for '%s' — likely at "
                       "ESPALEXA_MAXDEVICES cap",
-                      device.name.c_str());
+                      alexaName.c_str());
             return;
         }
 
@@ -259,9 +362,31 @@ class AlexaConnector {
         EspalexaDevice* d = espalexa.getDevice((uint8_t)(alexaIdx - 1));
         if (d != nullptr) {
             d->setStableId(stable);
+
+            // IRHUB: install a per-device EUI-48 derived from the
+            // device UUID's first 6 hex bytes. This becomes the first
+            // 6 bytes of the Hue `uniqueid` (e.g. "0a:85:0a:ff:fe:72:
+            // a1:01-XX"), so each light on the bridge presents a
+            // physically-distinct Zigbee address to Alexa. Alexa's
+            // app dedupe was previously collapsing two cards that
+            // shared the same uniqueid prefix (the bridge MAC) — this
+            // is the last shared identity field, and removing the
+            // sharing here closes the final dedup vector. Bit 1 of
+            // byte 0 (locally administered) is forced on so the value
+            // is a well-formed LAA address.
+            uint8_t uidMac[6] = {0, 0, 0, 0, 0, 0};
+            if (device.uuid.length() >= 12) {
+                for (uint8_t i = 0; i < 6; i++) {
+                    char hex[3] = {device.uuid.charAt(i * 2),
+                                   device.uuid.charAt(i * 2 + 1), '\0'};
+                    uidMac[i] = (uint8_t)strtol(hex, nullptr, 16);
+                }
+                uidMac[0] = (uint8_t)((uidMac[0] & 0xFE) | 0x02);
+                d->setUniqueIdMac(uidMac);
+            }
         }
         LOG_INFO("[Alexa] Registered '%s' as Hue white lamp, slot=%u alexaSlot=%u uuid=%s",
-                 device.name.c_str(), (unsigned)alexaIdx, (unsigned)device.alexaSlot,
+                 alexaName.c_str(), (unsigned)alexaIdx, (unsigned)device.alexaSlot,
                  device.uuid.c_str());
     }
 

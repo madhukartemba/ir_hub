@@ -53,12 +53,11 @@ class MQTTConnector {
     // Topic builders write into a caller-provided stack buffer to keep the
     // MQTT hot-paths heap-free. Returns the number of bytes that *would*
     // have been written (snprintf semantics); callers can ignore unless
-    // checking for truncation. Device topics now key on the 32-char hex
-    // uuid (~46 bytes added vs the old int form) — `kTopicBufSize` is
-    // sized to comfortably hold the longest:
-    //   "homeassistant/switch/ir_hub_<12mac>_device_<32uuid>/config"
-    //   = 22 + 7 + 12 + 8 + 32 + 7 + 1 = 89 bytes
-    static constexpr size_t kTopicBufSize = 112;
+    // checking for truncation. Device topics key on the 24-char hex uuid
+    // — `kTopicBufSize` is sized to comfortably hold the longest:
+    //   "homeassistant/switch/ir_hub_<12mac>_device_<24uuid>/config"
+    //   = 22 + 7 + 12 + 8 + 24 + 7 + 1 = 81 bytes
+    static constexpr size_t kTopicBufSize = 96;
 
     size_t discoveryTopicForUuid(const char* uuid, char* out, size_t outSize) const {
         return snprintf(out, outSize,
@@ -226,7 +225,13 @@ class MQTTConnector {
         discoveryTopicForUuid(device.uuid.c_str(), topic, sizeof(topic));
         bool ok = mqttClient.publish(topic, buf, true);
         if (!ok) {
-            LOG_ERROR("[MQTT] Failed to publish discovery for device %s", device.uuid.c_str());
+            LOG_ERROR("[MQTT] Failed to publish discovery for device %s "
+                      "(topic_len=%u json_len=%u buf=%u state=%d)",
+                      device.uuid.c_str(), (unsigned)strlen(topic), (unsigned)n,
+                      (unsigned)mqttClient.getBufferSize(), mqttClient.state());
+        } else {
+            LOG_INFO("[MQTT] Published discovery for '%s' (uuid=%s, %u-byte JSON)",
+                     device.name.c_str(), device.uuid.c_str(), (unsigned)n);
         }
         return ok;
     }
@@ -297,13 +302,14 @@ class MQTTConnector {
         }
 
         // Topic shape is `ir_hub/<macHex>/device/<uuid>/set` where <uuid>
-        // is exactly 32 lowercase hex chars. Pointer-arithmetic parser so
-        // an incoming MQTT message costs zero heap.
+        // is exactly 24 lowercase hex chars (DeviceManager::generateUuid).
+        // Pointer-arithmetic parser so an incoming MQTT message costs zero
+        // heap.
         const size_t macLen = hubMacHex.length();
         const size_t kPrefixFixed = sizeof("ir_hub/") - 1;        // 7
         const size_t kMid = sizeof("/device/") - 1;               // 8
         const size_t kSuffix = sizeof("/set") - 1;                // 4
-        const size_t kUuidLen = 32;
+        const size_t kUuidLen = 24;
 
         if (topicLen != kPrefixFixed + macLen + kMid + kUuidLen + kSuffix) {
             return;
@@ -365,10 +371,15 @@ class MQTTConnector {
         if (mqttClient.connect(clientId, userArg, passArg)) {
             LOG_INFO("[MQTT] Connected to broker");
             subscribeCommands();
-            deviceManager.forEachDevice([this](Device& d) {
-                publishDiscovery(d);
-                publishState(d.uuid, false);
+            size_t republished = 0;
+            deviceManager.forEachDevice([this, &republished](Device& d) {
+                if (publishDiscovery(d)) {
+                    publishState(d.uuid, false);
+                    republished++;
+                }
             });
+            LOG_INFO("[MQTT] Republished discovery for %u device(s) after connect",
+                     (unsigned)republished);
             publishHubInfoDiscovery();
             publishHubInfo();
             lastInfoPublishMs = millis();
@@ -467,21 +478,42 @@ class MQTTConnector {
 
     void registerDevice(const Device& device) {
         if (!enabled) {
+            // No broker configured / Wi-Fi was down at boot. The device
+            // sits in DeviceManager and will be republished by
+            // connectBroker() the next time MQTT comes up (it iterates
+            // every stored device on every successful connect).
+            LOG_WARN("[MQTT] registerDevice('%s') skipped: MQTT disabled "
+                     "(will republish on next broker connect)",
+                     device.name.c_str());
             return;
         }
-        if (mqttClient.connected()) {
-            publishDiscovery(device);
-            publishState(device.uuid, false);
+        if (!mqttClient.connected()) {
+            // Same self-heal path as above — `connectBroker` re-publishes
+            // all stored devices on every successful (re)connect, so an
+            // add during an outage is not lost. Surface so the user knows
+            // why HA didn't see it immediately.
+            LOG_WARN("[MQTT] registerDevice('%s') skipped: broker not "
+                     "connected (state=%d) — will republish on reconnect",
+                     device.name.c_str(), mqttClient.state());
+            return;
         }
+        publishDiscovery(device);
+        publishState(device.uuid, false);
     }
 
     void unregisterDevice(const Device& device) {
         if (!enabled) {
+            LOG_WARN("[MQTT] unregisterDevice('%s') skipped: MQTT disabled",
+                     device.name.c_str());
             return;
         }
-        if (mqttClient.connected()) {
-            publishDiscoveryRemove(device.uuid);
+        if (!mqttClient.connected()) {
+            LOG_WARN("[MQTT] unregisterDevice('%s') skipped: broker not "
+                     "connected (state=%d) — stale entity may linger in HA",
+                     device.name.c_str(), mqttClient.state());
+            return;
         }
+        publishDiscoveryRemove(device.uuid);
     }
 
     void update() {

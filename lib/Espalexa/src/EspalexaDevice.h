@@ -40,6 +40,14 @@ class EspalexaDevice {
     uint32_t _rgb = 0;
     uint8_t _id = 0;
     uint16_t _stableId = 0xFFFF;
+    // IRHUB: optional per-device 6-byte EUI-48 used as the first 6 bytes
+    // of the Hue `uniqueid` (instead of the bridge MAC). Each light
+    // gets its own prefix — derived in AlexaConnector from the IR-Hub
+    // device UUID — so Alexa's UI dedupe cannot collapse two lights on
+    // the same bridge by uniqueid-prefix match. `_hasUidMac=false`
+    // means "fall back to bridge MAC", preserving upstream behaviour.
+    uint8_t _uidMac[6] = {0, 0, 0, 0, 0, 0};
+    bool _hasUidMac = false;
     EspalexaDeviceType _type;
     EspalexaDeviceProperty _changed = EspalexaDeviceProperty::none;
     EspalexaColorMode _mode = EspalexaColorMode::xy;
@@ -81,6 +89,11 @@ class EspalexaDevice {
     void setStableId(uint16_t stableId);
     uint16_t getStableId() const;
     bool hasStableId() const;
+    // IRHUB: install the per-device EUI-48 used for the Hue uniqueid
+    // prefix. Pass nullptr to clear (revert to bridge MAC fallback).
+    void setUniqueIdMac(const uint8_t mac[6]);
+    bool hasUniqueIdMac() const;
+    const uint8_t* getUniqueIdMac() const;
     void setPropertyChanged(EspalexaDeviceProperty p);
     void setValue(uint8_t bri);
     void setState(bool onoff);

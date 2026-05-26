@@ -19,11 +19,17 @@ enum DeviceType {
 };
 
 struct Device {
-    /// 128-bit random primary key, rendered as 32 lowercase hex chars
+    /// 96-bit random primary key, rendered as 24 lowercase hex chars
     /// ("uuid" in JSON). Generated once at creation and never reused or
     /// mutated, so it's safe to use as the file name, MQTT topic segment,
     /// and lookup key. Collision probability across realistic
-    /// deployments is ~10^-37 (4× os_random() + micros() + cycle-count).
+    /// deployments is ~10^-25 (3× os_random() + micros() + cycle-count).
+    ///
+    /// 96 bits (rather than full 128) keeps the on-disk file name under
+    /// LittleFS's 31-char per-segment cap on the arduino-esp8266 port
+    /// (`LFS_NAME_MAX = 32`, check is `strlen >= 32`, define isn't
+    /// `#ifndef`-gated so a build flag can't widen it without patching
+    /// the framework). 24 hex + `.json` = 29 chars, comfortably under.
     String uuid;
     /// 1..255 — the 2-hex Hue `uniqueid` endpoint we ship to Alexa.
     /// The Hue uniqueid format pins us to 8 bits here (Alexa was observed
@@ -65,29 +71,45 @@ class DeviceManager {
     DeviceCallback onDeviceAdded;
     DeviceCallback onDeviceRemoved;
 
-    /// Generate a fresh 128-bit identifier as a 32-char lowercase hex
-    /// string. Sources four uint32_t from the ESP8266 hardware RNG
+    /// Generate a fresh 96-bit identifier as a 24-char lowercase hex
+    /// string. Sources three uint32_t from the ESP8266 hardware RNG
     /// (`os_random()`, fed by WiFi RF noise) and XORs two of them with
     /// `micros()` / cycle count so that even if the RNG isn't fully
     /// primed at boot (pre-WiFi) we still get unpredictable bits from
-    /// the CPU's own timing. At 128 bits the birthday collision bound
-    /// for any realistic deployment is on the order of 10^-30, so we
-    /// don't bother with a disk-collision check.
+    /// the CPU's own timing. At 96 bits the birthday collision bound for
+    /// any realistic deployment is on the order of 10^-25, so we don't
+    /// bother with a disk-collision check.
+    ///
+    /// Width is 96 (not 128) so the on-disk file name stays under
+    /// LittleFS's 31-char per-segment cap — see Device::uuid for details.
     static String generateUuid() {
-        uint32_t a = os_random();
-        uint32_t b = os_random() ^ (uint32_t)micros();
-        uint32_t c = os_random();
-        uint32_t d = os_random() ^ ESP.getCycleCount();
-        char buf[33];
-        snprintf(buf, sizeof(buf), "%08x%08x%08x%08x", a, b, c, d);
+        uint32_t a = os_random() ^ (uint32_t)micros();
+        uint32_t b = os_random();
+        uint32_t c = os_random() ^ ESP.getCycleCount();
+        char buf[25];
+        snprintf(buf, sizeof(buf), "%08x%08x%08x", a, b, c);
         return String(buf);
     }
 
-    /// Pick the smallest unused alexaSlot in 1..255 by scanning every
-    /// stored device. O(N) over the device count; called only at
-    /// creation time. Returns 0 if the (cosmically unlikely) full-slot
-    /// state is hit — caller treats 0 as "no free slot".
-    uint8_t allocateAlexaSlot() {
+    /// Pick an alexaSlot in 1..255 derived from the new device's uuid,
+    /// with linear-probe collision resolution against every stored
+    /// device. O(N) directory scan + per-file parse, called only at
+    /// creation. Returns 0 if (cosmically unlikely) every slot is taken.
+    ///
+    /// Why derive from the uuid instead of "lowest unused starting at 1"?
+    /// Alexa's cloud caches Hue uniqueids for ~24-48h after a device is
+    /// removed from the Alexa app. If we always allocate slot=1 first
+    /// after a factory reset, the very first new device's uniqueid
+    /// (`<mac>-01`) collides with whatever previous device occupied
+    /// slot 1 — and Alexa renames the stale cached entity instead of
+    /// creating a fresh one ("no new devices found" + the old card
+    /// silently morphs into the new device's name). Seeding the slot
+    /// from the uuid's first byte randomises it over the full 1..255
+    /// space, making cache collisions with prior-incarnation devices
+    /// statistically improbable (~N/255 per add for N prior cached
+    /// entries). The slot is then persisted in the device JSON so it
+    /// stays stable for the device's lifetime.
+    uint8_t allocateAlexaSlot(const String& uuid) {
         bool used[256] = {false};
         used[0] = true;  // reserve 0 — Espalexa's `+1` encoding makes it untouchable anyway
         Dir dir = LittleFS.openDir(storageDir);
@@ -106,8 +128,22 @@ class DeviceManager {
                 used[slot] = true;
             }
         }
-        for (int i = 1; i <= 255; i++) {
-            if (!used[i]) return (uint8_t)i;
+
+        // Seed the probe from the uuid's first byte. uuid is lowercase
+        // hex (24 chars) so the first 2 chars parse as a byte 0x00..0xFF.
+        // We OR with 1 to never start at 0 (which is reserved above).
+        uint8_t seed = 1;
+        if (uuid.length() >= 2) {
+            char hex[3] = {uuid.charAt(0), uuid.charAt(1), '\0'};
+            seed = (uint8_t)strtol(hex, nullptr, 16);
+            if (seed == 0) seed = 1;
+        }
+        // Linear probe with wrap-around. We walk every slot at most
+        // once; whichever free slot we hit first (starting from the
+        // uuid-derived seed) is the winner.
+        for (int offset = 0; offset < 255; offset++) {
+            uint8_t candidate = (uint8_t)(((int)seed - 1 + offset) % 255 + 1);
+            if (!used[candidate]) return candidate;
         }
         return 0;
     }
@@ -164,7 +200,7 @@ class DeviceManager {
 
         Device device;
         device.uuid = generateUuid();
-        device.alexaSlot = allocateAlexaSlot();
+        device.alexaSlot = allocateAlexaSlot(device.uuid);
         if (device.alexaSlot == 0) {
             LOG_ERROR("[DeviceManager] No free Alexa slot (255 in use?)");
             return String();
@@ -174,7 +210,9 @@ class DeviceManager {
         device.type = SINGLE_COMMAND;
         device.onCommand = command;
         device.offCommand = command;
-        saveDevice(device);
+        if (!saveDevice(device)) {
+            return String();
+        }
 
         return device.uuid;
     }
@@ -193,7 +231,7 @@ class DeviceManager {
 
         Device device;
         device.uuid = generateUuid();
-        device.alexaSlot = allocateAlexaSlot();
+        device.alexaSlot = allocateAlexaSlot(device.uuid);
         if (device.alexaSlot == 0) {
             LOG_ERROR("[DeviceManager] No free Alexa slot (255 in use?)");
             return String();
@@ -208,16 +246,24 @@ class DeviceManager {
         device.type = DUAL_COMMAND;
         device.onCommand = onCommand;
         device.offCommand = offCommand;
-        saveDevice(device);
+        if (!saveDevice(device)) {
+            return String();
+        }
         return device.uuid;
     }
 
-    void saveDevice(const Device& device) {
-        String filename = device.uuid + ".json";
-        File file = LittleFS.open(String(storageDir) + "/" + filename, "w");
+    /// Persist a Device to LittleFS. Returns true on success. On failure
+    /// (filesystem full, name too long, write error) logs an error and
+    /// does NOT fire the onDeviceAdded callback — callers must propagate
+    /// the failure so the UI doesn't claim success on a phantom device.
+    bool saveDevice(const Device& device) {
+        String path = String(storageDir) + "/" + device.uuid + ".json";
+        File file = LittleFS.open(path, "w");
         if (!file) {
-            LOG_ERROR("[DeviceManager] Failed to open file");
-            return;
+            LOG_ERROR("[DeviceManager] Failed to open %s for write (path len=%u, "
+                      "LFS_NAME_MAX cap is 31 chars per segment)",
+                      path.c_str(), (unsigned)(device.uuid.length() + 5));
+            return false;
         }
         JsonDocument doc;
         doc["uuid"] = device.uuid;
@@ -227,8 +273,14 @@ class DeviceManager {
         doc["protocolName"] = device.protocolName;
         doc["onCommand"] = device.onCommand.toJson();
         doc["offCommand"] = device.offCommand.toJson();
-        serializeJson(doc, file);
+        size_t written = serializeJson(doc, file);
         file.close();
+        if (written == 0) {
+            LOG_ERROR("[DeviceManager] serializeJson wrote 0 bytes for %s — disk full?",
+                      device.uuid.c_str());
+            LittleFS.remove(path);  // don't leave a zero-byte ghost
+            return false;
+        }
 
         if (onDeviceAdded) {
             LOG_DEBUG("[DeviceManager] Triggering onDeviceAdded callback for device %s",
@@ -236,7 +288,9 @@ class DeviceManager {
             onDeviceAdded(device);
         }
 
-        LOG_INFO("[DeviceManager] Device saved to %s", filename.c_str());
+        LOG_INFO("[DeviceManager] Device saved to %s (%u bytes)", path.c_str(),
+                 (unsigned)written);
+        return true;
     }
 
     bool removeDeviceByUuid(const String& uuid) {

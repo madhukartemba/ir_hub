@@ -30,6 +30,15 @@ mixing up my devices" or "Alexa won't discover the bridge at all":
 5. **All Espalexa bridges shared the friendlyName template** `"Espalexa (IP:80)"`,
    making it impossible to tell multiple IR Hubs apart in the Alexa app — and
    some Echo gens dedupe by friendlyName, causing 4 of 5 IR Hubs to vanish.
+6. **Bridge identity was MAC-derived and therefore immortal across factory
+   resets.** Wiping LittleFS gave us a fresh device list but the SSDP
+   `USN`/`UDN`, `bridgeid`, and Hue `uniqueid` prefix all stayed the same
+   because they were derived from the burned-in WiFi MAC. Amazon's smart-
+   home cloud cache keys off those values as the bridge identity and was
+   silently re-attaching stale entities (old "SONY 1" → new "SONY 2", etc.)
+   to the rebuilt bridge. End-user symptom: "I removed all the devices and
+   re-added them but Alexa is still firing the wrong IR command from the
+   wrong-named card."
 
 ## Patches applied
 
@@ -54,13 +63,48 @@ mixing up my devices" or "Alexa won't discover the bridge at all":
   IP, etc.). Both stream via `setContentLength(CONTENT_LENGTH_UNKNOWN)` +
   `sendContent` so the ~3 KB response never has to live as a contiguous
   String on the ESP8266 heap. The existing `/api/<user>/lights` handler was
-  also switched to chunked streaming so 10 registered devices (~5 KB) no
+  also switched to chunked streaming so 20 registered devices (~10 KB) no
   longer risk a WiFi stack OOM mid-response.
 - `setFriendlyName(String)` — caller-overridable bridge name used in both
   `description.xml` and the `config.name` field. `AlexaConnector` sets it to
   `IR Hub <last6mac>` so 5 IR Hubs on the same LAN are distinguishable.
 - SSDP `hue-bridgeid` header and `/api/<user>/config.bridgeid` now use the
   canonical 16-char `<MAC1-3>FFFE<MAC4-6>` format Alexa expects.
+- `setBridgeMac(uint8_t[6])` — install a caller-managed 6-byte EUI-48 that
+  replaces the WiFi MAC as the input to every bridge-identity field
+  (`escapedMac`, `mac24`, `bridgeIdHex`, SSDP `USN`, description.xml
+  `<UDN>`, `/config.mac`, light `uniqueid` prefix). `AlexaConnector`
+  persists a random locally-administered MAC in `/alexa_bridge_id.bin`
+  and rotates it on factory reset (LittleFS.format() wipes the file →
+  fresh ID on next boot) so Alexa sees a completely new bridge with no
+  cloud-cache carry-over.
+- `perDeviceModelId()` / `perDeviceManufacturer()` / `perDeviceProductName()` /
+  `perDeviceSwVersion()` — hash the per-device stableId into 16-entry
+  pools of plausible Hue variations (real modelids `LWB006..LWB022` /
+  `LWA001..LWA019` for white lamps, multiple Signify/Philips manufacturer
+  string variants, multiple human-product-name variants, multiple
+  swversion variants) and emit a unique-per-device combination in
+  `/lights`. Live capture with on-hub HTTP instrumentation proved the
+  Alexa app collapses cards that share bridge + modelid + productname
+  + manufacturer + uniqueid-prefix + friendly-name-first-word: with
+  every Espalexa device defaulting to the same values for ALL of those,
+  only one card rendered (the entities still existed in Alexa's cloud
+  and routed commands correctly, but the user couldn't tap the hidden
+  one). Each device now varies across every dedup axis. Pool size 16
+  is sized to keep every field distinct across the full
+  `ESPALEXA_MAXDEVICES` (20) range. Pool indices are sub-byte
+  deterministic so Alexa's cloud never sees a field flip-flop on
+  re-poll.
+- `EspalexaDevice::setUniqueIdMac(uint8_t[6])` + `encodeLightId()` per-
+  device override — install a 6-byte EUI-48 PER LIGHT (derived in
+  AlexaConnector from the first 6 hex bytes of the IR-Hub device UUID)
+  to use as the Hue `uniqueid` prefix instead of the bridge MAC. This
+  closes the LAST shared-identity axis (`uniqueid` previously shared
+  the first 8 bytes across every light on the bridge); after the
+  patch each light's `uniqueid` looks like a physically distinct
+  Zigbee endpoint, defeating any UI-side prefix-match dedupe. Falls
+  back to the bridge MAC when no per-device MAC is installed, so
+  upstream-equivalent callers see no behavioural change.
 
 ## Upgrading from upstream
 
