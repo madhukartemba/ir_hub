@@ -105,12 +105,12 @@ void superviseHeap() {
 void configureRuntimeCallbacks() {
     // Device add/remove: both Alexa and MQTT must stay in sync (single callback on DeviceManager)
     deviceManager.setOnDeviceAdded([](const Device& device) {
-        LOG_DEBUG("[Hub] Device added: %s (ID: %d)", device.name.c_str(), device.id);
+        LOG_DEBUG("[Hub] Device added: %s (uuid: %s)", device.name.c_str(), device.uuid.c_str());
         alexaConnector.registerDevice(device);
         mqttConnector.registerDevice(device);
     });
     deviceManager.setOnDeviceRemoved([](const Device& device) {
-        LOG_DEBUG("[Hub] Device removed: %s (ID: %d)", device.name.c_str(), device.id);
+        LOG_DEBUG("[Hub] Device removed: %s (uuid: %s)", device.name.c_str(), device.uuid.c_str());
         alexaConnector.unregisterDevice(device);
         mqttConnector.unregisterDevice(device);
     });
@@ -249,9 +249,6 @@ void setup() {
     }
     haptics.setMuted(!userPrefsHapticsEnabled());
 
-    if (!idGen.begin()) {
-        boot_safety::criticalFailure("IdGen", "init failed");
-    }
     if (!irManager.begin(IR_RX_PIN, IR_TX_PIN)) {
         boot_safety::criticalFailure("IR Manager", "check IR pins");
     }

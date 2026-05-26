@@ -212,10 +212,9 @@ class AddDevice : public Screen {
                 currentState = State::COMPARING;
 
                 if (firstCode == secondCode) {
-                    // Codes match, save as single command device
-                    int deviceId = deviceManager.addSingleCommandDevice(firstCode);
-                    if (deviceId != -1) {
-                        LOG_INFO("[AddDevice] Auto mode device saved with ID: %d", deviceId);
+                    String uuid = deviceManager.addSingleCommandDevice(firstCode);
+                    if (!uuid.isEmpty()) {
+                        LOG_INFO("[AddDevice] Auto mode device saved with uuid: %s", uuid.c_str());
                         currentState = State::SUCCESS;
                         setLedRingSuccess();
                         speaker.successBeep();
@@ -227,11 +226,10 @@ class AddDevice : public Screen {
                     }
                 } else {
                     LOG_INFO("[AddDevice] Codes don't match - saving as dual device");
-                    // Codes don't match, save as dual command device
-                    int deviceId = deviceManager.addDualCommandDevice(firstCode, secondCode);
-                    if (deviceId != -1) {
-                        LOG_INFO("[AddDevice] Auto mode device saved as dual device with ID: %d",
-                                 deviceId);
+                    String uuid = deviceManager.addDualCommandDevice(firstCode, secondCode);
+                    if (!uuid.isEmpty()) {
+                        LOG_INFO("[AddDevice] Auto mode device saved as dual device with uuid: %s",
+                                 uuid.c_str());
                         currentState = State::SUCCESS;
                         setLedRingSuccess();
                         speaker.successBeep();

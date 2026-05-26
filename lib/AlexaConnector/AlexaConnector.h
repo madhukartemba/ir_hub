@@ -231,10 +231,10 @@ class AlexaConnector {
         // slider this exposes is harmless: handleDeviceCallback() treats
         // any value > 0 as ON, so nudging the slider just re-sends the
         // recorded "on" IR command (which is idempotent for the typical
-        // TV/STB/AC remote). We then pin the Hue uniqueid to our
-        // DeviceManager id so Alexa's cloud cache keeps pointing at the
-        // right physical IR command regardless of registration order,
-        // add/remove churn, or reboots.
+        // TV/STB/AC remote). We pin the Hue uniqueid to `device.alexaSlot`
+        // — a 1..255 byte assigned at creation time by DeviceManager — so
+        // Alexa's cloud cache keeps pointing at the right physical IR
+        // command regardless of registration order or add/remove churn.
         uint8_t alexaIdx = espalexa.addDevice(
             device.name.c_str(),
             [this, deviceName = device.name](EspalexaDevice* d) {
@@ -251,19 +251,18 @@ class AlexaConnector {
             return;
         }
 
-        // device.id from IdGen is a monotonically increasing int (0, 1, 2,
-        // ...). Clamp to 16-bit before handing to Espalexa — anything above
-        // 0xFFFE is far beyond realistic IR Hub lifetimes and 0xFFFF is the
-        // "unset" sentinel.
-        uint16_t stable = (device.id >= 0 && device.id <= 0xFFFE)
-                              ? (uint16_t)device.id
-                              : (uint16_t)(device.id & 0x7FFF);
+        // device.alexaSlot is the 1..255 byte DeviceManager assigned at
+        // creation time. Espalexa internally encodes the Hue uniqueid
+        // endpoint as `(stableId + 1) & 0xFF`, so we pass slot - 1 to
+        // arrive back at our intended endpoint byte.
+        uint16_t stable = (uint16_t)(device.alexaSlot - 1);
         EspalexaDevice* d = espalexa.getDevice((uint8_t)(alexaIdx - 1));
         if (d != nullptr) {
             d->setStableId(stable);
         }
-        LOG_INFO("[Alexa] Registered '%s' as Hue white lamp, slot=%u stableId=%u",
-                 device.name.c_str(), (unsigned)alexaIdx, (unsigned)stable);
+        LOG_INFO("[Alexa] Registered '%s' as Hue white lamp, slot=%u alexaSlot=%u uuid=%s",
+                 device.name.c_str(), (unsigned)alexaIdx, (unsigned)device.alexaSlot,
+                 device.uuid.c_str());
     }
 
     void unregisterDevice(const Device& device) {

@@ -15,7 +15,7 @@ class DeviceDetails : public Screen {
         : device(device), currentPage(0), selectedDescriptionItem(0) {}
 
     void onEnter() override {
-        LOG_DEBUG("[DeviceDetails] onEnter for device %d", device.id);
+        LOG_DEBUG("[DeviceDetails] onEnter for device %s", device.uuid.c_str());
         ledRing.breathe(COLOR_SUCCESS_DARK);
 
         // Change button behavior
@@ -99,8 +99,9 @@ class DeviceDetails : public Screen {
         int y = 20;
         display.setTextSize(1);
 
-        // Device ID
-        display.print("ID: " + String(device.id), 0, y);
+        // Device ID — show first 6 chars of the 32-char uuid; the rest
+        // doesn't fit on a 128px OLED and isn't useful at a glance.
+        display.print("ID: " + device.uuid.substring(0, 6), 0, y);
         y += 10;
 
         // Device Name

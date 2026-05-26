@@ -53,23 +53,27 @@ class MQTTConnector {
     // Topic builders write into a caller-provided stack buffer to keep the
     // MQTT hot-paths heap-free. Returns the number of bytes that *would*
     // have been written (snprintf semantics); callers can ignore unless
-    // checking for truncation.
-    static constexpr size_t kTopicBufSize = 80;
+    // checking for truncation. Device topics now key on the 32-char hex
+    // uuid (~46 bytes added vs the old int form) — `kTopicBufSize` is
+    // sized to comfortably hold the longest:
+    //   "homeassistant/switch/ir_hub_<12mac>_device_<32uuid>/config"
+    //   = 22 + 7 + 12 + 8 + 32 + 7 + 1 = 89 bytes
+    static constexpr size_t kTopicBufSize = 112;
 
-    size_t discoveryTopicForId(int deviceId, char* out, size_t outSize) const {
+    size_t discoveryTopicForUuid(const char* uuid, char* out, size_t outSize) const {
         return snprintf(out, outSize,
-                        "homeassistant/switch/ir_hub_%s_device_%d/config",
-                        hubMacHex.c_str(), deviceId);
+                        "homeassistant/switch/ir_hub_%s_device_%s/config",
+                        hubMacHex.c_str(), uuid);
     }
 
-    size_t commandTopicForId(int deviceId, char* out, size_t outSize) const {
-        return snprintf(out, outSize, "ir_hub/%s/device/%d/set",
-                        hubMacHex.c_str(), deviceId);
+    size_t commandTopicForUuid(const char* uuid, char* out, size_t outSize) const {
+        return snprintf(out, outSize, "ir_hub/%s/device/%s/set",
+                        hubMacHex.c_str(), uuid);
     }
 
-    size_t stateTopicForId(int deviceId, char* out, size_t outSize) const {
-        return snprintf(out, outSize, "ir_hub/%s/device/%d/state",
-                        hubMacHex.c_str(), deviceId);
+    size_t stateTopicForUuid(const char* uuid, char* out, size_t outSize) const {
+        return snprintf(out, outSize, "ir_hub/%s/device/%s/state",
+                        hubMacHex.c_str(), uuid);
     }
 
     size_t otaCheckTopic(char* out, size_t outSize) const {
@@ -187,11 +191,12 @@ class MQTTConnector {
         // this function's scope.
         char cmdTopic[kTopicBufSize];
         char stTopic[kTopicBufSize];
-        char uniqueId[40];   // "ir_hub_" + 12 mac hex + "_" + 10 digits + null
+        char uniqueId[56];   // "ir_hub_" + 12 mac hex + "_" + 32 uuid + null
         char identifier[24]; // "ir_hub_" + 12 mac hex + null
-        commandTopicForId(device.id, cmdTopic, sizeof(cmdTopic));
-        stateTopicForId(device.id, stTopic, sizeof(stTopic));
-        snprintf(uniqueId, sizeof(uniqueId), "ir_hub_%s_%d", hubMacHex.c_str(), device.id);
+        commandTopicForUuid(device.uuid.c_str(), cmdTopic, sizeof(cmdTopic));
+        stateTopicForUuid(device.uuid.c_str(), stTopic, sizeof(stTopic));
+        snprintf(uniqueId, sizeof(uniqueId), "ir_hub_%s_%s", hubMacHex.c_str(),
+                 device.uuid.c_str());
         snprintf(identifier, sizeof(identifier), "ir_hub_%s", hubMacHex.c_str());
 
         JsonDocument doc;
@@ -213,30 +218,30 @@ class MQTTConnector {
         char buf[768];
         size_t n = serializeJson(doc, buf, sizeof(buf));
         if (n >= sizeof(buf)) {
-            LOG_ERROR("[MQTT] Discovery JSON too large for device %d", device.id);
+            LOG_ERROR("[MQTT] Discovery JSON too large for device %s", device.uuid.c_str());
             return false;
         }
 
         char topic[kTopicBufSize];
-        discoveryTopicForId(device.id, topic, sizeof(topic));
+        discoveryTopicForUuid(device.uuid.c_str(), topic, sizeof(topic));
         bool ok = mqttClient.publish(topic, buf, true);
         if (!ok) {
-            LOG_ERROR("[MQTT] Failed to publish discovery for device %d", device.id);
+            LOG_ERROR("[MQTT] Failed to publish discovery for device %s", device.uuid.c_str());
         }
         return ok;
     }
 
-    bool publishState(int deviceId, bool on) {
+    bool publishState(const String& uuid, bool on) {
         const char* payload = on ? "ON" : "OFF";
         char topic[kTopicBufSize];
-        stateTopicForId(deviceId, topic, sizeof(topic));
+        stateTopicForUuid(uuid.c_str(), topic, sizeof(topic));
         return mqttClient.publish(topic, payload, true);
     }
 
-    bool publishDiscoveryRemove(int deviceId) {
+    bool publishDiscoveryRemove(const String& uuid) {
         // Empty retained payload removes MQTT discovery entities in Home Assistant
         char topic[kTopicBufSize];
-        discoveryTopicForId(deviceId, topic, sizeof(topic));
+        discoveryTopicForUuid(uuid.c_str(), topic, sizeof(topic));
         return mqttClient.publish(topic, "", true);
     }
 
@@ -255,12 +260,12 @@ class MQTTConnector {
         return ok;
     }
 
-    void applyCommandForDevice(int deviceId, bool turnOn) {
+    void applyCommandForDevice(const String& uuid, bool turnOn) {
         // DeviceManager is uncached: this hits LittleFS + JSON parse (~5–15 ms).
         // Acceptable on the MQTT command path.
-        auto device = deviceManager.getDeviceById(deviceId);
+        auto device = deviceManager.getDeviceByUuid(uuid);
         if (!device) {
-            LOG_ERROR("[MQTT] Unknown device id %d", deviceId);
+            LOG_ERROR("[MQTT] Unknown device uuid %s", uuid.c_str());
             return;
         }
 
@@ -270,13 +275,13 @@ class MQTTConnector {
 
         if (turnOn) {
             irManager.sendProtocol(device->onCommand);
-            LOG_INFO("[MQTT] ON device id %d (%s)", deviceId, device->name.c_str());
+            LOG_INFO("[MQTT] ON device %s (%s)", uuid.c_str(), device->name.c_str());
         } else {
             irManager.sendProtocol(device->offCommand);
-            LOG_INFO("[MQTT] OFF device id %d (%s)", deviceId, device->name.c_str());
+            LOG_INFO("[MQTT] OFF device %s (%s)", uuid.c_str(), device->name.c_str());
         }
 
-        publishState(deviceId, turnOn);
+        publishState(uuid, turnOn);
     }
 
     void handleIncomingMessage(char* topic, byte* payload, unsigned int length) {
@@ -291,14 +296,16 @@ class MQTTConnector {
             return;
         }
 
-        // Topic shape is `ir_hub/<macHex>/device/<id>/set`. Pointer-arithmetic
-        // parser so an incoming MQTT message costs zero heap.
+        // Topic shape is `ir_hub/<macHex>/device/<uuid>/set` where <uuid>
+        // is exactly 32 lowercase hex chars. Pointer-arithmetic parser so
+        // an incoming MQTT message costs zero heap.
         const size_t macLen = hubMacHex.length();
         const size_t kPrefixFixed = sizeof("ir_hub/") - 1;        // 7
         const size_t kMid = sizeof("/device/") - 1;               // 8
         const size_t kSuffix = sizeof("/set") - 1;                // 4
+        const size_t kUuidLen = 32;
 
-        if (topicLen < kPrefixFixed + macLen + kMid + 1 + kSuffix) {
+        if (topicLen != kPrefixFixed + macLen + kMid + kUuidLen + kSuffix) {
             return;
         }
         if (memcmp(topic, "ir_hub/", kPrefixFixed) != 0) {
@@ -315,24 +322,16 @@ class MQTTConnector {
         }
 
         const char* idStart = topic + kPrefixFixed + macLen + kMid;
-        const char* idEnd = topic + topicLen - kSuffix;
-        if (idEnd <= idStart) {
-            return;
+        for (size_t i = 0; i < kUuidLen; i++) {
+            char ch = idStart[i];
+            bool ok = (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
+            if (!ok) {
+                return;  // not a uuid we generated
+            }
         }
-
-        char idBuf[12];
-        size_t idLen = (size_t)(idEnd - idStart);
-        if (idLen >= sizeof(idBuf)) {
-            return;
-        }
-        memcpy(idBuf, idStart, idLen);
-        idBuf[idLen] = '\0';
-
-        char* endp = nullptr;
-        long deviceId = strtol(idBuf, &endp, 10);
-        if (!endp || *endp != '\0' || deviceId < 0 || deviceId > INT32_MAX) {
-            return;
-        }
+        char idBuf[kUuidLen + 1];
+        memcpy(idBuf, idStart, kUuidLen);
+        idBuf[kUuidLen] = '\0';
 
         char cmd[8];
         if (length >= sizeof(cmd)) {
@@ -346,9 +345,9 @@ class MQTTConnector {
         cmd[length] = '\0';
 
         if (strcmp(cmd, "ON") == 0) {
-            applyCommandForDevice((int)deviceId, true);
+            applyCommandForDevice(String(idBuf), true);
         } else if (strcmp(cmd, "OFF") == 0) {
-            applyCommandForDevice((int)deviceId, false);
+            applyCommandForDevice(String(idBuf), false);
         } else {
             LOG_WARN("[MQTT] Unknown payload for %s: %s", topic, cmd);
         }
@@ -368,7 +367,7 @@ class MQTTConnector {
             subscribeCommands();
             deviceManager.forEachDevice([this](Device& d) {
                 publishDiscovery(d);
-                publishState(d.id, false);
+                publishState(d.uuid, false);
             });
             publishHubInfoDiscovery();
             publishHubInfo();
@@ -472,7 +471,7 @@ class MQTTConnector {
         }
         if (mqttClient.connected()) {
             publishDiscovery(device);
-            publishState(device.id, false);
+            publishState(device.uuid, false);
         }
     }
 
@@ -481,7 +480,7 @@ class MQTTConnector {
             return;
         }
         if (mqttClient.connected()) {
-            publishDiscoveryRemove(device.id);
+            publishDiscoveryRemove(device.uuid);
         }
     }
 

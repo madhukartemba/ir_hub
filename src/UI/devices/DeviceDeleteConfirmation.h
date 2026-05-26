@@ -11,7 +11,7 @@ class DeviceDeleteConfirmation : public Screen {
     explicit DeviceDeleteConfirmation(const Device& device) : device(device), confirmed(false) {}
 
     void onEnter() override {
-        LOG_DEBUG("[DeviceDeleteConfirmation] onEnter for device %d", device.id);
+        LOG_DEBUG("[DeviceDeleteConfirmation] onEnter for device %s", device.uuid.c_str());
         ledRing.breathe(COLOR_ERROR_DARK);
 
         // Change button behavior
@@ -24,9 +24,8 @@ class DeviceDeleteConfirmation : public Screen {
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[DeviceDeleteConfirmation] onButtonLongPress");
             if (confirmed) {
-                // Delete the device
-                LOG_INFO("[DeviceDeleteConfirmation] Deleting device %d", device.id);
-                bool success = deviceManager.removeDeviceById(device.id);
+                LOG_INFO("[DeviceDeleteConfirmation] Deleting device %s", device.uuid.c_str());
+                bool success = deviceManager.removeDeviceByUuid(device.uuid);
                 if (success) {
                     speaker.successBeep();
                     display.clear();
@@ -64,8 +63,8 @@ class DeviceDeleteConfirmation : public Screen {
         // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
-        // Show device info
-        display.print("Device " + String(device.id), 0, 20);
+        // Show device info — short uuid prefix keeps the line ≤16 chars wide.
+        display.print("Device " + device.uuid.substring(0, 6), 0, 20);
         display.print(device.name, 0, 30);
 
         // Show confirmation options

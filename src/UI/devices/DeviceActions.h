@@ -21,7 +21,7 @@ class DeviceActions : public Screen {
         : device(device), selectedAction(ActionType::ON), selectedIndex(0) {}
 
     void onEnter() override {
-        LOG_DEBUG("[DeviceActions] onEnter for device %d", device.id);
+        LOG_DEBUG("[DeviceActions] onEnter for device %s", device.uuid.c_str());
         ledRing.breathe(COLOR_INFO_DARK);
 
         // Change button behavior
@@ -64,9 +64,10 @@ class DeviceActions : public Screen {
     }
 
     void displayActions() {
-        // Show title with device name
+        // Show title with short device id (first 6 chars of the 32-char uuid).
+        // Full uuid is too wide for a 128px OLED.
         display.setTextSize(1);
-        String title = "Device " + String(device.id);
+        String title = "Device " + device.uuid.substring(0, 6);
         display.printCentered(title.c_str(), 0);
 
         // Draw horizontal line
@@ -80,12 +81,14 @@ class DeviceActions : public Screen {
         switch (selectedAction) {
             case ActionType::ON:
                 if (device.onCommand.isValid()) {
-                    LOG_INFO("[DeviceActions] Sending ON command for device %d", device.id);
+                    LOG_INFO("[DeviceActions] Sending ON command for device %s",
+                             device.uuid.c_str());
                     irManager.sendProtocol(device.onCommand);
                     ledRing.addAnimation(
                         std::make_unique<ClickSweepOnceAnimation>(NUM_LEDS, SEND_ON_COMMAND_COLOR));
                 } else {
-                    LOG_ERROR("[DeviceActions] Invalid ON command for device %d", device.id);
+                    LOG_ERROR("[DeviceActions] Invalid ON command for device %s",
+                              device.uuid.c_str());
                     display.clear();
                     display.printCentered("Invalid ON command", 30);
                     display.update();
@@ -95,12 +98,14 @@ class DeviceActions : public Screen {
 
             case ActionType::OFF:
                 if (device.offCommand.isValid()) {
-                    LOG_INFO("[DeviceActions] Sending OFF command for device %d", device.id);
+                    LOG_INFO("[DeviceActions] Sending OFF command for device %s",
+                             device.uuid.c_str());
                     irManager.sendProtocol(device.offCommand);
                     ledRing.addAnimation(std::make_unique<ClickSweepOnceAnimation>(
                         NUM_LEDS, SEND_OFF_COMMAND_COLOR));
                 } else {
-                    LOG_ERROR("[DeviceActions] Invalid OFF command for device %d", device.id);
+                    LOG_ERROR("[DeviceActions] Invalid OFF command for device %s",
+                              device.uuid.c_str());
                     display.clear();
                     display.printCentered("Invalid OFF command", 30);
                     display.update();

@@ -9,7 +9,6 @@
 #include "Display.h"
 #include "IRCode.h"
 #include "IRManager.h"
-#include "IdGen.h"
 #include "Log.h"
 #include "OtaUpdater.h"
 #include "Router.h"
@@ -23,7 +22,6 @@ extern Speaker speaker;
 extern Haptics haptics;
 extern NeoRing ledRing;
 extern Display display;
-extern IdGen idGen;
 extern IRManager irManager;
 extern DeviceManager deviceManager;
 extern AlexaConnector alexaConnector;
