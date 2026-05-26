@@ -5,8 +5,8 @@
 #include <Espalexa.h>
 #include <LittleFS.h>
 #include <WiFiUdp.h>
+#include <cstring>
 #include <functional>
-#include <vector>
 extern "C" {
 #include <user_interface.h>
 }
@@ -17,8 +17,9 @@ extern "C" {
 class AlexaConnector {
    private:
     struct RegisteredDeviceRef {
-        String uuid;
+        char uuid[25];
         uint8_t index;
+        bool active;
     };
 
     DeviceManager& deviceManager;
@@ -26,7 +27,7 @@ class AlexaConnector {
     Espalexa espalexa;
     bool wifiEnabled;
     std::function<void(const Device& device, bool state)> onStateChangeCallback;
-    std::vector<RegisteredDeviceRef> registeredDeviceRefs;
+    RegisteredDeviceRef registeredDeviceRefs[ESPALEXA_MAXDEVICES] = {};
 
     WiFiUDP ssdpNotifyUdp;  // outbound SSDP NOTIFY (separate from Espalexa's socket)
     bool ssdpNotifyReady = false;
@@ -146,10 +147,63 @@ class AlexaConnector {
                        "::urn:schemas-upnp-org:device:basic:1");
     }
 
-    void handleDeviceCallback(const String& uuid, const String& displayName, uint8_t value) {
+    RegisteredDeviceRef* findRefByUuid(const String& uuid) {
+        for (auto& ref : registeredDeviceRefs) {
+            if (ref.active && uuid == ref.uuid) {
+                return &ref;
+            }
+        }
+        return nullptr;
+    }
+
+    RegisteredDeviceRef* findRefByIndex(uint8_t index) {
+        for (auto& ref : registeredDeviceRefs) {
+            if (ref.active && ref.index == index) {
+                return &ref;
+            }
+        }
+        return nullptr;
+    }
+
+    RegisteredDeviceRef* findOrCreateRefForUuid(const String& uuid) {
+        if (RegisteredDeviceRef* existing = findRefByUuid(uuid)) {
+            return existing;
+        }
+        for (auto& ref : registeredDeviceRefs) {
+            if (!ref.active) {
+                strncpy(ref.uuid, uuid.c_str(), sizeof(ref.uuid) - 1);
+                ref.uuid[sizeof(ref.uuid) - 1] = '\0';
+                ref.index = 0;
+                ref.active = true;
+                return &ref;
+            }
+        }
+        return nullptr;
+    }
+
+    void clearRefByUuid(const String& uuid) {
+        if (RegisteredDeviceRef* ref = findRefByUuid(uuid)) {
+            ref->active = false;
+            ref->uuid[0] = '\0';
+            ref->index = 0;
+        }
+    }
+
+    void handleDeviceCallback(EspalexaDevice* d) {
+        if (d == nullptr) {
+            return;
+        }
+        RegisteredDeviceRef* ref = findRefByIndex(d->getId());
+        if (ref == nullptr) {
+            LOG_ERROR("[Alexa] Callback index=%u has no UUID mapping", (unsigned)d->getId());
+            return;
+        }
+
+        const String uuid(ref->uuid);
+        uint8_t value = d->getValue();
         bool state = value > 0;
-        LOG_DEBUG("[Alexa] Set state for '%s' (uuid=%s) to %s with value %d",
-                  displayName.c_str(), uuid.c_str(), state ? "ON" : "OFF", value);
+        LOG_DEBUG("[Alexa] Set state for uuid=%s to %s with value %d",
+                  uuid.c_str(), state ? "ON" : "OFF", value);
 
         auto device = deviceManager.getDeviceByUuid(uuid);
         if (device) {
@@ -158,14 +212,13 @@ class AlexaConnector {
             }
             if (state) {
                 irManager.sendProtocol(device->onCommand);
-                LOG_INFO("[Alexa] Turning ON '%s' (uuid=%s)", displayName.c_str(), uuid.c_str());
+                LOG_INFO("[Alexa] Turning ON '%s' (uuid=%s)", device->name.c_str(), uuid.c_str());
             } else {
                 irManager.sendProtocol(device->offCommand);
-                LOG_INFO("[Alexa] Turning OFF '%s' (uuid=%s)", displayName.c_str(), uuid.c_str());
+                LOG_INFO("[Alexa] Turning OFF '%s' (uuid=%s)", device->name.c_str(), uuid.c_str());
             }
         } else {
-            LOG_ERROR("[Alexa] Device uuid=%s ('%s') not found in device manager", uuid.c_str(),
-                      displayName.c_str());
+            LOG_ERROR("[Alexa] Device uuid=%s not found in device manager", uuid.c_str());
         }
     }
 
@@ -212,8 +265,9 @@ class AlexaConnector {
         ssdpStartupBurstRemaining = kSsdpStartupBurstCount;
         lastSsdpNotifyMs = 0;  // forces broadcast on the next update() tick
 
-        LOG_INFO("[Alexa] Alexa functionality enabled (IP=%s)",
-                 WiFi.localIP().toString().c_str());
+        IPAddress ip = WiFi.localIP();
+        LOG_INFO("[Alexa] Alexa functionality enabled (IP=%u.%u.%u.%u)",
+                 (unsigned)ip[0], (unsigned)ip[1], (unsigned)ip[2], (unsigned)ip[3]);
     }
 
     void shutdown() {
@@ -225,7 +279,11 @@ class AlexaConnector {
             espalexa.stop();
         }
         wifiEnabled = false;
-        registeredDeviceRefs.clear();
+        for (auto& ref : registeredDeviceRefs) {
+            ref.active = false;
+            ref.uuid[0] = '\0';
+            ref.index = 0;
+        }
     }
 
     void setOnStateChangeCallback(std::function<void(const Device& device, bool state)> callback) {
@@ -241,9 +299,7 @@ class AlexaConnector {
 
         uint8_t alexaIdx = espalexa.addDevice(
             alexaName.c_str(),
-            [this, uuid = device.uuid, displayName = alexaName](EspalexaDevice* d) {
-                handleDeviceCallback(uuid, displayName, d->getValue());
-            },
+            [this](EspalexaDevice* d) { handleDeviceCallback(d); },
             EspalexaDeviceType::dimmable);
         if (alexaIdx == 0) {
             LOG_ERROR("[Alexa] addDevice failed for '%s' — likely at "
@@ -267,18 +323,13 @@ class AlexaConnector {
             }
         }
 
-        bool updatedExisting = false;
         uint8_t deviceIndex = (uint8_t)(alexaIdx - 1);
-        for (auto& ref : registeredDeviceRefs) {
-            if (ref.uuid == device.uuid) {
-                ref.index = deviceIndex;
-                updatedExisting = true;
-                break;
-            }
+        RegisteredDeviceRef* ref = findOrCreateRefForUuid(device.uuid);
+        if (ref == nullptr) {
+            LOG_ERROR("[Alexa] UUID map full; cannot track device uuid=%s", device.uuid.c_str());
+            return;
         }
-        if (!updatedExisting) {
-            registeredDeviceRefs.push_back({device.uuid, deviceIndex});
-        }
+        ref->index = deviceIndex;
 
         LOG_INFO("[Alexa] Registered '%s' as Hue white lamp, slot=%u alexaSlot=%u uuid=%s",
                  alexaName.c_str(), (unsigned)alexaIdx, (unsigned)device.alexaSlot,
@@ -290,12 +341,7 @@ class AlexaConnector {
             LOG_DEBUG("[Alexa] Device %s unregistered (note: Espalexa keeps devices registered)",
                       device.name.c_str());
         }
-        for (size_t i = 0; i < registeredDeviceRefs.size(); i++) {
-            if (registeredDeviceRefs[i].uuid == device.uuid) {
-                registeredDeviceRefs.erase(registeredDeviceRefs.begin() + i);
-                break;
-            }
-        }
+        clearRefByUuid(device.uuid);
     }
 
     // Keep Alexa's internal per-device state in sync when commands originate elsewhere (e.g. MQTT).
@@ -303,14 +349,13 @@ class AlexaConnector {
         if (!wifiEnabled) {
             return;
         }
-        for (const auto& ref : registeredDeviceRefs) {
-            if (ref.uuid == uuid) {
-                EspalexaDevice* d = espalexa.getDevice(ref.index);
-                if (d != nullptr) {
-                    d->setState(state);
-                }
-                return;
-            }
+        RegisteredDeviceRef* ref = findRefByUuid(uuid);
+        if (ref == nullptr) {
+            return;
+        }
+        EspalexaDevice* d = espalexa.getDevice(ref->index);
+        if (d != nullptr) {
+            d->setState(state);
         }
     }
 

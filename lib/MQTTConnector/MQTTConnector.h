@@ -148,10 +148,15 @@ class MQTTConnector {
             return false;
         }
 
+        IPAddress ip = WiFi.localIP();
+        char ipStr[16];
+        snprintf(ipStr, sizeof(ipStr), "%u.%u.%u.%u", (unsigned)ip[0], (unsigned)ip[1],
+                 (unsigned)ip[2], (unsigned)ip[3]);
+
         JsonDocument doc;
         doc["firmware"] = FIRMWARE_VERSION;
         doc["ssid"] = WiFi.SSID();
-        doc["ip"] = WiFi.localIP().toString();
+        doc["ip"] = ipStr;
         doc["rssi"] = WiFi.RSSI();
         doc["uptime_s"] = millis() / 1000UL;
         doc["free_heap"] = ESP.getFreeHeap();
@@ -223,16 +228,16 @@ class MQTTConnector {
         return ok;
     }
 
-    bool publishState(const String& uuid, bool on) {
+    bool publishState(const char* uuid, bool on) {
         const char* payload = on ? "ON" : "OFF";
         char topic[kTopicBufSize];
-        stateTopicForUuid(uuid.c_str(), topic, sizeof(topic));
+        stateTopicForUuid(uuid, topic, sizeof(topic));
         return mqttClient.publish(topic, payload, true);
     }
 
-    bool publishDiscoveryRemove(const String& uuid) {
+    bool publishDiscoveryRemove(const char* uuid) {
         char topic[kTopicBufSize];
-        discoveryTopicForUuid(uuid.c_str(), topic, sizeof(topic));
+        discoveryTopicForUuid(uuid, topic, sizeof(topic));
         return mqttClient.publish(topic, "", true);
     }
 
@@ -251,10 +256,10 @@ class MQTTConnector {
         return ok;
     }
 
-    void applyCommandForDevice(const String& uuid, bool turnOn) {
+    void applyCommandForDevice(const char* uuid, bool turnOn) {
         auto device = deviceManager.getDeviceByUuid(uuid);
         if (!device) {
-            LOG_ERROR("[MQTT] Unknown device uuid %s", uuid.c_str());
+            LOG_ERROR("[MQTT] Unknown device uuid %s", uuid);
             return;
         }
 
@@ -266,10 +271,10 @@ class MQTTConnector {
 
         if (turnOn) {
             irManager.sendProtocol(device->onCommand);
-            LOG_INFO("[MQTT] ON device %s (%s)", uuid.c_str(), device->name.c_str());
+            LOG_INFO("[MQTT] ON device %s (%s)", uuid, device->name.c_str());
         } else {
             irManager.sendProtocol(device->offCommand);
-            LOG_INFO("[MQTT] OFF device %s (%s)", uuid.c_str(), device->name.c_str());
+            LOG_INFO("[MQTT] OFF device %s (%s)", uuid, device->name.c_str());
         }
 
         // Fallback publish if app-level callback is not configured.
@@ -334,9 +339,9 @@ class MQTTConnector {
         cmd[length] = '\0';
 
         if (strcmp(cmd, "ON") == 0) {
-            applyCommandForDevice(String(idBuf), true);
+            applyCommandForDevice(idBuf, true);
         } else if (strcmp(cmd, "OFF") == 0) {
-            applyCommandForDevice(String(idBuf), false);
+            applyCommandForDevice(idBuf, false);
         } else {
             LOG_WARN("[MQTT] Unknown payload for %s: %s", topic, cmd);
         }
@@ -356,7 +361,7 @@ class MQTTConnector {
             size_t republished = 0;
             deviceManager.forEachDevice([this, &republished](Device& d) {
                 if (publishDiscovery(d)) {
-                    publishState(d.uuid, false);
+                    publishState(d.uuid.c_str(), false);
                     republished++;
                 }
             });
@@ -399,7 +404,7 @@ class MQTTConnector {
           lastConnectState(MQTT_DISCONNECTED),
           lastReconnectAttempt(0),
           lastInfoPublishMs(0) {
-        mqttClient.setBufferSize(768);  // match publishDiscovery() buf cap
+        mqttClient.setBufferSize(640);  // reduced from 768 to lower persistent heap
         mqttClient.setKeepAlive(60);
     }
 
@@ -466,7 +471,7 @@ class MQTTConnector {
             return;
         }
         publishDiscovery(device);
-        publishState(device.uuid, false);
+        publishState(device.uuid.c_str(), false);
     }
 
     void unregisterDevice(const Device& device) {
@@ -481,7 +486,7 @@ class MQTTConnector {
                      device.name.c_str(), mqttClient.state());
             return;
         }
-        publishDiscoveryRemove(device.uuid);
+        publishDiscoveryRemove(device.uuid.c_str());
     }
 
     void update() {
@@ -515,7 +520,7 @@ class MQTTConnector {
         if (!enabled || !mqttClient.connected()) {
             return false;
         }
-        return publishState(uuid, on);
+        return publishState(uuid.c_str(), on);
     }
     int getLastConnectState() { return lastConnectState; }
     bool hasError() {
