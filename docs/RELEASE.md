@@ -142,8 +142,8 @@ manifest (and the binary URL already works). It can never see
 
 ## After running
 
-Devices check the manifest 30 s after boot and then every 6 hours, so a
-release rolls out within 6 hours organically. To trigger an immediate
+Devices check the manifest 30 s after boot and then every 1 hour, so a
+release rolls out within an hour organically. To trigger an immediate
 pickup, publish an empty MQTT message to the device's OTA topic:
 
 ```bash

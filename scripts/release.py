@@ -442,7 +442,7 @@ def main() -> None:
     if args.dry_run:
         print("Dry run complete. Re-run without --dry-run to actually release.")
     else:
-        print(f"Done. Devices will pick up v{version} on their next 6h poll.")
+        print(f"Done. Devices will pick up v{version} on their next 1h poll.")
         print(f"For an immediate push, publish an empty MQTT message to:")
         print(f"  ir_hub/<mac>/ota/check")
 

@@ -1,6 +1,6 @@
 # Remote OTA via GitHub Releases
 
-The device polls a JSON manifest in this repo every 6 hours (and once shortly
+The device polls a JSON manifest in this repo every 1 hour (and once shortly
 after boot). When the manifest version is newer than what the device is
 running, it downloads `firmware_<variant>_v<version>.bin` via jsDelivr
 (serving the file from this repo's `binaries/` folder) and self-flashes.
@@ -124,7 +124,7 @@ Use `scripts/release.py` — it does all of the below in one command. See
 6. **Commit and push** `platformio.ini`, `binaries/`, and `ota/manifest.json`
    to `main`. The device will pick it up on its next poll.
 
-7. **(Optional) Trigger an immediate update** instead of waiting 6 hours.
+7. **(Optional) Trigger an immediate update** instead of waiting up to an hour.
    If the device has MQTT configured, publish an empty message to its OTA
    topic:
 
@@ -146,7 +146,7 @@ On boot:
    restart on success. Failures get logged and shown briefly, then the
    device keeps running the old firmware.
 
-On the loop, every 6 hours: same as steps 3-4 above.
+On the loop, every 1 hour: same as steps 3-4 above.
 
 Whenever a manifest fetch fails or the update aborts mid-stream, the existing
 `BootGuard` + `LittleFS` recovery handles the worst case. If the new firmware
