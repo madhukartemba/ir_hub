@@ -139,6 +139,12 @@ void showReadyScreen(bool wifiConnected) {
     ledRing.finishTransition();
     display.update();
     delay(500);
+
+    if (wifiManager.isConnected()) {
+        ledRing.wave(COLOR_HOME_SCREEN_WIFI_CONNECTED);
+    } else {
+        ledRing.wave(COLOR_HOME_SCREEN_WIFI_DISCONNECTED);
+    }
 }
 
 void configureRouter() {
