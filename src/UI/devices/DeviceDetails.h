@@ -18,7 +18,6 @@ class DeviceDetails : public Screen {
         LOG_DEBUG("[DeviceDetails] onEnter for device %s", device.uuid.c_str());
         ledRing.breathe(COLOR_SUCCESS_DARK);
 
-        // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("[DeviceDetails] onButtonClick");
             if (currentPage == 0) {
@@ -63,7 +62,6 @@ class DeviceDetails : public Screen {
             }
         });
 
-        // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[DeviceDetails] onButtonLongPress");
             // Exit from anywhere
@@ -92,7 +90,6 @@ class DeviceDetails : public Screen {
         display.setTextSize(1);
         display.printCentered("Device Details", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show device information
@@ -152,7 +149,6 @@ class DeviceDetails : public Screen {
         display.setTextSize(1);
         display.printCentered("ON Command", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Always show description items in scrollable list
@@ -175,7 +171,6 @@ class DeviceDetails : public Screen {
         display.setTextSize(1);
         display.printCentered("OFF Command", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Always show description items in scrollable list

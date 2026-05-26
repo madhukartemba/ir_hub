@@ -37,7 +37,6 @@ class AddDevice : public Screen {
 
         button.setClickCallback([this]() {
             LOG_DEBUG("[AddDevice] onButtonClick");
-            // Click behavior can be customized based on current state
             switch (currentState) {
                 case State::READY_TO_RECORD_FIRST:
                     startRecordingFirst();
@@ -47,18 +46,15 @@ class AddDevice : public Screen {
                     break;
                 case State::SUCCESS:
                 case State::ERROR:
-                    // Go back to main menu
                     router.pop();
                     break;
                 default:
-                    // Other states might not respond to click
                     break;
             }
         });
 
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[AddDevice] onButtonLongPress");
-            // Long press = back. Don't go through ERROR or we'd flash a
             // misleading "Unknown protocol" screen on an abort.
             if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
                 LOG_DEBUG("[AddDevice] Cancelling recording via long press");
@@ -69,7 +65,6 @@ class AddDevice : public Screen {
     }
 
     void onUpdate() override {
-        // Check for recording timeout
         if ((currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) &&
             (millis() - recordingStartTime) > RECORDING_TIMEOUT) {
             LOG_DEBUG("[AddDevice] Recording timeout reached");
@@ -84,10 +79,8 @@ class AddDevice : public Screen {
             speaker.errorBeep();
         }
 
-        // Drain the IR buffer every loop, but ignore the result while the
-        // touch button is held — EMI from the press otherwise decodes as a
-        // fake UNKNOWN pulse and trips a false error during long-press abort.
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
+            // ignore IR while button held — EMI can fake UNKNOWN during long-press abort
             if (irManager.decode() && !button.isPressed()) {
                 LOG_DEBUG("[AddDevice] IR code received during recording");
                 if (currentState == State::RECORDING_FIRST) {
@@ -129,39 +122,31 @@ class AddDevice : public Screen {
 
     void onExit() override {
         LOG_DEBUG("[AddDevice] onExit");
-        // Clean up any recording resources if needed
         if (currentState == State::RECORDING_FIRST || currentState == State::RECORDING_SECOND) {
             irManager.stopCapture();
         }
-        // Free the ~2 KB IRrecv timing buffer; it's only needed while learning.
         irManager.releaseReceiver();
     }
 
    private:
-    // LED Ring Methods for different states
     void setLedRingRecording() {
-        // Solid blue color during recording
         ledRing.solid(COLOR_INFO_ROYAL);
         ledRing.finishTransition();
     }
 
     void setLedRingSuccess() {
-        // Green pulse for success
         ledRing.rainbow();
     }
 
     void setLedRingError() {
-        // Red pulse for errors
         ledRing.breathe(COLOR_ERROR);
     }
 
     void setLedRingFirstCodeSuccess() {
-        // Green pulse for first code success
         ledRing.breathe(COLOR_SUCCESS);
     }
 
     void setLedRingSecondCodeSuccess() {
-        // Green pulse with more pulses for second code success
         ledRing.breathe(COLOR_SUCCESS);
     }
 
@@ -207,7 +192,6 @@ class AddDevice : public Screen {
             setLedRingSecondCodeSuccess();
             secondCode = irManager.getLastCode();
 
-            // Compare the two codes
             if (firstCode.isValid() && secondCode.isValid()) {
                 currentState = State::COMPARING;
 
@@ -257,41 +241,30 @@ class AddDevice : public Screen {
     }
 
     void drawReadyToRecordFirst() {
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Add Device", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Show status
         display.setTextSize(1);
         display.printCentered("Click to begin", 53);
 
-        // LED-style indicators with power symbols
-        // Power ON indicator (active - filled circle)
         display.fillCircle(32, 32, 6);  // Active indicator
         display.print("ON", 24, 42);
 
-        // Power OFF indicator (inactive - outline circle)
         display.drawCircle(96, 32, 6);  // Inactive indicator (empty)
         display.print("OFF", 88, 42);
     }
 
     void drawRecordingFirst() {
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Add Device", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Show status
         display.setTextSize(1);
         display.printCentered("RECORDING ON...", 12);
 
-        // LED-style indicators with recording animation
-        // Power ON indicator with pulsing animation
         unsigned long pulse = (millis() / 300) % 2;
         if (pulse) {
             // Pulsing filled circle with larger radius
@@ -302,7 +275,6 @@ class AddDevice : public Screen {
         }
         display.print("ON", 24, 42);
 
-        // Power OFF indicator (inactive - outline circle)
         display.drawCircle(96, 32, 6);
         display.print("OFF", 88, 42);
 
@@ -314,55 +286,41 @@ class AddDevice : public Screen {
     }
 
     void drawReadyToRecordSecond() {
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Add Device", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Show status
         display.setTextSize(1);
         display.printCentered("Click to begin", 53);
 
-        // LED-style indicators
-        // Power ON indicator (completed - filled circle with checkmark)
         display.fillCircle(32, 32, 6);
-        // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
         display.print("ON", 24, 42);
 
-        // Power OFF indicator (active - filled circle, ready to record)
         display.fillCircle(96, 32, 6);
         display.print("OFF", 88, 42);
     }
 
     void drawRecordingSecond() {
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Add Device", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Show status
         display.setTextSize(1);
         display.printCentered("RECORDING OFF...", 12);
 
-        // LED-style indicators
-        // Power ON indicator (completed - filled circle with checkmark)
         display.fillCircle(32, 32, 6);
-        // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
         display.print("ON", 24, 42);
 
-        // Power OFF indicator with pulsing animation
         unsigned long pulse = (millis() / 300) % 2;
         if (pulse) {
             // Pulsing filled circle with larger radius
@@ -381,30 +339,22 @@ class AddDevice : public Screen {
     }
 
     void drawComparing() {
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Add Device", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
-        // Show status
         display.setTextSize(1);
         display.printCentered("COMPARING...", 16);
 
-        // LED-style indicators - both completed
-        // Power ON indicator (completed - filled circle with checkmark)
         display.fillCircle(32, 32, 6);
-        // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
         display.drawLine(29, 33, 31, 35);
         display.drawLine(31, 35, 35, 31);
         display.setTextColor(1);  // Reset to white
         display.print("ON", 24, 42);
 
-        // Power OFF indicator (completed - filled circle with checkmark)
         display.fillCircle(96, 32, 6);
-        // Checkmark overlay
         display.setTextColor(0);  // Black for visibility on filled circle
         display.drawLine(93, 33, 95, 35);
         display.drawLine(95, 35, 99, 31);
@@ -416,11 +366,9 @@ class AddDevice : public Screen {
     }
 
     void drawSuccess() {
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Add Device", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
         // Better centered content layout
@@ -457,11 +405,9 @@ class AddDevice : public Screen {
     }
 
     void drawError() {
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Add Device", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 10, display.getWidth(), 10);
 
         display.setTextSize(1);

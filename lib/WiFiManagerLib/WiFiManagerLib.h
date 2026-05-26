@@ -36,9 +36,6 @@ class WiFiManagerLib {
     bool setupFlowFinished = false;
     bool hasSavedCredentials = false;
     char setupApName_[33]{};
-    /// `ir-hub-<last6mac>`. Cached so WiFi.hostname() (pre-connect) and the
-    /// ArduinoOTA hostname (post-connect) stay in sync without re-formatting
-    /// the MAC each time.
     char stableHostname_[24]{};
     bool isOtaSetup = false;
     uint32_t otaColor = 0x0000FF;
@@ -49,27 +46,19 @@ class WiFiManagerLib {
     static constexpr int kMqttPortMax = 6;
     static constexpr int kMqttFieldMax = 64;
 
-    // WiFiManager keeps pointers to these for the lifetime of `wifiManager`; they must not be
-    // stack locals in setupWiFiManager/begin.
-    char mqttHostBuf_[kMqttHostMax]{};
+    char mqttHostBuf_[kMqttHostMax]{};  // must outlive wifiManager (not stack locals)
     char mqttPortBuf_[kMqttPortMax]{};
     char mqttUserBuf_[kMqttFieldMax]{};
     char mqttPassBuf_[kMqttFieldMax]{};
-    /// Page-wide CSS + intro card at the top of the captive portal form.
     WiFiManagerParameter portalHeader_;
-    /// Visual section divider that introduces the MQTT block.
     WiFiManagerParameter mqttSectionHeader_;
     WiFiManagerParameter mqttHostParam_;
     WiFiManagerParameter mqttPortParam_;
     WiFiManagerParameter mqttUserParam_;
     WiFiManagerParameter mqttPassParam_;
-    /// Custom HTML only (no id): toggles visibility of the `mqtt_pass` input.
     WiFiManagerParameter mqttPassToggle_;
-    /// Final hint paragraph below the MQTT block.
     WiFiManagerParameter mqttFooterHint_;
 
-    /// Populate `stableHostname_` from the STA MAC. Idempotent and cheap;
-    /// safe to call multiple times. Returns a pointer to the cached buffer.
     const char* computeStableHostname() {
         if (stableHostname_[0] != '\0') {
             return stableHostname_;
@@ -82,30 +71,22 @@ class WiFiManagerLib {
         return stableHostname_;
     }
 
-    /// Pin the radio so it never enters MODEM_SLEEP. Most consumer APs do not
-    /// buffer multicast for sleeping clients — DTIM-window drops are a major
-    /// source of "Alexa sometimes can't discover my device" reports. Safe to
-    /// call repeatedly; the SDK just overwrites the current sleep mode.
     void pinRadioAwakeForMulticast() {
         WiFi.setSleepMode(WIFI_NONE_SLEEP);
     }
 
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
-        // Configure timeout (in seconds)
         wifiManager.setConfigPortalTimeout(apTimeout);
         wifiManager.setConnectTimeout(connectTimeout);
 
-        // Disable OTA update options and other advanced features
         wifiManager.setBreakAfterConfig(true);    // Exit after configuration
         wifiManager.setRemoveDuplicateAPs(true);  // Remove duplicate APs
         wifiManager.setMinimumSignalQuality(30);  // Minimum signal quality
         wifiManager.setConfigPortalBlocking(false);
 
-        // Customize the portal appearance
         wifiManager.setTitle("IR Hub Wi-Fi Setup");
         wifiManager.setClass("invert");
 
-        // Set custom callbacks for better user experience
         wifiManager.setAPCallback([apName](WiFiManager* myWiFiManager) {
             (void)myWiFiManager;
             LOG_INFO("[WiFi] Config portal active (AP: %s)", apName);
@@ -131,7 +112,6 @@ class WiFiManagerLib {
             display.update();
         });
 
-        // Set custom menu items to hide OTA and other advanced options
         std::vector<const char*> menu = {"wifi", "info"};
         wifiManager.setMenu(menu);
 
@@ -152,7 +132,6 @@ class WiFiManagerLib {
           speaker(speaker),
           wifiConnected(false),
           portalHeader_(
-              // Page CSS + intro card. Kept compact to fit ESP8266 RAM.
               "<style>"
               "body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;}"
               ".irhub-card{background:#0f172a;color:#f1f5f9;border-radius:10px;"
@@ -212,26 +191,17 @@ class WiFiManagerLib {
                  (unsigned)mqttCredentialsPort());
         strncpy(mqttUserBuf_, mqttCredentialsUser(), sizeof(mqttUserBuf_) - 1);
         strncpy(mqttPassBuf_, mqttCredentialsPass(), sizeof(mqttPassBuf_) - 1);
-        // Second arg is max field length (HTML maxlength), not strlen — using strlen would
-        // shrink the input to the current value length (e.g. ~6 chars).
-        mqttHostParam_.setValue(mqttHostBuf_, kMqttHostMax - 1);
+        mqttHostParam_.setValue(mqttHostBuf_, kMqttHostMax - 1);  // arg is maxlength, not strlen
         mqttPortParam_.setValue(mqttPortBuf_, kMqttPortMax - 1);
         mqttUserParam_.setValue(mqttUserBuf_, kMqttFieldMax - 1);
         mqttPassParam_.setValue(mqttPassBuf_, kMqttFieldMax - 1);
 
         setupWiFiManager(apName, apTimeout, connectTimeout);
 
-        // Set the STA hostname BEFORE WiFi.begin() so the DHCP DISCOVER
-        // includes Option 12. This makes the device show up as
-        // "ir-hub-XXXXXX" on the router's client list (which helps the user
-        // confirm the device joined) and gives Alexa/mDNS a stable name to
-        // bind to. autoConnect() below ultimately calls WiFi.begin(), so
-        // this must run first.
-        const char* hostname = computeStableHostname();
+        const char* hostname = computeStableHostname();  // before autoConnect()/WiFi.begin()
         WiFi.hostname(hostname);
         LOG_INFO("[WiFi] Hostname: %s", hostname);
 
-        // Check if WiFi credentials exist using WiFiManager
         hasSavedCredentials = wifiManager.getWiFiIsSaved();
 
         if (hasSavedCredentials) {
@@ -247,7 +217,6 @@ class WiFiManagerLib {
         LOG_INFO("[WiFi] Starting connection attempt...");
         LOG_DEBUG("[WiFi] Timeout set to %d seconds", connectTimeout);
 
-        // Try to connect to WiFi
         setupFlowFinished = false;
         setupState = SetupState::CONNECTING;
         wifiConnected = wifiManager.autoConnect(setupApName_);
@@ -356,7 +325,6 @@ class WiFiManagerLib {
         isOtaSetup = true;
         LOG_INFO("[OTA] Ready");
 
-        // Display OTA info
         display.clear();
         display.printCentered("IR Hub", 10);
         display.printCentered("IP: " + WiFi.localIP().toString(), 25);
@@ -368,10 +336,6 @@ class WiFiManagerLib {
     bool isConnected() const { return wifiConnected && WiFi.status() == WL_CONNECTED; }
     bool isOtaReady() const { return isOtaSetup; }
 
-    /// Re-pin the radio out of MODEM_SLEEP. Call this after every detected
-    /// reconnect; the ESP8266 SDK occasionally resets the sleep mode when
-    /// the STA transitions WL_DISCONNECTED -> WL_CONNECTED, which would
-    /// resume dropping multicast (SSDP/M-SEARCH) packets during DTIM idle.
     void reapplyNoSleep() { WiFi.setSleepMode(WIFI_NONE_SLEEP); }
 
     bool isSetupFlowFinished() const { return setupFlowFinished; }

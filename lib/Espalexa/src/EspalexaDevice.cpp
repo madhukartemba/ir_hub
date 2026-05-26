@@ -27,7 +27,7 @@ EspalexaDevice::EspalexaDevice(String deviceName, DeviceCallbackFunction gnCallb
   _deviceName = deviceName;
   _callbackDev = gnCallback;
   _type = t;
-  // IRHUB: removed upstream's silent `onoff -> dimmable` rewrite. The
+  // IRHUB: removed upstream's silent `onoff -> dimmable` rewrite
   // real bug was empty type/modelid strings for `onoff` in Espalexa.h;
   // those are populated with real Hue Smart Plug (LOM001) values now,
   // so `onoff` renders correctly as a plug card in the Alexa app.
@@ -266,12 +266,12 @@ void EspalexaDevice::setId(uint8_t id)
   _id = id;
 }
 
-// IRHUB: stable per-device Hue uniqueid — see header for rationale.
+// IRHUB: stable per-device Hue uniqueid — see header for rationale
 void EspalexaDevice::setStableId(uint16_t stableId) { _stableId = stableId; }
 uint16_t EspalexaDevice::getStableId() const        { return _stableId; }
 bool     EspalexaDevice::hasStableId() const        { return _stableId != 0xFFFF; }
 
-// IRHUB: per-device EUI-48 for Hue uniqueid prefix — see header for rationale.
+// IRHUB: per-device EUI-48 for Hue uniqueid prefix — see header for rationale
 void EspalexaDevice::setUniqueIdMac(const uint8_t mac[6])
 {
   if (mac == nullptr) { _hasUidMac = false; return; }

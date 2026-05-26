@@ -12,13 +12,9 @@ class Speaker {
    private:
     uint8_t pin;
     bool isInitialized;
-    // When true every tone-producing call is a no-op. Controlled at runtime
-    // by the user's "Sound" preference in Settings — persisted across reboots
-    // so the device stays silent until they change their mind.
     bool muted = false;
 
    public:
-    // Constructor
     Speaker(uint8_t speakerPin) : pin(speakerPin), isInitialized(false) {}
 
     Speaker() : pin(-1), isInitialized(false) {}
@@ -31,7 +27,6 @@ class Speaker {
         return begin(pin);
     }
 
-    // Initialize the speaker pin
     bool begin(uint8_t speakerPin) {
         pin = speakerPin;
         pinMode(pin, OUTPUT);
@@ -40,7 +35,6 @@ class Speaker {
         return true;
     }
 
-    // Runtime mute controls — gate every tone-producing method.
     void setMuted(bool m) {
         muted = m;
         if (muted) {

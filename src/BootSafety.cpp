@@ -9,9 +9,7 @@ namespace boot_safety {
 
 namespace {
 
-// RTC user memory survives soft restarts but not power loss.
-// Must NOT be packed: rtcUserMemoryRead/Write needs 4-byte alignment.
-struct BootGuard {
+struct BootGuard {  // RTC-backed; must be uint32-aligned (not packed)
     uint32_t magic;
     uint16_t failures;
     uint16_t reserved;
@@ -74,7 +72,6 @@ void setSpeakerReady(bool ready) {
     LOG_ERROR("[CRITICAL] %s%s%s", line1 ? line1 : "(unknown)", line2 ? " — " : "",
               line2 ? line2 : "");
 
-    // setup() bumped this counter on entry; we never decremented because we're failing here.
     uint16_t failures = bootGuardReadFailures();
     bool persistent = failures >= kBootGuardSoftLimit;
 

@@ -3,6 +3,7 @@
 #include "../../preferences.h"
 #include "../../utils/MenuUtils.h"
 #include "ClearDataConfirmation.h"
+#include "DisableAlexaConfirmation.h"
 #include "FactoryResetConfirmation.h"
 #include "ResetWiFiConfirmation.h"
 #include "SystemInfoScreen.h"
@@ -11,10 +12,9 @@
 
 class Settings : public Screen {
    private:
-    // One row per concrete menu action. HAPTICS row only shown when DRV2605
-    // is present; CHECK_UPDATE only when OTA_MANIFEST_URL is configured.
     enum class Action {
         SOUND,
+        ALEXA,
         HAPTICS,
         FIRMWARE_INFO,
         LAST_CHECK_INFO,
@@ -49,9 +49,7 @@ class Settings : public Screen {
     void onEnter() override {
         LOG_DEBUG("[Settings] onEnter");
 
-        // Gate on `isPresent`, not `isReady`: the chip may be uncalibrated if
-        // the user had haptics muted at boot — we still need the toggle row.
-        hasHaptics = haptics.isPresent();
+        hasHaptics = haptics.isPresent();  // isPresent, not isReady (uncalibrated chip)
         hasOta = otaUpdater.isEnabled();
         buildMenu();
         selectedIndex = 0;
@@ -98,13 +96,12 @@ class Settings : public Screen {
     void buildMenu() {
         menuCount = 0;
 
-        // 1) Everyday toggles
         addRow(Action::SOUND);
+        addRow(Action::ALEXA);
         if (hasHaptics) {
             addRow(Action::HAPTICS);
         }
 
-        // 2) OTA actions + status
         if (hasOta) {
             addRow(Action::CHECK_UPDATE);
             addRow(Action::FIRMWARE_INFO);
@@ -114,7 +111,6 @@ class Settings : public Screen {
         addRow(Action::MQTT_STATUS_INFO);
         addRow(Action::INFO_SCREEN);
 
-        // 3) Device/system actions
         addRow(Action::RESTART);
         if (!userPrefsSkipWiFiSetup()) {
             addRow(Action::WIFI_WIPE);
@@ -122,7 +118,6 @@ class Settings : public Screen {
         addRow(Action::CLEAR_DATA);
         addRow(Action::FACTORY_RESET);
 
-        // 4) Navigation
         addRow(Action::BACK);
     }
 
@@ -135,7 +130,6 @@ class Settings : public Screen {
         menuCount++;
     }
 
-    // Re-resolve labels that change at runtime (the toggles).
     void refreshDynamicLabels() {
         if (hasOta) {
             refreshOtaInfoLabels();
@@ -186,6 +180,8 @@ class Settings : public Screen {
         switch (action) {
             case Action::SOUND:
                 return userPrefsSoundEnabled() ? "Sound: On" : "Sound: Off";
+            case Action::ALEXA:
+                return userPrefsAlexaEnabled() ? "Alexa: On" : "Alexa: Off";
             case Action::HAPTICS:
                 return userPrefsHapticsEnabled() ? "Haptics: On" : "Haptics: Off";
             case Action::FIRMWARE_INFO:
@@ -218,6 +214,9 @@ class Settings : public Screen {
         switch (action) {
             case Action::SOUND:
                 toggleSound();
+                break;
+            case Action::ALEXA:
+                toggleAlexa();
                 break;
             case Action::HAPTICS:
                 toggleHaptics();
@@ -299,6 +298,23 @@ class Settings : public Screen {
         }
 
         LOG_INFO("[Settings] Haptics %s", newState ? "ON" : "OFF");
+    }
+
+    void toggleAlexa() {
+        bool currentlyEnabled = userPrefsAlexaEnabled();
+        if (currentlyEnabled) {
+            // Disabling needs explicit confirmation.
+            router.push(new DisableAlexaConfirmation());
+            return;
+        }
+
+        userPrefsSetAlexaEnabled(true);
+        speaker.shortBeep();
+
+        if (wifiManager.isConnected()) {
+            alexaConnector.begin();
+        }
+        LOG_INFO("[Settings] Alexa ON");
     }
 
     void drawMenu() {

@@ -88,8 +88,6 @@ class IRManager {
         isCapturing = true;
     }
 
-    /// Free the IRrecv timing buffer. Call when leaving the device-learning
-    /// flow so the ~2 KB returns to the heap pool until the next learn.
     void releaseReceiver() {
         if (!irrecv) return;
         irrecv->disableIRIn();

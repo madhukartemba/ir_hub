@@ -22,10 +22,7 @@ class MQTTConnector {
     IRManager& irManager;
     WiFiClient wifiClient;
     PubSubClient mqttClient;
-    /// True when MQTT is permitted to run: Wi-Fi is up *and* a broker host
-    /// has been configured (either in secrets.h or via the captive portal).
     bool enabled;
-    /// Lowercase 12-char hex STA MAC — used in MQTT topics so multiple hubs do not collide.
     String hubMacHex;
     unsigned long lastReconnectAttempt;
     static constexpr unsigned long kReconnectIntervalMs = 5000;
@@ -50,14 +47,7 @@ class MQTTConnector {
         return String(buf);
     }
 
-    // Topic builders write into a caller-provided stack buffer to keep the
-    // MQTT hot-paths heap-free. Returns the number of bytes that *would*
-    // have been written (snprintf semantics); callers can ignore unless
-    // checking for truncation. Device topics key on the 24-char hex uuid
-    // — `kTopicBufSize` is sized to comfortably hold the longest:
-    //   "homeassistant/switch/ir_hub_<12mac>_device_<24uuid>/config"
-    //   = 22 + 7 + 12 + 8 + 24 + 7 + 1 = 81 bytes
-    static constexpr size_t kTopicBufSize = 96;
+    static constexpr size_t kTopicBufSize = 96;  // stack topic buffers (heap-free MQTT path)
 
     size_t discoveryTopicForUuid(const char* uuid, char* out, size_t outSize) const {
         return snprintf(out, outSize,
@@ -184,11 +174,7 @@ class MQTTConnector {
     }
 
     bool publishDiscovery(const Device& device) {
-        // Stack-build all topic / id strings the discovery JSON references.
-        // ArduinoJson v7 stores const char* by reference (no copy), so these
-        // buffers must outlive serializeJson — which they do, both live in
-        // this function's scope.
-        char cmdTopic[kTopicBufSize];
+        char cmdTopic[kTopicBufSize];  // ArduinoJson v7 holds const char* by reference
         char stTopic[kTopicBufSize];
         char uniqueId[56];   // "ir_hub_" + 12 mac hex + "_" + 32 uuid + null
         char identifier[24]; // "ir_hub_" + 12 mac hex + null
@@ -244,7 +230,6 @@ class MQTTConnector {
     }
 
     bool publishDiscoveryRemove(const String& uuid) {
-        // Empty retained payload removes MQTT discovery entities in Home Assistant
         char topic[kTopicBufSize];
         discoveryTopicForUuid(uuid.c_str(), topic, sizeof(topic));
         return mqttClient.publish(topic, "", true);
@@ -266,8 +251,6 @@ class MQTTConnector {
     }
 
     void applyCommandForDevice(const String& uuid, bool turnOn) {
-        // DeviceManager is uncached: this hits LittleFS + JSON parse (~5–15 ms).
-        // Acceptable on the MQTT command path.
         auto device = deviceManager.getDeviceByUuid(uuid);
         if (!device) {
             LOG_ERROR("[MQTT] Unknown device uuid %s", uuid.c_str());
@@ -290,8 +273,6 @@ class MQTTConnector {
     }
 
     void handleIncomingMessage(char* topic, byte* payload, unsigned int length) {
-        // Fast-path the (rare) OTA check command before parsing the device
-        // topic shape; topic strings are interned by PubSubClient on the stack.
         const size_t topicLen = strlen(topic);
         char otaTopic[kTopicBufSize];
         const size_t otaLen = otaCheckTopic(otaTopic, sizeof(otaTopic));
@@ -301,10 +282,6 @@ class MQTTConnector {
             return;
         }
 
-        // Topic shape is `ir_hub/<macHex>/device/<uuid>/set` where <uuid>
-        // is exactly 24 lowercase hex chars (DeviceManager::generateUuid).
-        // Pointer-arithmetic parser so an incoming MQTT message costs zero
-        // heap.
         const size_t macLen = hubMacHex.length();
         const size_t kPrefixFixed = sizeof("ir_hub/") - 1;        // 7
         const size_t kMid = sizeof("/device/") - 1;               // 8
@@ -362,9 +339,7 @@ class MQTTConnector {
     bool connectBroker() {
         char clientId[24];  // "ir_hub_" (7) + 12 mac hex + null = 20
         snprintf(clientId, sizeof(clientId), "ir_hub_%s", hubMacHex.c_str());
-        // Pass nullptr for empty credentials so PubSubClient connects
-        // anonymously instead of sending empty username/password frames.
-        const char* user = mqttCredentialsUser();
+        const char* user = mqttCredentialsUser();  // nullptr creds => anonymous connect
         const char* pass = mqttCredentialsPass();
         const char* userArg = (user && *user) ? user : nullptr;
         const char* passArg = (pass && *pass) ? pass : nullptr;
@@ -415,15 +390,7 @@ class MQTTConnector {
           enabled(false),
           lastReconnectAttempt(0),
           lastInfoPublishMs(0) {
-        // 768 B holds our worst-case discovery packet (~470 B JSON +
-        // ~60 B topic + headers) with comfortable margin. Saves 256 B of
-        // permanent heap vs the previous 1024 B. Keep in sync with the
-        // 768 B `buf` cap inside publishDiscovery().
-        mqttClient.setBufferSize(768);
-        // Default 15 s keepalive ⇒ PINGREQ/PINGRESP every 15 s, ~5760 round
-        // trips/day. Each one churns the heap a little. 60 s is well within
-        // HA's default `birth/will` timeout window and reduces background
-        // MQTT traffic and fragmentation drift ~4×.
+        mqttClient.setBufferSize(768);  // match publishDiscovery() buf cap
         mqttClient.setKeepAlive(60);
     }
 
@@ -467,8 +434,6 @@ class MQTTConnector {
                  mqttCredentialsHost(), (unsigned)mqttCredentialsPort(),
                  hubMacHex.c_str());
 
-        // Add/remove callbacks are set in main.cpp so Alexa and MQTT both receive updates.
-
         if (connectBroker()) {
             LOG_INFO("[MQTT] Home Assistant MQTT enabled");
         } else {
@@ -478,20 +443,12 @@ class MQTTConnector {
 
     void registerDevice(const Device& device) {
         if (!enabled) {
-            // No broker configured / Wi-Fi was down at boot. The device
-            // sits in DeviceManager and will be republished by
-            // connectBroker() the next time MQTT comes up (it iterates
-            // every stored device on every successful connect).
             LOG_WARN("[MQTT] registerDevice('%s') skipped: MQTT disabled "
                      "(will republish on next broker connect)",
                      device.name.c_str());
             return;
         }
         if (!mqttClient.connected()) {
-            // Same self-heal path as above — `connectBroker` re-publishes
-            // all stored devices on every successful (re)connect, so an
-            // add during an outage is not lost. Surface so the user knows
-            // why HA didn't see it immediately.
             LOG_WARN("[MQTT] registerDevice('%s') skipped: broker not "
                      "connected (state=%d) — will republish on reconnect",
                      device.name.c_str(), mqttClient.state());
@@ -532,9 +489,6 @@ class MQTTConnector {
         }
     }
 
-    /// Disconnect from the broker and stop attempting reconnects. Use this
-    /// before destructive operations like `LittleFS.format()` so we don't
-    /// keep retransmitting / publishing during the wipe.
     void shutdown() {
         if (mqttClient.connected()) {
             mqttClient.disconnect();

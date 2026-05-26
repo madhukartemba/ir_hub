@@ -10,25 +10,6 @@
 #include "Log.h"
 #include "PendingOta.h"
 
-/// Pull-based OTA: periodically fetches a JSON manifest, compares versions,
-/// and — when a newer build is published — stashes the URL in RTC RAM and
-/// reboots into the downloader-mode boot path defined in main.cpp.
-///
-/// We deliberately do NOT download in-process: even after MQTT teardown,
-/// Alexa + device cache + UI router leave only ~18 KB free, and BearSSL's
-/// transient handshake needs ~17 KB. Rebooting first frees the full ~32 KB,
-/// which is comfortably above the TLS budget. The user sees a brief
-/// "Installing v…" screen during the reboot.
-///
-/// Manifest schema (minimum):
-///   { "version": "1.0.1", "url": "https://.../firmware_v3.bin" }
-///
-/// Per-variant schema (preferred — one manifest serves all PCB revisions):
-///   {
-///     "variants": {
-///       "v3": { "version": "1.0.1", "url": "https://.../firmware_v3.bin" }
-///     }
-///   }
 class OtaUpdater {
    public:
     enum class CheckStatus : uint8_t {
@@ -65,7 +46,6 @@ class OtaUpdater {
                  manifestUrl_, currentVersion_, hwVariant_);
     }
 
-    /// Force a manifest check on the next update() tick.
     void checkNow() {
         if (!enabled_) {
             LOG_WARN("[OTA-HTTP] checkNow ignored — updater disabled");
@@ -78,8 +58,6 @@ class OtaUpdater {
         bootDelayUntil_ = 0;  // bypass the boot grace period for on-demand checks
     }
 
-    /// Called just before the device reboots into downloader mode, so the UI
-    /// can flash a "Restarting to install vX.Y.Z" message. Optional.
     void setOnUpdatePending(std::function<void(const char* version, const char* url)> cb) {
         onUpdatePending_ = cb;
     }
@@ -144,31 +122,11 @@ class OtaUpdater {
     }
 
    private:
-    // Wait a bit after boot before the first check so the device isn't
-    // simultaneously connecting to Wi-Fi, registering with HA, AND pulling TLS
-    // — the heap spike would risk a boot-time crash on flaky networks.
     static constexpr unsigned long kBootDelayMs = 30UL * 1000UL;
-    // Manifest fetch measured peak: ~11 KB transient (BearSSL session ~6 KB,
-    // TLS RX buf 1 KB, lwIP TCP buffers ~3 KB, JSON parse ~0.5 KB).
-    // Free-heap floor is the *total* available. Background checks stay
-    // conservative; manual (user-tapped) checks are slightly more permissive
-    // so Settings -> Check for Updates still works on busy devices.
     static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
     static constexpr uint32_t kMinHeapForManualManifest = 13 * 1024;
-    // BearSSL session state needs a single contiguous block (~6 KB). On a
-    // fragmented heap the total free can look fine while the largest block is
-    // too small — that's the failure mode that crashes mid-handshake. Gate on
-    // max_block to refuse the check cleanly before BearSSL OOMs.
-    static constexpr uint16_t kMinMaxBlockForManifest = 7 * 1024;
-    // Small TLS buffers only work when the server supports MFLN (RFC 6066).
-    // Cloudflare Pages does; raw.githubusercontent.com (Fastly) and jsDelivr do not.
-    // See docs/OTA_RELEASES.md for the recommended URL pattern.
-    //
-    // Empirically: Cloudflare Pages negotiates MFLN at 1024 but NOT at 512 —
-    // dropping the RX buffer to 512 makes BearSSL fail the handshake with
-    // BR_ERR_TOO_LARGE (SSL err 6) on the certificate-chain flight, since
-    // Cloudflare keeps sending standard-sized records. Stay at 1024.
-    static constexpr int kTlsRxBuffer = 1024;
+    static constexpr uint16_t kMinMaxBlockForManifest = 7 * 1024;  // BearSSL needs ~6 KB contiguous
+    static constexpr int kTlsRxBuffer = 1024;  // MFLN; 512 breaks Cloudflare cert chain
     static constexpr int kTlsTxBuffer = 512;
 
     const char* manifestUrl_ = "";
@@ -238,9 +196,6 @@ class OtaUpdater {
             return CheckStatus::CHECK_FAILED;
         }
 
-        // Stash the URL+size+md5 in RTC RAM and reboot into downloader mode.
-        // We don't download in-process because BearSSL needs more transient
-        // heap than we have once Alexa + device cache + UI are loaded.
         if (!pending_ota::arm(firmwareUrl.c_str(), newVersion.c_str(),
                               firmwareSize, firmwareMd5.c_str())) {
             LOG_ERROR("[OTA-HTTP] Failed to arm pending OTA (URL/version/md5 too long?)");
@@ -257,9 +212,6 @@ class OtaUpdater {
 
     bool fetchManifest(String& outUrl, String& outVersion,
                        uint32_t& outSize, String& outMd5) {
-        // Snapshot heap at each phase so we can see the real peak usage of a
-        // manifest fetch (TLS handshake is the spike; everything else fits in
-        // the steady-state buffers). Compare each line to the baseline above.
         uint32_t hStart = ESP.getFreeHeap();
         uint32_t hMin = hStart;
         auto sample = [&](const char* tag) {
@@ -296,9 +248,6 @@ class OtaUpdater {
             return false;
         }
 
-        // Stream-parse straight from the socket so we never materialise the
-        // full body as a String. Saves ~(body size) bytes of transient heap
-        // and one fragmentation event during the TLS-handshake spike.
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, http.getStream());
         sample("after json parse");
@@ -316,8 +265,6 @@ class OtaUpdater {
         const char* md5 = doc["md5"] | "";
         uint32_t size = doc["size"] | 0u;
 
-        // Per-variant entry takes precedence so a single manifest can target
-        // multiple PCB revisions with one bump.
         if (hwVariant_ && *hwVariant_) {
             JsonVariant v = doc["variants"][hwVariant_];
             if (!v.isNull()) {
@@ -349,8 +296,6 @@ class OtaUpdater {
         if (isHttps) {
             auto* secure = new (std::nothrow) WiFiClientSecure();
             if (!secure) return nullptr;
-            // Trust-on-first-use. Bytes are still encrypted in transit; for
-            // supply-chain protection sign the binary (see OTA_RELEASES.md).
             secure->setInsecure();
             secure->setBufferSizes(kTlsRxBuffer, kTlsTxBuffer);
             return std::unique_ptr<WiFiClient>(secure);
@@ -385,8 +330,6 @@ class OtaUpdater {
         LOG_WARN("[OTA-HTTP] %s returned %d%s", op, code, httpErr);
     }
 
-    /// Returns >0 if a is newer than b, 0 if equal, <0 if older.
-    /// Handles "1.10.0" > "1.2.0" correctly (integer-wise per segment).
     static int compareVersions(const char* a, const char* b) {
         if (!a) a = "";
         if (!b) b = "";

@@ -24,7 +24,6 @@ class DeviceActions : public Screen {
         LOG_DEBUG("[DeviceActions] onEnter for device %s", device.uuid.c_str());
         ledRing.breathe(COLOR_INFO_DARK);
 
-        // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("[DeviceActions] onButtonClick");
             // Navigate through actions
@@ -32,7 +31,6 @@ class DeviceActions : public Screen {
             selectedAction = static_cast<ActionType>(selectedIndex);
         });
 
-        // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[DeviceActions] onButtonLongPress");
             switch (selectedAction) {
@@ -70,7 +68,6 @@ class DeviceActions : public Screen {
         String title = "Device " + device.uuid.substring(0, 6);
         display.printCentered(title.c_str(), 0);
 
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Use the scrollable menu utility

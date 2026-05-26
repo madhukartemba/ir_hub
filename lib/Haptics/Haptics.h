@@ -105,7 +105,6 @@ class Haptics {
 
     bool isPresent() const { return present; }
 
-    /// Full init + auto-calibration (briefly drives the LRA).
     bool begin() {
         initialized = false;
         // Wire.begin() expected to have been called (e.g. by display).

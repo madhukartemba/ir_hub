@@ -9,14 +9,11 @@ class Router {
     std::stack<Screen*> screenStack;
     Screen* defaultScreen;
 
-    // Timeout functionality
-    unsigned long timeoutDuration;      // Timeout duration in milliseconds
-    unsigned long lastScreenEnterTime;  // When the current screen was entered
-    bool timeoutEnabled;                // Whether timeout is enabled
-    bool isDefaultScreen;               // Track if current screen is the default screen
-
-    // Activity monitoring callback
-    std::function<unsigned long()> activityCallback;  // Callback to get last activity time
+    unsigned long timeoutDuration;
+    unsigned long lastScreenEnterTime;
+    bool timeoutEnabled;
+    bool isDefaultScreen;
+    std::function<unsigned long()> activityCallback;
 
    public:
     Router()
@@ -38,13 +35,11 @@ class Router {
         LOG_INFO("[Router] Default screen set");
     }
 
-    // Activity monitoring setup
     void setActivityCallback(std::function<unsigned long()> callback) {
         activityCallback = callback;
         LOG_INFO("[Router] Activity callback set");
     }
 
-    // Timeout configuration methods
     void setTimeoutDuration(unsigned long duration) {
         timeoutDuration = duration;
         LOG_INFO("[Router] Timeout duration set to %lu ms", duration);
@@ -61,7 +56,6 @@ class Router {
 
     void resetTimeout() { lastScreenEnterTime = millis(); }
 
-    // Check for activity and reset timeout if needed
     void checkActivity() {
         if (activityCallback && timeoutEnabled && !isDefaultScreen) {
             unsigned long lastActivity = activityCallback();
@@ -85,7 +79,6 @@ class Router {
         screenStack.push(screen);
         LOG_INFO("[Router] Pushed new screen to stack");
 
-        // Update timeout tracking
         lastScreenEnterTime = millis();
         isDefaultScreen = (screen == defaultScreen);
 
@@ -108,8 +101,6 @@ class Router {
         int poppedCount = 0;
         int maxPops = count;
 
-        // Calculate how many screens we can actually pop
-        // We need to keep at least the default screen
         if (defaultScreen != nullptr) {
             int nonDefaultScreens = 0;
             std::stack<Screen*> tempStack = screenStack;
@@ -125,7 +116,6 @@ class Router {
             return;
         }
 
-        // Pop the calculated number of screens
         for (int i = 0; i < maxPops && !screenStack.empty(); i++) {
             Screen* top = screenStack.top();
             screenStack.pop();
@@ -142,10 +132,8 @@ class Router {
         if (!screenStack.empty()) {
             LOG_DEBUG("[Router] Screen stack not empty after pop");
             screenStack.top()->onEnter();
-            // Screen is now active again
         } else {
             LOG_INFO("[Router] Screen stack is now empty");
-            // Stack is empty, show default screen if available
             if (defaultScreen != nullptr) {
                 LOG_DEBUG("[Router] Setting default screen after stack became empty");
                 push(defaultScreen);
@@ -186,17 +174,13 @@ class Router {
 
     void update() {
         if (!screenStack.empty()) {
-            // Check for activity and reset timeout if needed
             checkActivity();
 
-            // Screens that intentionally pause navigation (e.g. onboarding/setup)
-            // should not be forced through timeout-to-default logic.
             if (screenStack.top()->isNavigationPaused()) {
                 screenStack.top()->onUpdate();
                 return;
             }
 
-            // Check for timeout
             if (timeoutEnabled && !isDefaultScreen && defaultScreen != nullptr) {
                 unsigned long currentTime = millis();
                 unsigned long timeSinceEnter = currentTime - lastScreenEnterTime;
@@ -215,7 +199,6 @@ class Router {
         }
     }
 
-    // Method to manually return to default screen
     void returnToDefaultScreen() {
         if (defaultScreen == nullptr) {
             LOG_WARN("[Router] No default screen available for timeout return");
@@ -229,11 +212,7 @@ class Router {
 
         LOG_INFO("[Router] Returning to default screen");
 
-        // Use clear() to remove all screens and push defaultScreen
         clear();
-
-        // After clear(), defaultScreen should be on top if it was set
-        // Reset timeout for default screen
         resetTimeout();
         isDefaultScreen = true;
     }

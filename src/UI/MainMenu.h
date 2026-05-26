@@ -31,7 +31,6 @@ class MainMenu : public Screen {
         currentState = menuStates[0];
         ledRing.breathe(COLOR_INFO_DARK);
 
-        // Change button behavior
         button.setClickCallback([this]() {
             // Switch to next state using mod operator.
             LOG_DEBUG("[MainMenu] onButtonClick");
@@ -39,7 +38,6 @@ class MainMenu : public Screen {
             currentState = menuStates[selectedIndex];
         });
 
-        // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[MainMenu] onButtonLongPress");
             if (currentState == State::DEVICES) {
@@ -75,7 +73,6 @@ class MainMenu : public Screen {
 
     void onExit() override {
         LOG_DEBUG("[MainMenu] onExit");
-        // Make sure display is turned on when exiting
         display.turnOn();
     }
 
@@ -85,7 +82,6 @@ class MainMenu : public Screen {
         display.setTextSize(1);
         display.printCentered("Main Menu", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Use the scrollable menu utility

@@ -9,12 +9,14 @@ static constexpr const char* kPrefsPath = "/prefs.json";
 static bool g_soundEnabled = true;
 static bool g_hapticsEnabled = true;
 static bool g_skipWiFiSetup = false;
+static bool g_alexaEnabled = true;
 
 static void writeBack() {
     JsonDocument doc;
     doc["sound"] = g_soundEnabled;
     doc["haptics"] = g_hapticsEnabled;
     doc["skip_wifi_setup"] = g_skipWiFiSetup;
+    doc["alexa_enabled"] = g_alexaEnabled;
 
     File f = LittleFS.open(kPrefsPath, "w");
     if (!f) {
@@ -31,6 +33,7 @@ void userPrefsLoad() {
     g_soundEnabled = true;  // defaults
     g_hapticsEnabled = true;
     g_skipWiFiSetup = false;
+    g_alexaEnabled = true;
 
     if (!LittleFS.exists(kPrefsPath)) {
         LOG_INFO("[Prefs] No %s yet — using defaults", kPrefsPath);
@@ -60,8 +63,11 @@ void userPrefsLoad() {
     if (!doc["skip_wifi_setup"].isNull()) {
         g_skipWiFiSetup = doc["skip_wifi_setup"].as<bool>();
     }
-    LOG_INFO("[Prefs] Loaded: sound=%s haptics=%s", g_soundEnabled ? "on" : "off",
-             g_hapticsEnabled ? "on" : "off");
+    if (!doc["alexa_enabled"].isNull()) {
+        g_alexaEnabled = doc["alexa_enabled"].as<bool>();
+    }
+    LOG_INFO("[Prefs] Loaded: sound=%s haptics=%s alexa=%s", g_soundEnabled ? "on" : "off",
+             g_hapticsEnabled ? "on" : "off", g_alexaEnabled ? "on" : "off");
 }
 
 bool userPrefsSoundEnabled() { return g_soundEnabled; }
@@ -95,4 +101,15 @@ void userPrefsSetSkipWiFiSetup(bool enabled) {
     g_skipWiFiSetup = enabled;
     writeBack();
     LOG_INFO("[Prefs] skip_wifi_setup=%s", g_skipWiFiSetup ? "on" : "off");
+}
+
+bool userPrefsAlexaEnabled() { return g_alexaEnabled; }
+
+void userPrefsSetAlexaEnabled(bool enabled) {
+    if (g_alexaEnabled == enabled) {
+        return;
+    }
+    g_alexaEnabled = enabled;
+    writeBack();
+    LOG_INFO("[Prefs] alexa_enabled=%s", g_alexaEnabled ? "on" : "off");
 }

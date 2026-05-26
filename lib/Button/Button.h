@@ -55,8 +55,6 @@ class Button {
     // Getter for last interaction time
     unsigned long getLastInteractionTime() const { return lastInteractionTime; }
 
-    /// True between physical press and release. Lets screens gate noise-
-    /// sensitive input (e.g. the IR receiver) during a button hold.
     bool isPressed() const { return buttonPressed; }
 
     void update() {

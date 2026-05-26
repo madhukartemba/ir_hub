@@ -2,16 +2,11 @@
 
 #include <Arduino.h>
 
-// Logging: stack-only formatting (no heap allocs) + compile-time level gate.
-// Override the level with -DMIN_LOG_LEVEL=LOG_LEVEL_DEBUG from build flags.
-
-// Set to 0 to disable all logs globally
+// Stack-only logging; gate with LOGGING_ENABLED and MIN_LOG_LEVEL.
 #ifndef LOGGING_ENABLED
 #  define LOGGING_ENABLED 1
 #endif
 
-// Log levels - set the minimum level to display
-// DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3
 #define LOG_LEVEL_DEBUG 0
 #define LOG_LEVEL_INFO  1
 #define LOG_LEVEL_WARN  2
@@ -25,8 +20,6 @@
 
 namespace ir_hub_log {
 
-// 192 byte stack buffer covers our longest lines (MQTT topics + state).
-// Over-long lines truncate rather than allocating.
 inline void emit(const char* level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 
 inline void emit(const char* level, const char* fmt, ...) {
@@ -71,7 +64,6 @@ inline void emit(const char* level, const char* fmt, ...) {
 #    define LOG_ERROR(...) ((void)0)
 #  endif
 
-// Legacy macros for backward compatibility
 #  define LOG(msg) LOG_INFO(msg)
 #  define LOGF(fmt, ...) LOG_INFO(fmt, ##__VA_ARGS__)
 #  define LOG_LINE() Serial.println(F("-------------"))

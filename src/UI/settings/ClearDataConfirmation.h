@@ -22,11 +22,9 @@ class ClearDataConfirmation : public Screen {
     void onUpdate() override {
         display.clear();
 
-        // Draw title
         display.setTextSize(1);
         display.printCentered("Erase Saved Data?", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Draw warning message

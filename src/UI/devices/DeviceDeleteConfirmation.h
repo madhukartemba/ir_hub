@@ -14,13 +14,11 @@ class DeviceDeleteConfirmation : public Screen {
         LOG_DEBUG("[DeviceDeleteConfirmation] onEnter for device %s", device.uuid.c_str());
         ledRing.breathe(COLOR_ERROR_DARK);
 
-        // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("[DeviceDeleteConfirmation] onButtonClick");
             confirmed = !confirmed;
         });
 
-        // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[DeviceDeleteConfirmation] onButtonLongPress");
             if (confirmed) {
@@ -60,7 +58,6 @@ class DeviceDeleteConfirmation : public Screen {
         display.setTextSize(1);
         display.printCentered("Delete Device?", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
         // Show device info — short uuid prefix keeps the line ≤16 chars wide.

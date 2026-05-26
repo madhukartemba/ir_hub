@@ -24,11 +24,8 @@ namespace app {
 
 namespace {
 
-// 1-hour gap between manifest checks for faster OTA pickup.
 constexpr unsigned long kOtaCheckIntervalMs = 1UL * 60UL * 60UL * 1000UL;
 
-// Heap supervisor: logs trend + proactively restarts before fragmentation
-// causes a mid-MQTT/OTA crash. ESP8266 has ~30 KB usable heap.
 constexpr unsigned long kHeapLogIntervalMs = 60UL * 1000UL;
 constexpr uint32_t kHeapFreePanicBytes = 4096;
 constexpr uint16_t kHeapBlockPanicBytes = 2048;
@@ -37,23 +34,11 @@ constexpr uint8_t kHeapFragPanicPct = 80;
 unsigned long lastHeapLog = 0;
 bool wasWifiConnected = false;
 
-// --- Wi-Fi outage recovery -------------------------------------------------
-//
-// Espalexa joins the SSDP multicast group inside Espalexa::begin() and never
-// re-joins. After a real Wi-Fi outage (the AP rebooted, DHCP renewed with a
-// different IP, mesh roaming hopped APs) the IGMP membership is gone and the
-// device becomes silently invisible to Alexa — Espalexa::loop() keeps polling
-// a socket that will never receive another M-SEARCH. The library does not
-// expose a teardown API, so the only durable fix is to restart the device
-// when we detect a meaningful outage. Sub-second blips are tolerated.
 constexpr unsigned long kWifiOutageRebootThresholdMs = 5UL * 1000UL;
 constexpr unsigned long kPostReconnectRebootDelayMs = 2UL * 1000UL;
 unsigned long wifiLostAtMs = 0;
 bool wifiRebootPending = false;
 unsigned long wifiRebootAtMs = 0;
-// Limit our patience for DHCP after the link comes up: if WiFi.localIP()
-// hasn't become non-zero within this window we just reboot — same recovery,
-// no need to try to differentiate "slow DHCP" from "stuck DHCP".
 constexpr unsigned long kPostLinkUpDhcpWaitMs = 10UL * 1000UL;
 unsigned long linkUpAtMs = 0;
 
@@ -71,8 +56,6 @@ void performWifiRecoveryReboot() {
     display.printCentered("re-link Alexa...", 50);
     display.update();
 
-    // Tidy up the network sockets we own so we don't ship half-baked UDP/TCP
-    // frames into the lwIP queues on the way out.
     alexaConnector.shutdown();
     mqttConnector.shutdown();
 
@@ -103,7 +86,6 @@ void superviseHeap() {
 }
 
 void configureRuntimeCallbacks() {
-    // Device add/remove: both Alexa and MQTT must stay in sync (single callback on DeviceManager)
     deviceManager.setOnDeviceAdded([](const Device& device) {
         LOG_DEBUG("[Hub] Device added: %s (uuid: %s)", device.name.c_str(), device.uuid.c_str());
         alexaConnector.registerDevice(device);
@@ -126,8 +108,6 @@ void configureRuntimeCallbacks() {
 
     otaUpdater.begin(OTA_MANIFEST_URL, FIRMWARE_VERSION, OTA_HW_VARIANT, kOtaCheckIntervalMs);
     otaUpdater.setOnUpdatePending([](const char* version, const char* /*url*/) {
-        // Flash a brief message before the reboot trampoline picks the OTA up
-        // in downloader mode. The actual download UI lives in runDownloaderMode().
         if (!display.isDisplayOn()) {
             display.turnOn();
         }
@@ -141,7 +121,6 @@ void configureRuntimeCallbacks() {
         display.printCentered("Restarting to", 42);
         display.printCentered("install...", 54);
         display.update();
-        // Best-effort tidy-up of network sockets before reboot.
         mqttConnector.shutdown();
     });
     mqttConnector.setOnOtaCheckCallback([]() { otaUpdater.checkNow(); });
@@ -168,7 +147,6 @@ void showReadyScreen(bool wifiConnected) {
 void configureRouter() {
     router.setTimeoutDuration(TIMEOUT_DURATION);
     router.enableTimeout(true);
-    // Set up activity callback to reset timeout on button interactions
     router.setActivityCallback([]() -> unsigned long { return button.getLastInteractionTime(); });
 }
 
@@ -177,11 +155,6 @@ void attachHomeAsDefaultScreen() { router.setDefaultScreen(new HomeScreen()); }
 }  // namespace
 
 void setup() {
-    // OTA downloader-mode trampoline: if the previous boot's normal-mode
-    // firmware armed a pending OTA, hand the entire heap to the TLS download
-    // by skipping all non-essential subsystem init. We clear the slot first so
-    // a crash during download falls back to normal boot on the next restart
-    // (preventing an OTA-induced boot loop).
     pending_ota::Slot pending{};
     bool hasPending = pending_ota::peek(pending);
     if (hasPending) {
@@ -191,13 +164,11 @@ void setup() {
 
     Serial.begin(115200);
 
-    // Bump boot-loop counter; cleared at end of setup() when system ready.
     uint16_t bootFailures = boot_safety::registerBootAttempt();
     if (bootFailures > 0) {
         LOG_WARN("[Boot] Recovering from previous failed boot (count=%u)", (unsigned)bootFailures);
     }
 
-    // Initialize display first so subsequent failures can be shown on-screen.
     bool displayReady = display.begin(OLED_SDA_PIN, OLED_SCL_PIN, DISPLAY_TYPE, DISPLAY_FLIPPED);
     boot_safety::setDisplayReady(displayReady);
     if (!displayReady) {
@@ -207,7 +178,6 @@ void setup() {
 
     display.clear();
     if (U8G2* raw = display.getDisplay()) {
-        // Startup splash: bold brand title + subtle author credit.
         raw->setFont(u8g2_font_helvB10_tr);
         const char* title = "IR Hub";
         int titleW = raw->getStrWidth(title);
@@ -218,14 +188,11 @@ void setup() {
         int creditW = raw->getStrWidth(credit);
         raw->drawStr((display.getWidth() - creditW) / 2, 60, credit);
     } else {
-        // Defensive fallback; should not happen after successful display.begin().
         display.printCentered("IR Hub", 20);
         display.printCentered("By Madhukar", 44);
     }
     display.update();
 
-    // Probe only; defer calibration until after we know the user's haptics
-    // preference (so a muted boot doesn't buzz the LRA).
     if (!haptics.probe()) {
         LOG_WARN("[Haptics] DRV2605 not found — tactile feedback disabled");
     }
@@ -285,7 +252,6 @@ void setup() {
         wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
         if (!wifiConnected) {
             router.push(new SetupOnboardingScreen());
-            // Set default after onboarding is on stack to avoid flashing HomeScreen first.
             attachHomeAsDefaultScreen();
         } else {
             attachHomeAsDefaultScreen();
@@ -293,7 +259,11 @@ void setup() {
         }
     }
 
-    alexaConnector.begin();
+    if (userPrefsAlexaEnabled()) {
+        alexaConnector.begin();
+    } else {
+        LOG_INFO("[Alexa] Disabled in settings; skipping startup");
+    }
     mqttConnector.begin();
 
     configureRuntimeCallbacks();
@@ -313,44 +283,32 @@ void setup() {
 }
 
 void loop() {
-    // ledRing is serviced multiple times to absorb the OLED transfer stall.
-    // NeoRing's internal 60 fps gate makes extra calls free.
     ledRing.update();
     wifiManager.update();
 
     bool wifiConnectedNow = wifiManager.isConnected();
     unsigned long nowMs = millis();
 
-    // --- Falling edge: link just went down ---------------------------------
     if (!wifiConnectedNow && wasWifiConnected) {
         wifiLostAtMs = nowMs;
         LOG_WARN("[WiFi] Link dropped");
     }
 
-    // --- Rising edge: link just came back --------------------------------
     if (wifiConnectedNow && !wasWifiConnected) {
         linkUpAtMs = nowMs;
         unsigned long outageMs = (wifiLostAtMs > 0) ? (nowMs - wifiLostAtMs) : 0;
         LOG_INFO("[WiFi] Link is up (outage=%lums)", outageMs);
 
-        // The SDK occasionally resets MODEM_SLEEP back to default across a
-        // reconnect, which would start dropping multicast again. Reapply.
         wifiManager.reapplyNoSleep();
 
         if (outageMs > kWifiOutageRebootThresholdMs && !wifiRebootPending) {
-            // Real outage — Espalexa's multicast subscription is almost
-            // certainly stale. Schedule a clean reboot in a moment so the
-            // user sees a status flash and pending IR/MQTT work can drain.
             wifiRebootPending = true;
             wifiRebootAtMs = nowMs + kPostReconnectRebootDelayMs;
         } else {
-            // Brief blip (sub-5s): the lwIP/IGMP state is usually intact, so
-            // we just refresh the lazy-started services that were skipped at
-            // boot because Wi-Fi wasn't up yet.
             if (!wifiManager.isOtaReady()) {
                 wifiManager.setupOTA(COLOR_INFO, COLOR_SUCCESS, COLOR_ERROR);
             }
-            if (!alexaConnector.isEnabled() &&
+            if (userPrefsAlexaEnabled() && !alexaConnector.isEnabled() &&
                 WiFi.localIP() != IPAddress(0, 0, 0, 0)) {
                 alexaConnector.begin();
             }
@@ -360,13 +318,8 @@ void loop() {
         }
     }
 
-    // --- Lazy Alexa start: link is up but begin() was deferred -----------
-    //
-    // If alexaConnector.begin() was called too early (DHCP hadn't issued an
-    // IP yet) it parked itself disabled. Retry once an IP appears. If DHCP
-    // never produces one within our patience window, just reboot — same
-    // outcome as the long-outage path.
-    if (wifiConnectedNow && !alexaConnector.isEnabled() && !wifiRebootPending) {
+    if (userPrefsAlexaEnabled() && wifiConnectedNow && !alexaConnector.isEnabled() &&
+        !wifiRebootPending) {
         if (WiFi.localIP() != IPAddress(0, 0, 0, 0)) {
             alexaConnector.begin();
         } else if (linkUpAtMs > 0 && (nowMs - linkUpAtMs) > kPostLinkUpDhcpWaitMs) {
@@ -379,10 +332,9 @@ void loop() {
 
     wasWifiConnected = wifiConnectedNow;
 
-    // --- Execute pending reboot ---------------------------------------
     if (wifiRebootPending && nowMs >= wifiRebootAtMs) {
         performWifiRecoveryReboot();
-        return;  // unreachable
+        return;
     }
 
     router.update();

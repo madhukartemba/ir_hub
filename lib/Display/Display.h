@@ -6,29 +6,23 @@
 #include <Wire.h>
 #include <memory>
 
-// Display configuration
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 
-// Display type enum
 enum DisplayType { SSD1306, SH1106 };
 
-// Text alignment constants
 enum TextAlign { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT };
 
 enum VerticalAlign { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM };
 
 class Display {
    public:
-    // Constructor
     Display()
         : textSize(1), textColor(1), displayFlipped(true), displayOn(false), displayType(SSD1306) {}
 
-    // Destructor
     ~Display() = default;
 
-    // Initialize the display
     bool begin(int sdaPin = -1, int sclPin = -1, DisplayType type = SSD1306, bool flipped = false) {
         displayType = type;
         displayFlipped = flipped;
@@ -36,30 +30,22 @@ class Display {
         if (sdaPin != -1 && sclPin != -1) {
             Wire.begin(sdaPin, sclPin);
         }
-        // 400 kHz "Fast Mode": rated max for both the SH1106 and DRV2605
-        // that share this bus. Default 100 kHz makes a full OLED frame
-        // take ~82 ms, which hitches every animation alongside it.
-        Wire.setClock(400000);
+        Wire.setClock(400000);  // 400 kHz — shared SH1106 + DRV2605 bus
 
-        // Create display object based on type
         if (displayType == SH1106) {
             display = std::make_unique<U8G2_SH1106_128X64_NONAME_F_HW_I2C>(U8G2_R0, U8X8_PIN_NONE);
         } else {
-            // Default to SSD1306
             display = std::make_unique<U8G2_SSD1306_128X64_NONAME_F_HW_I2C>(U8G2_R0, U8X8_PIN_NONE);
         }
 
-        // Initialize display
         if (!display->begin()) {
             return false;
         }
 
-        // Set default text properties - use a cleaner, modern Helvetica font
         display->setFont(u8g2_font_helvR08_tr);
         display->setFontDirection(0);
         display->setFontMode(1);  // Transparent mode
 
-        // Apply display rotation if flipped
         if (displayFlipped) {
             display->setDisplayRotation(U8G2_R2);
         }
@@ -70,7 +56,6 @@ class Display {
         return true;
     }
 
-    // Basic display control
     void clear() {
         if (display) {
             display->clearBuffer();
@@ -86,7 +71,6 @@ class Display {
         if (currentTime - lastUpdateTime < frameDelay) return;
         lastUpdateTime = currentTime;
 
-        // Skip the I²C transfer when the pixel buffer hasn't changed.
         uint32_t hash = computeBufferHash();
         if (needsFirstSend || hash != lastBufferHash) {
             display->sendBuffer();
@@ -95,10 +79,8 @@ class Display {
         }
     }
 
-    /// Force the next update() to push the buffer, e.g. after power save.
     void invalidate() { needsFirstSend = true; }
 
-    // Setter for FPS
     void setFPS(uint8_t targetFPS) {
         LOG_DEBUG("[Display] Setting display FPS to %d", targetFPS);
         if (targetFPS == 0) targetFPS = 1;  // Avoid division by zero
@@ -153,12 +135,10 @@ class Display {
         }
     }
 
-    // Text display methods
     void print(const String& text, int x = 0, int y = 0) { print(text.c_str(), x, y); }
     void print(const char* text, int x = 0, int y = 0) {
         if (display) {
-            // Adjust Y coordinate for U8g2 baseline difference
-            int adjustedY = y + getTextHeight() - 2;  // U8g2 baseline is at bottom, Adafruit at top
+            int adjustedY = y + getTextHeight() - 2;  // U8g2 baseline vs Adafruit top-origin
             display->setCursor(x, adjustedY);
             display->print(text);
         }
@@ -166,14 +146,12 @@ class Display {
     void println(const String& text, int x = 0, int y = 0) { println(text.c_str(), x, y); }
     void println(const char* text, int x = 0, int y = 0) {
         if (display) {
-            // Adjust Y coordinate for U8g2 baseline difference
-            int adjustedY = y + getTextHeight() - 2;  // U8g2 baseline is at bottom, Adafruit at top
+            int adjustedY = y + getTextHeight() - 2;  // U8g2 baseline vs Adafruit top-origin
             display->setCursor(x, adjustedY);
             display->print(text);
         }
     }
 
-    // Advanced text methods
     void printCentered(const String& text, int y = -1) { printCentered(text.c_str(), y); }
     void printCentered(const char* text, int y = -1) {
         if (!display) return;
@@ -185,7 +163,6 @@ class Display {
             y = (SCREEN_HEIGHT - getTextHeight()) / 2;
         }
 
-        // Adjust Y coordinate for U8g2 baseline difference
         int adjustedY = y + getTextHeight() - 2;
         display->setCursor(x, adjustedY);
         display->print(text);
@@ -197,7 +174,6 @@ class Display {
         if (!display) return;
 
         int textX = calculateTextX(String(text), align, x);
-        // Adjust Y coordinate for U8g2 baseline difference
         int adjustedY = y + getTextHeight() - 2;
         display->setCursor(textX, adjustedY);
         display->print(text);
@@ -215,7 +191,6 @@ class Display {
         printAligned(text, halign, y, x);
     }
 
-    // Text wrapping
     void printWrapped(const String& text, int x = 0, int y = 0, int maxWidth = SCREEN_WIDTH) {
         printWrapped(text.c_str(), x, y, maxWidth);
     }
@@ -231,7 +206,6 @@ class Display {
         wrapText(String(text), 0, y, SCREEN_WIDTH, ALIGN_CENTER);
     }
 
-    // Text box with border
     void printInBox(const String& text, int x, int y, int width, int height, bool border = true,
                     TextAlign align = ALIGN_CENTER) {
         printInBox(text.c_str(), x, y, width, height, border, align);
@@ -244,37 +218,31 @@ class Display {
             drawBorder(x, y, width, height);
         }
 
-        // Calculate text position within the box
-        int textX = x + 2;               // Padding from left edge
-        int textY = y + 2;               // Padding from top edge
-        int availableWidth = width - 4;  // Account for padding
+        int textX = x + 2;
+        int textY = y + 2;
+        int availableWidth = width - 4;
 
         if (align == ALIGN_CENTER) {
             int textWidth = getTextWidth(text);
             if (textWidth <= availableWidth) {
                 textX = x + (width - textWidth) / 2;
             } else {
-                // Text is too wide, use wrapping
                 wrapText(String(text), textX, textY, availableWidth, ALIGN_CENTER);
                 return;
             }
         } else if (align == ALIGN_RIGHT) {
             int textWidth = getTextWidth(text);
-            textX = x + width - textWidth - 2;  // Padding from right edge
+            textX = x + width - textWidth - 2;
         }
 
-        // Adjust Y coordinate for U8g2 baseline difference
         int adjustedTextY = textY + getTextHeight() - 2;
         display->setCursor(textX, adjustedTextY);
         display->print(text);
     }
 
-    // Text size and font
     void setTextSize(uint8_t size) {
         textSize = size;
         if (display) {
-            // U8g2 doesn't have a direct setTextSize method like Adafruit_GFX
-            // Use modern Helvetica fonts for different sizes
             switch (size) {
                 case 1:
                     display->setFont(u8g2_font_helvR08_tr);  // Small
@@ -293,14 +261,12 @@ class Display {
     }
     void setTextColor(uint16_t color) {
         textColor = color;
-        // U8g2 doesn't have setTextColor, it uses the current drawing color
         if (display) {
             display->setDrawColor(color);
         }
     }
     uint8_t getTextSize() const { return textSize; }
 
-    // Text measurement
     int getTextWidth(const String& text) { return getTextWidth(text.c_str()); }
     int getTextWidth(const char* text) {
         if (!display) return 0;
@@ -319,11 +285,9 @@ class Display {
         return display->getMaxCharHeight();
     }
 
-    // Screen dimensions
     int getWidth() const { return SCREEN_WIDTH; }
     int getHeight() const { return SCREEN_HEIGHT; }
 
-    // Drawing methods
     void drawPixel(int x, int y, uint16_t color = 1) {
         if (display) {
             display->setDrawColor(color);
@@ -365,7 +329,6 @@ class Display {
         }
     }
 
-    // Progress bar
     void drawProgressBar(int x, int y, int width, int height, int progress, int maxProgress = 100,
                          bool showText = true) {
         if (!display) return;
@@ -373,7 +336,6 @@ class Display {
         if (progress < 0) progress = 0;
         if (progress > maxProgress) progress = maxProgress;
 
-        // Match OTA progress style: framed container + inner fill.
         drawRect(x, y, width, height);
         int innerPad = (width >= 12 && height >= 8) ? 2 : 1;
         int innerW = width - (innerPad * 2);
@@ -388,7 +350,6 @@ class Display {
         if (showText) {
             String percentText = String((progress * 100) / maxProgress) + "%";
             int textY = y + height + 2;
-            // If there is no room below the bar, fall back to centered overlay.
             if (textY + getTextHeight() > SCREEN_HEIGHT) {
                 textY = y + (height - getTextHeight()) / 2;
             }
@@ -396,7 +357,6 @@ class Display {
         }
     }
 
-    // Menu helpers
     void drawMenuItem(const String& text, int index, int totalItems, bool selected = false,
                       int startY = 0) {
         drawMenuItem(text.c_str(), index, totalItems, selected, startY);
@@ -409,7 +369,6 @@ class Display {
         int y = startY + (index * itemHeight);
 
         if (selected) {
-            // Highlight the selected item
             fillRect(0, y, SCREEN_WIDTH, itemHeight, 1);
             setTextColor(0);  // Black text on white background
             print(text, 4, y + 2);
@@ -419,7 +378,6 @@ class Display {
         }
     }
 
-    // Get raw display object for advanced operations
     U8G2* getDisplay() { return display.get(); }
 
    private:
@@ -430,17 +388,14 @@ class Display {
     bool displayOn;
     DisplayType displayType;
 
-    // FPS limiting
     uint8_t fps = 10;              // Target FPS
     uint8_t defaultFPS = 10;       // Default FPS
     unsigned long lastUpdateTime;  // Last time display was updated
 
-    // Dirty-buffer skip state.
     uint32_t lastBufferHash = 0;
     bool needsFirstSend = true;
 
-    // FNV-1a 32-bit over the full frame buffer (~30 µs for 1024 bytes).
-    uint32_t computeBufferHash() const {
+    uint32_t computeBufferHash() const {  // FNV-1a dirty check
         if (!display) return 0;
         const uint8_t* buf = display->getBufferPtr();
         size_t size = static_cast<size_t>(display->getBufferTileWidth()) *
@@ -453,7 +408,6 @@ class Display {
         return h;
     }
 
-    // Helper methods
     void wrapText(const String& text, int x, int y, int maxWidth, TextAlign align = ALIGN_LEFT) {
         if (!display) return;
 
@@ -467,7 +421,6 @@ class Display {
             int lineWidth = 0;
             int i = 0;
 
-            // Build line word by word
             while (i < (int)remainingText.length()) {
                 char c = remainingText[i];
 
@@ -485,7 +438,6 @@ class Display {
                             ((int)line.length() > (int)word.length() ? getCharWidth() : 0) +
                             wordWidth;
                     } else {
-                        // Word doesn't fit, print current line and start new one
                         break;
                     }
 
@@ -501,20 +453,16 @@ class Display {
                 i++;
             }
 
-            // Print the line
             if ((int)line.length() > 0) {
                 int lineX = calculateTextX(line, align, x, maxWidth);
-                // Adjust Y coordinate for U8g2 baseline difference
                 int adjustedCurrentY = currentY + getTextHeight() - 2;
                 display->setCursor(lineX, adjustedCurrentY);
                 display->print(line);
                 currentY += lineHeight;
             }
 
-            // Remove processed text
             remainingText = remainingText.substring(i);
 
-            // Check if we've run out of vertical space
             if (currentY + lineHeight > SCREEN_HEIGHT) {
                 break;
             }

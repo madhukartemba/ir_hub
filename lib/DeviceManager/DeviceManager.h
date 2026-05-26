@@ -19,25 +19,7 @@ enum DeviceType {
 };
 
 struct Device {
-    /// 96-bit random primary key, rendered as 24 lowercase hex chars
-    /// ("uuid" in JSON). Generated once at creation and never reused or
-    /// mutated, so it's safe to use as the file name, MQTT topic segment,
-    /// and lookup key. Collision probability across realistic
-    /// deployments is ~10^-25 (3× os_random() + micros() + cycle-count).
-    ///
-    /// 96 bits (rather than full 128) keeps the on-disk file name under
-    /// LittleFS's 31-char per-segment cap on the arduino-esp8266 port
-    /// (`LFS_NAME_MAX = 32`, check is `strlen >= 32`, define isn't
-    /// `#ifndef`-gated so a build flag can't widen it without patching
-    /// the framework). 24 hex + `.json` = 29 chars, comfortably under.
     String uuid;
-    /// 1..255 — the 2-hex Hue `uniqueid` endpoint we ship to Alexa.
-    /// The Hue uniqueid format pins us to 8 bits here (Alexa was observed
-    /// rejecting 4-hex endpoints), so this is allocated as
-    /// "lowest unused slot on this hub" at creation time rather than
-    /// derived from the UUID (which would give birthday-bound collisions
-    /// at ~10 devices in 256 slots). Persisted alongside the rest of the
-    /// device so removing a device frees its slot for the next add.
     uint8_t alexaSlot;
     DeviceType type;
     String name;
@@ -46,22 +28,6 @@ struct Device {
     IRCode offCommand;
 };
 
-/// Stateless device store. Every lookup hits LittleFS — there is no in-RAM
-/// cache. This trades ~5–15 ms of disk + JSON-parse latency per lookup for
-/// keeping the steady-state heap free of duplicated Device data, which
-/// matters during the OTA manifest fetch (BearSSL needs a contiguous 6 KB
-/// session block on a tight ~16 KB free-heap budget).
-///
-/// Identity model (post-IdGen):
-/// - `uuid` is a 32-hex-char random primary key. File name is
-///   `/devices/<uuid>.json`. Used for UI lookups, MQTT topics, log lines.
-/// - `alexaSlot` is a per-hub 1..255 byte assigned at creation time as
-///   the lowest unused slot. It maps to the 2-hex Hue uniqueid endpoint
-///   shipped to Alexa.
-///
-/// Lookup APIs return `std::optional<Device>` by value. Callers that need
-/// to retain the Device must copy/move it; the returned object owns its
-/// own strings + state vector.
 class DeviceManager {
    public:
     using DeviceCallback = std::function<void(const Device&)>;
@@ -71,17 +37,6 @@ class DeviceManager {
     DeviceCallback onDeviceAdded;
     DeviceCallback onDeviceRemoved;
 
-    /// Generate a fresh 96-bit identifier as a 24-char lowercase hex
-    /// string. Sources three uint32_t from the ESP8266 hardware RNG
-    /// (`os_random()`, fed by WiFi RF noise) and XORs two of them with
-    /// `micros()` / cycle count so that even if the RNG isn't fully
-    /// primed at boot (pre-WiFi) we still get unpredictable bits from
-    /// the CPU's own timing. At 96 bits the birthday collision bound for
-    /// any realistic deployment is on the order of 10^-25, so we don't
-    /// bother with a disk-collision check.
-    ///
-    /// Width is 96 (not 128) so the on-disk file name stays under
-    /// LittleFS's 31-char per-segment cap — see Device::uuid for details.
     static String generateUuid() {
         uint32_t a = os_random() ^ (uint32_t)micros();
         uint32_t b = os_random();
@@ -91,24 +46,6 @@ class DeviceManager {
         return String(buf);
     }
 
-    /// Pick an alexaSlot in 1..255 derived from the new device's uuid,
-    /// with linear-probe collision resolution against every stored
-    /// device. O(N) directory scan + per-file parse, called only at
-    /// creation. Returns 0 if (cosmically unlikely) every slot is taken.
-    ///
-    /// Why derive from the uuid instead of "lowest unused starting at 1"?
-    /// Alexa's cloud caches Hue uniqueids for ~24-48h after a device is
-    /// removed from the Alexa app. If we always allocate slot=1 first
-    /// after a factory reset, the very first new device's uniqueid
-    /// (`<mac>-01`) collides with whatever previous device occupied
-    /// slot 1 — and Alexa renames the stale cached entity instead of
-    /// creating a fresh one ("no new devices found" + the old card
-    /// silently morphs into the new device's name). Seeding the slot
-    /// from the uuid's first byte randomises it over the full 1..255
-    /// space, making cache collisions with prior-incarnation devices
-    /// statistically improbable (~N/255 per add for N prior cached
-    /// entries). The slot is then persisted in the device JSON so it
-    /// stays stable for the device's lifetime.
     uint8_t allocateAlexaSlot(const String& uuid) {
         bool used[256] = {false};
         used[0] = true;  // reserve 0 — Espalexa's `+1` encoding makes it untouchable anyway
@@ -129,18 +66,12 @@ class DeviceManager {
             }
         }
 
-        // Seed the probe from the uuid's first byte. uuid is lowercase
-        // hex (24 chars) so the first 2 chars parse as a byte 0x00..0xFF.
-        // We OR with 1 to never start at 0 (which is reserved above).
         uint8_t seed = 1;
         if (uuid.length() >= 2) {
             char hex[3] = {uuid.charAt(0), uuid.charAt(1), '\0'};
             seed = (uint8_t)strtol(hex, nullptr, 16);
             if (seed == 0) seed = 1;
         }
-        // Linear probe with wrap-around. We walk every slot at most
-        // once; whichever free slot we hit first (starting from the
-        // uuid-derived seed) is the winner.
         for (int offset = 0; offset < 255; offset++) {
             uint8_t candidate = (uint8_t)(((int)seed - 1 + offset) % 255 + 1);
             if (!used[candidate]) return candidate;
@@ -148,9 +79,6 @@ class DeviceManager {
         return 0;
     }
 
-    /// Snapshot the live device count for friendly-name suffix generation
-    /// ("VOLTAS 1", "VOLTAS 2"). Counts JSON files without parsing them.
-    /// Number reuse after delete is fine — names are user-editable.
     size_t countExistingDevices() {
         size_t n = 0;
         Dir dir = LittleFS.openDir(storageDir);
@@ -191,7 +119,6 @@ class DeviceManager {
         return true;
     }
 
-    /// Returns the new device's UUID on success, empty String on failure.
     String addSingleCommandDevice(IRCode command) {
         if (!command.isValid()) {
             LOG_ERROR("[DeviceManager] Invalid command");
@@ -217,7 +144,6 @@ class DeviceManager {
         return device.uuid;
     }
 
-    /// Returns the new device's UUID on success, empty String on failure.
     String addDualCommandDevice(IRCode onCommand, IRCode offCommand) {
         if (!onCommand.isValid() || !offCommand.isValid()) {
             if (!onCommand.isValid()) {
@@ -252,10 +178,6 @@ class DeviceManager {
         return device.uuid;
     }
 
-    /// Persist a Device to LittleFS. Returns true on success. On failure
-    /// (filesystem full, name too long, write error) logs an error and
-    /// does NOT fire the onDeviceAdded callback — callers must propagate
-    /// the failure so the UI doesn't claim success on a phantom device.
     bool saveDevice(const Device& device) {
         String path = String(storageDir) + "/" + device.uuid + ".json";
         File file = LittleFS.open(path, "w");
@@ -302,9 +224,6 @@ class DeviceManager {
     }
 
     bool removeDevice(const Device& device) {
-        // Snapshot so the onDeviceRemoved callback still sees valid data
-        // even if `device` aliased a temporary that gets invalidated by
-        // LittleFS.remove (paranoia held over from the cached impl).
         Device snapshot = device;
 
         String filename = snapshot.uuid + ".json";
@@ -322,15 +241,10 @@ class DeviceManager {
         return success;
     }
 
-    /// Each call hits LittleFS — returns std::nullopt if the device doesn't
-    /// exist. The returned Device owns its own data; the caller may keep it
-    /// for as long as needed.
     std::optional<Device> getDeviceByUuid(const String& uuid) {
         return loadDeviceFromDisk(uuid);
     }
 
-    /// O(N) directory scan + per-file parse. Used only by the Alexa command
-    /// path, which is rare enough that the linear scan doesn't matter.
     std::optional<Device> getDeviceByName(const String& name) {
         Dir dir = LittleFS.openDir(storageDir);
         while (dir.next()) {
@@ -363,10 +277,6 @@ class DeviceManager {
         return devices;
     }
 
-    /// Iterate every device. The Device passed to `fn` is a freshly-loaded
-    /// stack-local — it goes out of scope once `fn` returns, so the callback
-    /// must not retain the reference. (All current call sites — MQTT
-    /// discovery + Alexa registration — only use it synchronously.)
     template <typename Fn>
     void forEachDevice(Fn fn) {
         Dir dir = LittleFS.openDir(storageDir);
@@ -381,8 +291,6 @@ class DeviceManager {
         }
     }
 
-    /// Number of stored devices. Counts JSON files without parsing them, so
-    /// this is cheap and safe to call from UI code.
     size_t deviceCount() {
         size_t count = 0;
         Dir dir = LittleFS.openDir(storageDir);
@@ -396,10 +304,6 @@ class DeviceManager {
     }
 
    private:
-    /// Stream-parses /devices/<uuid>.json. Returns std::nullopt on missing
-    /// file, malformed JSON, or schema mismatch (e.g. legacy
-    /// `<int>.json` files from before the UUID migration — those have no
-    /// `uuid` field and are intentionally orphaned).
     std::optional<Device> loadDeviceFromDisk(const String& uuid) {
         String filename = uuid + ".json";
         File file = LittleFS.open(String(storageDir) + "/" + filename, "r");
@@ -417,9 +321,7 @@ class DeviceManager {
             return std::nullopt;
         }
 
-        // Legacy `<int>.json` files have no "uuid" field. Skip with a loud
-        // log so the user knows their pre-UUID devices need re-adding.
-        const char* storedUuid = doc["uuid"] | (const char*)nullptr;
+        const char* storedUuid = doc["uuid"] | (const char*)nullptr;  // skip legacy <int>.json
         int storedSlot = doc["alexaSlot"] | 0;
         if (storedUuid == nullptr || storedSlot < 1 || storedSlot > 255) {
             LOG_WARN("[DeviceManager] Skipping legacy device file %s (no uuid/alexaSlot) — "

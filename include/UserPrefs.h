@@ -20,3 +20,8 @@ void userPrefsSetHapticsEnabled(bool enabled);
 /// Default: false.
 bool userPrefsSkipWiFiSetup();
 void userPrefsSetSkipWiFiSetup(bool enabled);
+
+/// Whether Alexa bridge emulation is enabled. Default: true.
+/// When false, no Alexa sockets are opened and no SSDP/HTTP Hue traffic is served.
+bool userPrefsAlexaEnabled();
+void userPrefsSetAlexaEnabled(bool enabled);

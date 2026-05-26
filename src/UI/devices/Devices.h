@@ -18,7 +18,6 @@ class Devices : public Screen {
 
         ledRing.breathe(COLOR_INFO_LIGHT);
 
-        // Change button behavior
         button.setClickCallback([this]() {
             LOG_DEBUG("[Devices] onButtonClick");
             // Navigate through devices and back option
@@ -26,7 +25,6 @@ class Devices : public Screen {
             selectedIndex = (selectedIndex + 1) % totalItems;
         });
 
-        // Change button long press behavior
         button.setLongPressCallback([this]() {
             LOG_DEBUG("[Devices] onButtonLongPress");
             if (selectedIndex < static_cast<int>(devices.size())) {
@@ -56,7 +54,6 @@ class Devices : public Screen {
         display.setTextSize(1);
         display.printCentered("Devices", 0);
 
-        // Draw horizontal line
         display.drawLine(0, 12, display.getWidth(), 12);
 
         if (devices.empty()) {

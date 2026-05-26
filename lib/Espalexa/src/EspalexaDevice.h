@@ -88,7 +88,7 @@ class EspalexaDevice {
     uint16_t getStableId() const;
     bool hasStableId() const;
 
-    // IRHUB: install the per-device EUI-48 for the Hue uniqueid prefix.
+    // IRHUB: install the per-device EUI-48 for the Hue uniqueid prefix
     // nullptr clears it (revert to bridge-MAC fallback).
     void setUniqueIdMac(const uint8_t mac[6]);
     bool hasUniqueIdMac() const;

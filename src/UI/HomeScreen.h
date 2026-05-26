@@ -12,10 +12,7 @@ class HomeScreen : public Screen {
    private:
     unsigned long lastActivityTime;
     const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
-    /// Re-send black while blanked: NeoRing only pushes pixels to the strip when the frame
-    /// changes; static black stops updating after the first frame, so flaky LEDs can stay lit.
-    /// Interval must exceed the library fade duration (~1s) so we do not queue many animations.
-    const unsigned long LED_BLANK_REFRESH_INTERVAL_MS = 600000;
+    const unsigned long LED_BLANK_REFRESH_INTERVAL_MS = 600000;  // re-blank NeoRing when pixels unchanged
     bool isBlanked = false;
     unsigned long lastLedBlankRefresh = 0;
     unsigned long animationTimer = 0;
@@ -32,12 +29,9 @@ class HomeScreen : public Screen {
 
         display.setFPS(1);
 
-        // Change button behavior
         button.setClickCallback([this]() {
-            // Reset activity timer
             lastActivityTime = millis();
 
-            // If screen is blanked, turn it back on
             if (isBlanked) {
                 display.turnOn();
                 ringColor();
@@ -47,15 +41,12 @@ class HomeScreen : public Screen {
             }
         });
 
-        // Change button long press behavior
         button.setLongPressCallback([this]() {
-            // Reset activity timer
             lastActivityTime = millis();
 
             // Long press could be used for system functions in the future
             LOG_DEBUG("[HomeScreen] onButtonLongPress");
 
-            // If screen is blanked, turn it back on
             if (isBlanked) {
                 display.turnOn();
                 ringColor();
@@ -64,14 +55,12 @@ class HomeScreen : public Screen {
                 return;
             }
 
-            // Navigate to main menu
             LOG_DEBUG("[HomeScreen] onButtonClick - navigating to MainMenu");
             router.push(new MainMenu());
         });
     }
 
     void onUpdate() override {
-        // Check for status screen blanking timeout
         if (!isBlanked && (millis() - lastActivityTime) > STATUS_BLANK_TIMEOUT) {
             isBlanked = true;
             display.turnOff();
@@ -81,7 +70,6 @@ class HomeScreen : public Screen {
             return;  // Don't update display when blanked
         }
 
-        // Don't update display when blanked; keep re-driving the strip with black for bad pixels
         if (isBlanked) {
             if (millis() - lastLedBlankRefresh >= LED_BLANK_REFRESH_INTERVAL_MS) {
                 lastLedBlankRefresh = millis();
@@ -95,7 +83,6 @@ class HomeScreen : public Screen {
             animationTimer = millis();
         }
 
-        // Update display
         display.clear();
         showBeautifulStatusScreen();
         display.update();
@@ -108,9 +95,7 @@ class HomeScreen : public Screen {
         if (isBlanked) {
             ledRing.blank();
         }
-        // Restore display FPS to default
         display.resetFPS();
-        // Make sure display is turned on when exiting
         display.turnOn();
     }
 
@@ -124,13 +109,10 @@ class HomeScreen : public Screen {
     }
 
     void showBeautifulStatusScreen() {
-        // Draw clean header with signal bar
         drawHeader();
 
-        // Draw centered IP address
         drawCenteredIP();
 
-        // Draw uptime at bottom
         drawUptime();
     }
 
@@ -152,7 +134,6 @@ class HomeScreen : public Screen {
             int signalStrength = map(rssi, -100, -30, 1, 5);  // Map RSSI to 1-5 bars
             signalStrength = constrain(signalStrength, 1, 5);
 
-            // Draw signal bars on the right
             for (int i = 0; i < signalStrength; i++) {
                 int barHeight = (i + 1) * 2;
                 int barWidth = 3;
@@ -162,7 +143,6 @@ class HomeScreen : public Screen {
             }
 
         } else {
-            // Draw disconnected state on the right
             display.setTextSize(1);
             display.setTextColor(1);
             display.print("X", 115, 4);
@@ -170,21 +150,17 @@ class HomeScreen : public Screen {
     }
 
     void drawCenteredIP() {
-        // Draw smaller folder-like card with IP information
         int cardWidth = 96;
         int cardHeight = 16;
         int cardX = (128 - cardWidth) / 2;  // Center the box horizontally
         int cardY = 30;                     // Moved down from 20 to 24
 
-        // Draw card outline
         display.drawRect(cardX, cardY, cardWidth, cardHeight);
 
-        // Draw modern folder tab with "IP" text inside
         int tabWidth = 28;
         int tabHeight = 10;
         display.fillRect(cardX + 2, cardY - tabHeight, tabWidth, tabHeight);
 
-        // Draw "IP" text in the tab
         display.setTextSize(1);
         display.setTextColor(0);  // Black text on filled tab
         display.print("IP", cardX + 10, cardY - tabHeight);
@@ -214,11 +190,9 @@ class HomeScreen : public Screen {
         int iconY = 58;  // Bottom area for icon
         int textY = 53;  // Bottom area for text baseline
 
-        // Draw clock icon
         display.drawCircle(startX + 4, iconY, 4);
         display.fillCircle(startX + 4, iconY, 1);
 
-        // Animate clock hands through all 4 positions
         switch (animationFrame) {
             case 0:  // 12 o'clock
                 display.drawLine(startX + 4, iconY, startX + 4, iconY - 4);

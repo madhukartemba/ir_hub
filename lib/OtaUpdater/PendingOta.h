@@ -4,14 +4,6 @@
 #include <stdint.h>
 #include <string.h>
 
-/// Tiny RTC-memory slot that survives a soft reboot. The normal-mode firmware
-/// writes a pending firmware URL + version here and then calls ESP.restart().
-/// On the next boot, setup() reads (and immediately clears) this slot and, if
-/// it's valid, enters a stripped-down "downloader mode" with ~32 KB free heap
-/// to do the TLS download — far above BearSSL's transient handshake budget.
-///
-/// The slot is checksum-protected so RTC-RAM noise after a brown-out can't
-/// trick the device into a fake OTA URL.
 namespace pending_ota {
 
 // Bump this when the Slot layout changes so old slots from a previous
@@ -43,8 +35,6 @@ inline uint32_t computeChecksum(const Slot& s) {
     return c;
 }
 
-/// Returns false if URL/version/md5 is too long, or if the write itself fails.
-/// `md5_hex` may be nullptr or empty to skip integrity verification.
 inline bool arm(const char* url, const char* version, uint32_t expected_size,
                 const char* md5_hex = nullptr) {
     if (!url || !version) return false;
@@ -65,7 +55,6 @@ inline bool arm(const char* url, const char* version, uint32_t expected_size,
                                   sizeof(s));
 }
 
-/// Returns true if a checksum-valid pending OTA was found and `out` is filled.
 inline bool peek(Slot& out) {
     if (!ESP.rtcUserMemoryRead(kRtcDwordOffset,
                                reinterpret_cast<uint32_t*>(&out),
