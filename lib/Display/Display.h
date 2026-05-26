@@ -157,6 +157,7 @@ class Display {
     static constexpr int kBrandLine1BaselineY = 44;
     static constexpr int kBrandLine2BaselineY = 56;
     static constexpr int kBrandLine3BaselineY = 60;
+    static constexpr int kBrandSingleLineBaselineY = kBrandLine2BaselineY;
 
     void drawBrandTitle() {
         if (!display) return;
@@ -183,7 +184,7 @@ class Display {
     void drawBrandStatus(const char* statusLine) {
         clear();
         drawBrandTitle();
-        drawBrandLine(statusLine, kBrandLine1BaselineY);
+        drawBrandLine(statusLine, kBrandSingleLineBaselineY);
     }
 
     void drawBrandStatus2(const char* line1, const char* line2) {
