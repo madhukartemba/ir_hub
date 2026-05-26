@@ -152,6 +152,7 @@ class HomeScreen : public Screen {
         const bool wifiConnected = WiFi.status() == WL_CONNECTED;
         const bool mqttConnected = mqttConnector.isConnected();
         const bool mqttEnabled = mqttConnector.isEnabled();
+        const bool alexaEnabled = alexaConnector.isEnabled();
 
         BadgeState alexaState = BADGE_OFF;
         BadgeState mqttState = BADGE_OFF;
@@ -160,7 +161,6 @@ class HomeScreen : public Screen {
             alexaState = BADGE_OFFLINE;
             mqttState = BADGE_OFFLINE;
         } else {
-            alexaState = alexaConnector.isEnabled() ? BADGE_ACTIVE : BADGE_OFF;
             if (mqttConnected) {
                 mqttState = BADGE_ACTIVE;
             } else if (mqttEnabled) {
@@ -168,11 +168,22 @@ class HomeScreen : public Screen {
             } else {
                 mqttState = BADGE_OFF;
             }
+
+            if (!alexaEnabled) {
+                alexaState = BADGE_OFF;
+            } else if (mqttState == BADGE_ERROR) {
+                alexaState = BADGE_ERROR;
+            } else if (mqttState == BADGE_PENDING) {
+                alexaState = BADGE_PENDING;
+            } else {
+                alexaState = BADGE_ACTIVE;
+            }
         }
 
         drawBadge(3, 14, 60, 36, "ALEXA", alexaState,
                   alexaState == BADGE_ACTIVE   ? "ONLINE"
                   : alexaState == BADGE_PENDING ? "RETRY"
+                  : alexaState == BADGE_ERROR   ? "ERROR"
                   : alexaState == BADGE_OFFLINE ? "OFFLINE"
                                                 : "OFF");
         drawBadge(65, 14, 60, 36, "MQTT", mqttState,
