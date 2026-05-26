@@ -16,11 +16,17 @@ extern "C" {
 
 class AlexaConnector {
    private:
+    struct RegisteredDeviceRef {
+        String uuid;
+        uint8_t index;
+    };
+
     DeviceManager& deviceManager;
     IRManager& irManager;
     Espalexa espalexa;
     bool wifiEnabled;
     std::function<void(const Device& device, bool state)> onStateChangeCallback;
+    std::vector<RegisteredDeviceRef> registeredDeviceRefs;
 
     WiFiUDP ssdpNotifyUdp;  // outbound SSDP NOTIFY (separate from Espalexa's socket)
     bool ssdpNotifyReady = false;
@@ -219,6 +225,7 @@ class AlexaConnector {
             espalexa.stop();
         }
         wifiEnabled = false;
+        registeredDeviceRefs.clear();
     }
 
     void setOnStateChangeCallback(std::function<void(const Device& device, bool state)> callback) {
@@ -259,6 +266,20 @@ class AlexaConnector {
                 d->setUniqueIdMac(uidMac);
             }
         }
+
+        bool updatedExisting = false;
+        uint8_t deviceIndex = (uint8_t)(alexaIdx - 1);
+        for (auto& ref : registeredDeviceRefs) {
+            if (ref.uuid == device.uuid) {
+                ref.index = deviceIndex;
+                updatedExisting = true;
+                break;
+            }
+        }
+        if (!updatedExisting) {
+            registeredDeviceRefs.push_back({device.uuid, deviceIndex});
+        }
+
         LOG_INFO("[Alexa] Registered '%s' as Hue white lamp, slot=%u alexaSlot=%u uuid=%s",
                  alexaName.c_str(), (unsigned)alexaIdx, (unsigned)device.alexaSlot,
                  device.uuid.c_str());
@@ -268,6 +289,28 @@ class AlexaConnector {
         if (wifiEnabled) {
             LOG_DEBUG("[Alexa] Device %s unregistered (note: Espalexa keeps devices registered)",
                       device.name.c_str());
+        }
+        for (size_t i = 0; i < registeredDeviceRefs.size(); i++) {
+            if (registeredDeviceRefs[i].uuid == device.uuid) {
+                registeredDeviceRefs.erase(registeredDeviceRefs.begin() + i);
+                break;
+            }
+        }
+    }
+
+    // Keep Alexa's internal per-device state in sync when commands originate elsewhere (e.g. MQTT).
+    void syncDeviceState(const String& uuid, bool state) {
+        if (!wifiEnabled) {
+            return;
+        }
+        for (const auto& ref : registeredDeviceRefs) {
+            if (ref.uuid == uuid) {
+                EspalexaDevice* d = espalexa.getDevice(ref.index);
+                if (d != nullptr) {
+                    d->setState(state);
+                }
+                return;
+            }
         }
     }
 

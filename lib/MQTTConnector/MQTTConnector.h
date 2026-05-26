@@ -258,7 +258,9 @@ class MQTTConnector {
             return;
         }
 
+        bool hadCallback = false;
         if (onStateChangeCallback) {
+            hadCallback = true;
             onStateChangeCallback(*device, turnOn);
         }
 
@@ -270,7 +272,10 @@ class MQTTConnector {
             LOG_INFO("[MQTT] OFF device %s (%s)", uuid.c_str(), device->name.c_str());
         }
 
-        publishState(uuid, turnOn);
+        // Fallback publish if app-level callback is not configured.
+        if (!hadCallback) {
+            publishState(uuid, turnOn);
+        }
     }
 
     void handleIncomingMessage(char* topic, byte* payload, unsigned int length) {
@@ -506,6 +511,12 @@ class MQTTConnector {
 
     bool isEnabled() const { return enabled; }
     bool isConnected() { return enabled && mqttClient.connected(); }
+    bool syncDeviceState(const String& uuid, bool on) {
+        if (!enabled || !mqttClient.connected()) {
+            return false;
+        }
+        return publishState(uuid, on);
+    }
     int getLastConnectState() { return lastConnectState; }
     bool hasError() {
         if (!enabled || mqttClient.connected()) {

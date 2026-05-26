@@ -99,6 +99,8 @@ void configureRuntimeCallbacks() {
 
     auto onIrRemoteStateChange = [](const Device& device, bool state) {
         LOG_DEBUG("[Hub] Remote state: %s %s", device.name.c_str(), state ? "ON" : "OFF");
+        mqttConnector.syncDeviceState(device.uuid, state);
+        alexaConnector.syncDeviceState(device.uuid, state);
         speaker.beep();
         ledRing.addAnimation(std::make_unique<ClickSweepOnceAnimation>(
             NUM_LEDS, state ? SEND_ON_COMMAND_COLOR : SEND_OFF_COMMAND_COLOR));
