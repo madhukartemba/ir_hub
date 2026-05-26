@@ -113,7 +113,8 @@ class HomeScreen : public Screen {
         display.print("IR Hub", 2, 0);
         drawVersionTag();
         drawSignalBar();
-        display.drawLine(0, 11, 127, 11);
+        // Keep a guaranteed 1px vertical gap below the tallest signal bar.
+        display.drawLine(0, 12, 127, 12);
     }
 
     void drawVersionTag() {
@@ -154,7 +155,7 @@ class HomeScreen : public Screen {
         BadgeState alexaState = alexaConnector.isEnabled() ? BADGE_ACTIVE : BADGE_OFF;
         BadgeState mqttState = mqttConnected ? BADGE_ACTIVE : (mqttEnabled ? BADGE_PENDING : BADGE_OFF);
 
-        drawBadge(3, 14, 60, 36, "Alexa", alexaState,
+        drawBadge(3, 14, 60, 36, "ALEXA", alexaState,
                   alexaState == BADGE_ACTIVE ? "ONLINE" : "OFF");
         drawBadge(65, 14, 60, 36, "MQTT", mqttState,
                   mqttState == BADGE_ACTIVE ? "ONLINE"
@@ -181,7 +182,7 @@ class HomeScreen : public Screen {
         }
 
         int valueX = x + (w - display.getTextWidth(value)) / 2;
-        display.print(value, valueX, y + 17);
+        display.print(value, valueX, y + 18);
 
         drawCardActivityBar(x, y, w, h, state);
     }
@@ -205,13 +206,13 @@ class HomeScreen : public Screen {
 
     void drawQuickStatsRow() {
         const bool wifiConnected = WiFi.status() == WL_CONNECTED;
-        const char* wifiLabel = wifiConnected ? "WiFi:OK" : "WiFi:OFF";
-        display.drawLine(0, 52, 127, 52);
-        display.print(wifiLabel, 2, 55);
+        const char* wifiLabel = wifiConnected ? "WiFi: OK" : "WiFi: NC";
+        display.drawLine(0, 51, 127, 51);
+        display.print(wifiLabel, 2, 54);
 
         char deviceLabel[24];
-        snprintf(deviceLabel, sizeof(deviceLabel), "Devices:%u", (unsigned)deviceManager.deviceCount());
+        snprintf(deviceLabel, sizeof(deviceLabel), "Devices: %u", (unsigned)deviceManager.deviceCount());
         int devX = 126 - display.getTextWidth(deviceLabel);
-        display.print(deviceLabel, devX, 55);
+        display.print(deviceLabel, devX, 54);
     }
 };
