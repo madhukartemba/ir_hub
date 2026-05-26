@@ -17,7 +17,7 @@
 #    define DISPLAY_DRIVER DisplayDriver::FASTLED
 
 #    define WIFI_AP_NAME "IRHub V0 Setup"
-#    define WIFI_AP_TIMEOUT 180      // 3 minutes timeout
+#    define WIFI_AP_TIMEOUT 180  // 3 minutes timeout
 
 #endif  // USE_VERSION_0
 
@@ -38,7 +38,7 @@
 #    define DISPLAY_DRIVER DisplayDriver::NEOPIXEL
 
 #    define WIFI_AP_NAME "IRHub V1 Setup"
-#    define WIFI_AP_TIMEOUT 180      // 3 minutes timeout
+#    define WIFI_AP_TIMEOUT 180  // 3 minutes timeout
 
 #endif  // USE_VERSION_1
 
@@ -59,7 +59,7 @@
 #    define DISPLAY_DRIVER DisplayDriver::NEOPIXEL
 
 #    define WIFI_AP_NAME "IRHub V3 Setup"
-#    define WIFI_AP_TIMEOUT 30       // 3 minutes timeout
+#    define WIFI_AP_TIMEOUT 180  // 3 minutes timeout
 
 #endif  // USE_VERSION_3
 
