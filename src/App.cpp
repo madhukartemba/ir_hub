@@ -227,14 +227,20 @@ void setup() {
     configureRouter();
     bool wifiConnected = false;
     bool skipWiFiSetup = userPrefsSkipWiFiSetup();
+    bool hasSavedWiFiCredentials = false;
     if (skipWiFiSetup) {
         wifiManager.skipSetupFlow();
         LOG_INFO("[WiFi] Setup/connect skipped by user preference");
         attachHomeAsDefaultScreen();
     } else {
         wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
+        hasSavedWiFiCredentials = wifiManager.hasSavedWiFiCredentials();
         if (!wifiConnected) {
-            router.push(new SetupOnboardingScreen());
+            if (!hasSavedWiFiCredentials) {
+                router.push(new SetupOnboardingScreen());
+            } else {
+                LOG_INFO("[WiFi] Saved credentials found but network unavailable; booting offline");
+            }
             attachHomeAsDefaultScreen();
         } else {
             attachHomeAsDefaultScreen();
@@ -252,7 +258,7 @@ void setup() {
     configureRuntimeCallbacks();
     if (wifiConnected) {
         showReadyScreen(true);
-    } else if (skipWiFiSetup) {
+    } else if (skipWiFiSetup || hasSavedWiFiCredentials) {
         showReadyScreen(false);
     }
 

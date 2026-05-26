@@ -75,6 +75,43 @@ class WiFiManagerLib {
         WiFi.setSleepMode(WIFI_NONE_SLEEP);
     }
 
+    bool connectWithSavedCredentialsOnly(int connectTimeoutSeconds) {
+        WiFi.mode(WIFI_STA);
+        WiFi.setAutoReconnect(true);
+        WiFi.begin();
+
+        unsigned long startMs = millis();
+        unsigned long timeoutMs =
+            (connectTimeoutSeconds <= 0) ? 0UL : (unsigned long)connectTimeoutSeconds * 1000UL;
+
+        while (WiFi.status() != WL_CONNECTED &&
+               (timeoutMs == 0UL || (millis() - startMs) < timeoutMs)) {
+            delay(200);
+            yield();
+        }
+
+        if (WiFi.status() == WL_CONNECTED) {
+            wifiConnected = true;
+            setupState = SetupState::CONNECTED;
+            setupFlowFinished = true;
+            pinRadioAwakeForMulticast();
+            LOG_INFO("[WiFi] Connection successful!");
+            LOG_DEBUG("[WiFi] IP Address: %s", WiFi.localIP().toString().c_str());
+            LOG_DEBUG("[WiFi] SSID: %s", WiFi.SSID().c_str());
+            LOG_DEBUG("[WiFi] RSSI: %d dBm", WiFi.RSSI());
+            display.drawBrandStatus("Wi-Fi connected!");
+            display.update();
+            return true;
+        }
+
+        wifiConnected = false;
+        setupState = SetupState::TIMED_OUT;
+        setupFlowFinished = true;
+        LOG_WARN("[WiFi] Saved network unavailable - booting offline (setup portal disabled)");
+        LOG_DEBUG("[WiFi] Status: %d", WiFi.status());
+        return false;
+    }
+
     void setupWiFiManager(const char* apName, int apTimeout, int connectTimeout) {
         wifiManager.setConfigPortalTimeout(apTimeout);
         wifiManager.setConnectTimeout(connectTimeout);
@@ -208,6 +245,7 @@ class WiFiManagerLib {
 
             LOG_INFO("[WiFi] Found saved credentials, attempting connection...");
             LOG_DEBUG("[WiFi] Saved SSID: %s", WiFi.SSID().c_str());
+            return connectWithSavedCredentialsOnly(connectTimeout);
         }
 
         LOG_INFO("[WiFi] Starting connection attempt...");
@@ -370,7 +408,18 @@ class WiFiManagerLib {
             }
         }
 
-        if (isConnected()) {
+        bool linkUp = (WiFi.status() == WL_CONNECTED);
+        if (linkUp && !wifiConnected) {
+            wifiConnected = true;
+            pinRadioAwakeForMulticast();
+            LOG_INFO("[WiFi] Link restored");
+            LOG_DEBUG("[WiFi] IP Address: %s", WiFi.localIP().toString().c_str());
+        } else if (!linkUp && wifiConnected) {
+            wifiConnected = false;
+            LOG_WARN("[WiFi] Link lost");
+        }
+
+        if (linkUp) {
             if (isOtaSetup) {
                 ArduinoOTA.handle();  // Handle OTA updates only if WiFi is connected
             }
