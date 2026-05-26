@@ -15,6 +15,7 @@ Welcome to your IR Hub! This guide walks you through everything you need — set
 - [Smart Home Integration](#smart-home-integration)
 - [Settings Menu](#settings-menu)
 - [Keeping It Up to Date](#keeping-it-up-to-date)
+- [Upgrading to 2.0.0](#upgrading-to-200)
 - [Resetting Your Hub](#resetting-your-hub)
 - [Troubleshooting](#troubleshooting)
 - [Contact & Support](#contact--support)
@@ -114,8 +115,9 @@ Once you've added a device, you have three ways to control it:
 - Trigger it from dashboards, automations, scripts, etc.
 
 **3. With your voice** (Alexa, via local discovery)
-- Just say *"Alexa, discover devices"* once after adding a new appliance
-- Then: *"Alexa, turn on TV"* / *"Alexa, turn off AC"*, etc.
+- Say *"Alexa, discover devices"* once after adding a new appliance on the Hub
+- Then use the name Alexa shows (you can rename it in the Alexa app for easier voice commands)
+- The Hub supports up to **20** saved devices
 
 ---
 
@@ -131,14 +133,24 @@ If you have a Home Assistant install with an MQTT broker (e.g. Mosquitto), the H
 
 ### Alexa
 
-The Hub presents each saved device to Alexa as a smart switch (no Alexa account or skill required — it uses local discovery on your Wi-Fi):
+The Hub exposes each saved device to Alexa over your local Wi-Fi (no Alexa skill or cloud account linking required):
 
-1. Make sure your Echo and the Hub are on the **same Wi-Fi network**.
+1. Make sure your Echo and the Hub are on the **same Wi-Fi network** (same band — many routers split 2.4 GHz and 5 GHz).
 2. Add at least one device on the Hub.
-3. Say *"Alexa, discover devices"* — your new device will be found.
-4. Control it by name: *"Alexa, turn on the TV."*
+3. Say *"Alexa, discover devices"* — each appliance should appear as its own entry.
+4. Control it by name, e.g. *"Alexa, turn on Living Room TV."*
 
-If you rename a device on the Hub, ask Alexa to discover again.
+**Names in the Alexa app**
+
+When Alexa first discovers a device, it may show a short hex prefix before the name you set on the Hub (for example `46ef8b TV 1`). That prefix keeps each device separate in Alexa's list. **Rename the device inside the Alexa app** to whatever you want for voice control (e.g. `Living Room TV`). The rename stays in Alexa only — the name on the Hub screen does not change.
+
+**After you add or remove a device on the Hub**
+
+Say *"Alexa, discover devices"* again so Alexa picks up the latest list.
+
+**Turning Alexa off**
+
+Open **Settings -> Alexa: On**, then long-press and confirm on the **Disable Alexa?** screen. Discovery and voice control stop immediately until you turn Alexa back on from Settings (no confirmation required to re-enable).
 
 ---
 
@@ -149,7 +161,8 @@ From the Main Menu, open **Settings** to access:
 | Setting | What it does |
 |---|---|
 | **Sound** | Turns the buzzer beeps on/off |
-| **Haptics** | Turns the vibration feedback on/off |
+| **Alexa** | Turns local Alexa discovery and control on/off (disabling asks for confirmation) |
+| **Haptics** | Turns the vibration feedback on/off *(shown only if your Hub has a haptics driver)* |
 | **Check for Updates** | Manually look for new firmware |
 | **Firmware** | Shows the version you're currently running |
 | **Last check** | When the Hub last looked for an update |
@@ -160,7 +173,7 @@ From the Main Menu, open **Settings** to access:
 | **Erase Saved Data** | Delete all saved remotes/devices |
 | **Factory Reset** | Wipe **everything** and start over |
 
-All destructive actions (reset / erase / factory reset) ask for a long-press confirmation, so you won't accidentally wipe your setup.
+Disabling Alexa, and all destructive actions (reset / erase / factory reset), ask for a long-press confirmation on a dedicated screen so you won't accidentally change them.
 
 ---
 
@@ -182,7 +195,38 @@ Your Hub gets better over time as new features are released. Updates are deliver
   - `Low heap` — try again in a few seconds, the Hub was busy
   - `Check failed` — temporary network blip, just try again
 
-Your saved remotes, settings, and Wi-Fi credentials are all preserved across updates.
+Most routine updates keep your saved remotes, Wi-Fi, MQTT settings, and preferences (sound, haptics, Alexa on/off).
+
+**Major upgrades (such as 2.0.0)** can change how devices appear in Alexa or Home Assistant even when your remotes are still on the Hub. See [Upgrading to 2.0.0](#upgrading-to-200) below.
+
+---
+
+## Upgrading to 2.0.0
+
+Firmware **2.0.0** is a major release. After your Hub installs it (automatically or via **Settings -> Check for Updates**), you may need a few extra steps so smart-home integrations match the new device identities.
+
+**What usually stays the same**
+
+- Wi-Fi credentials
+- Sound, haptics, and Alexa on/off preferences
+- Devices you already taught the Hub *(if they were saved with the current storage format)*
+
+**Alexa (recommended after updating)**
+
+1. In the **Alexa app**, delete every old IR Hub / Hue-style device that no longer works or shows the wrong name.
+2. Say *"Alexa, discover devices"* again.
+3. Rename each device in the Alexa app if you see a hex prefix (e.g. change `46ef8b TV 1` to `Living Room TV`).
+
+Stale entries from older firmware often cause "only one device," wrong names, or controls that trigger the wrong appliance until you delete and rediscover.
+
+**Home Assistant (MQTT)**
+
+- New devices you add after the update publish with the current identity automatically.
+- Old switch entities may show as unavailable or duplicate. Remove stale `switch.ir_hub_…` entities in Home Assistant (or restart MQTT discovery) and use the freshly published ones.
+
+**If a saved remote disappeared from the Hub menu**
+
+Very old device files from before the Hub used permanent UUIDs are skipped at boot. **Re-add** that appliance via **Add Device** — you do not need a factory reset unless you want a completely clean slate.
 
 ---
 
@@ -199,7 +243,7 @@ There are three levels of reset, depending on what you want to clear:
 
 All of these are under **Settings**. Each one shows a confirmation screen — **long-press** to actually go through with it.
 
-After a Factory Reset, the Hub starts fresh and reopens the `IRHub V3 Setup` Wi-Fi network, ready for [First-Time Setup](#first-time-setup) again.
+After a **Factory Reset**, the Hub starts fresh, gets a **new Alexa bridge identity**, and reopens the `IRHub V3 Setup` Wi-Fi network, ready for [First-Time Setup](#first-time-setup) again. That is the cleanest way to clear confused Alexa caches — delete any leftover IR Hub devices in the Alexa app, then discover again after setup.
 
 ---
 
@@ -237,7 +281,19 @@ The Hub dims the screen after a few seconds of inactivity to save power. **Click
 
 ### Alexa can't find my devices
 - Make sure your Echo and the Hub are on the **same Wi-Fi network** (and the same Wi-Fi band — some routers separate 2.4 GHz and 5 GHz).
+- Check **Settings** — **Alexa** must be **On**. If you disabled it earlier, long-press to turn it back on.
 - Say *"Alexa, discover devices"* after adding new ones on the Hub.
+- Wait up to a minute after the Hub boots — it advertises itself periodically on the network.
+
+### Alexa shows only one device, or the wrong device opens when I tap it
+- This usually means Alexa is still using **cached entries from older firmware**. In the Alexa app, **delete all** IR Hub / related smart-home devices tied to this Hub, then say *"Alexa, discover devices"* once.
+- After discovery, each entry should be separate. Rename them in the Alexa app if you see a hex prefix in the name.
+
+### Alexa name looks like `a1b2c3 TV 1` — can I change it?
+- Yes. **Rename in the Alexa app** for voice commands. The name on the Hub's own screen stays whatever you set when you added the device.
+
+### I don't want Alexa on this Hub at all
+- **Settings -> Alexa: On** → long-press → confirm **Disable Alexa?**. The Hub stops all Alexa discovery and control until you enable it again.
 
 ### Nothing is working — I just want to start over
 Use **Settings -> Factory Reset**. This clears everything and brings you back to the first-time setup flow.
