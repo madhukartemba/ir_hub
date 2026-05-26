@@ -54,6 +54,8 @@ class SetupOnboardingScreen : public Screen {
             if (wifiManager.didSetupTimeout()) {
                 if (continueOfflineSelected) {
                     proceedWithoutWiFiAndRestart();
+                } else {
+                    retrySetupAndRestart();
                 }
                 return;
             }
@@ -186,6 +188,15 @@ class SetupOnboardingScreen : public Screen {
     void proceedWithoutWiFiAndRestart() {
         userPrefsSetSkipWiFiSetup(true);
         display.drawBrandStatus("Continuing offline");
+        display.update();
+        speaker.shortBeep();
+        delay(600);
+        ESP.restart();
+    }
+
+    void retrySetupAndRestart() {
+        userPrefsSetSkipWiFiSetup(false);
+        display.drawBrandStatus("Restarting setup");
         display.update();
         speaker.shortBeep();
         delay(600);
