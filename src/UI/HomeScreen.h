@@ -10,7 +10,8 @@
 
 class HomeScreen : public Screen {
    private:
-    enum BadgeState { BADGE_OFF, BADGE_PENDING, BADGE_ACTIVE };
+    enum BadgeState { BADGE_OFF, BADGE_PENDING, BADGE_ACTIVE, BADGE_OFFLINE };
+    static constexpr bool FORCE_ALEXA_RETRY_DEMO = true;
 
     unsigned long lastActivityTime;
     const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
@@ -25,7 +26,7 @@ class HomeScreen : public Screen {
         isBlanked = false;
         ringColor();
 
-        display.setFPS(1);
+        display.setFPS(2);
 
         button.setClickCallback([this]() {
             lastActivityTime = millis();
@@ -149,17 +150,34 @@ class HomeScreen : public Screen {
     }
 
     void drawServiceCards() {
+        const bool wifiConnected = WiFi.status() == WL_CONNECTED;
         const bool mqttConnected = mqttConnector.isConnected();
         const bool mqttEnabled = mqttConnector.isEnabled();
 
-        BadgeState alexaState = alexaConnector.isEnabled() ? BADGE_ACTIVE : BADGE_OFF;
-        BadgeState mqttState = mqttConnected ? BADGE_ACTIVE : (mqttEnabled ? BADGE_PENDING : BADGE_OFF);
+        BadgeState alexaState = BADGE_OFF;
+        BadgeState mqttState = BADGE_OFF;
+
+        if (!wifiConnected) {
+            alexaState = BADGE_OFFLINE;
+            mqttState = BADGE_OFFLINE;
+        } else {
+            alexaState = alexaConnector.isEnabled() ? BADGE_ACTIVE : BADGE_OFF;
+            mqttState = mqttConnected ? BADGE_ACTIVE : (mqttEnabled ? BADGE_PENDING : BADGE_OFF);
+            if (FORCE_ALEXA_RETRY_DEMO) {
+                alexaState = BADGE_PENDING;  // demo override requested by user
+            }
+        }
 
         drawBadge(3, 14, 60, 36, "ALEXA", alexaState,
-                  alexaState == BADGE_ACTIVE ? "ONLINE" : "OFF");
+                  alexaState == BADGE_ACTIVE   ? "ONLINE"
+                  : alexaState == BADGE_PENDING ? "RETRY"
+                  : alexaState == BADGE_OFFLINE ? "OFFLINE"
+                                                : "OFF");
         drawBadge(65, 14, 60, 36, "MQTT", mqttState,
-                  mqttState == BADGE_ACTIVE ? "ONLINE"
-                  : (mqttState == BADGE_PENDING ? "RETRY" : "OFF"));
+                  mqttState == BADGE_ACTIVE   ? "ONLINE"
+                  : mqttState == BADGE_PENDING ? "RETRY"
+                  : mqttState == BADGE_OFFLINE ? "OFFLINE"
+                                               : "OFF");
     }
 
     void drawBadge(int x, int y, int w, int h, const char* label, BadgeState state,
@@ -172,13 +190,21 @@ class HomeScreen : public Screen {
 
         int dotX = x + w - 8;
         int dotY = y + 6;
+        // Home screen renders at 1 FPS, so animation steps must be >=1s to remain visible.
+        bool blinkOn = ((millis() / 1000) % 2) == 0;
         if (state == BADGE_ACTIVE) {
             display.fillCircle(dotX, dotY, 2);
+        } else if (state == BADGE_PENDING) {
+            // Clear blink cue while reconnecting: alternate filled and outline dot.
+            if (blinkOn) {
+                display.fillCircle(dotX, dotY, 2);
+            } else {
+                display.drawCircle(dotX, dotY, 2);
+            }
+        } else if (state == BADGE_OFFLINE) {
+            display.fillRect(dotX - 2, dotY - 1, 5, 3);
         } else {
             display.drawCircle(dotX, dotY, 2);
-            if (state == BADGE_PENDING && ((millis() / 400) % 2 == 0)) {
-                display.fillCircle(dotX, dotY, 1);
-            }
         }
 
         int valueX = x + (w - display.getTextWidth(value)) / 2;
@@ -188,19 +214,51 @@ class HomeScreen : public Screen {
     }
 
     void drawCardActivityBar(int x, int y, int w, int h, BadgeState state) {
-        int barX = x + 3;
-        int barY = y + h - 4;
-        int barW = w - 6;
+        int trackX = x + 3;
+        int trackY = y + h - 5;
+        int trackW = w - 6;
+        int trackH = 3;
+
+        display.drawRect(trackX, trackY, trackW, trackH);
+
+        int fillX = trackX + 1;
+        int fillY = trackY + 1;
+        int fillMaxW = trackW - 2;
+        if (fillMaxW <= 0) {
+            return;
+        }
 
         if (state == BADGE_ACTIVE) {
-            display.fillRect(barX, barY, barW, 2);
+            display.fillRect(fillX, fillY, fillMaxW, 1);
         } else if (state == BADGE_PENDING) {
-            int pulse = ((millis() / 250) % 4) + 1;
-            int pulseW = (barW * pulse) / 4;
-            display.drawRect(barX, barY, barW, 2);
-            display.fillRect(barX, barY, pulseW, 2);
-        } else {
-            display.drawRect(barX, barY, barW, 2);
+            // Tunnel-loop loader: exits right edge, disappears briefly, then emerges from left.
+            int segmentW = fillMaxW / 3;
+            if (segmentW < 2) segmentW = 2;
+            if (segmentW > fillMaxW) segmentW = fillMaxW;
+
+            int gapW = segmentW / 2;
+            if (gapW < 2) gapW = 2;
+
+            int cycle = fillMaxW + segmentW + gapW;
+            int phase = (millis() / 90) % cycle;
+            int segStart = phase - segmentW;  // enters from left off-screen
+            int segEnd = segStart + segmentW;
+
+            if (segEnd <= 0 || segStart >= fillMaxW) {
+                return;  // fully inside "tunnel"
+            }
+
+            int visibleStart = segStart;
+            if (visibleStart < 0) visibleStart = 0;
+            int visibleEnd = segEnd;
+            if (visibleEnd > fillMaxW) visibleEnd = fillMaxW;
+            int visibleW = visibleEnd - visibleStart;
+            if (visibleW <= 0) {
+                return;
+            }
+            display.fillRect(fillX + visibleStart, fillY, visibleW, 1);
+        } else if (state == BADGE_OFFLINE) {
+            display.fillRect(fillX, fillY, fillMaxW, 1);
         }
     }
 
