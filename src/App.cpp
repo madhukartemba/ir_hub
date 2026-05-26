@@ -233,7 +233,7 @@ void setup() {
         LOG_INFO("[WiFi] Setup/connect skipped by user preference");
         attachHomeAsDefaultScreen();
     } else {
-        wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT, WIFI_CONNECT_TIMEOUT);
+        wifiConnected = wifiManager.begin(WIFI_AP_NAME, WIFI_AP_TIMEOUT);
         hasSavedWiFiCredentials = wifiManager.hasSavedWiFiCredentials();
         if (!wifiConnected) {
             if (!hasSavedWiFiCredentials) {
