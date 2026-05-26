@@ -23,6 +23,7 @@ class MQTTConnector {
     WiFiClient wifiClient;
     PubSubClient mqttClient;
     bool enabled;
+    int lastConnectState;
     String hubMacHex;
     unsigned long lastReconnectAttempt;
     static constexpr unsigned long kReconnectIntervalMs = 5000;
@@ -344,6 +345,7 @@ class MQTTConnector {
         const char* userArg = (user && *user) ? user : nullptr;
         const char* passArg = (pass && *pass) ? pass : nullptr;
         if (mqttClient.connect(clientId, userArg, passArg)) {
+            lastConnectState = MQTT_CONNECTED;
             LOG_INFO("[MQTT] Connected to broker");
             subscribeCommands();
             size_t republished = 0;
@@ -361,7 +363,8 @@ class MQTTConnector {
             return true;
         }
 
-        LOG_WARN("[MQTT] Connect failed, rc=%d", mqttClient.state());
+        lastConnectState = mqttClient.state();
+        LOG_WARN("[MQTT] Connect failed, rc=%d", lastConnectState);
         return false;
     }
 
@@ -388,6 +391,7 @@ class MQTTConnector {
           irManager(irManager),
           mqttClient(wifiClient),
           enabled(false),
+          lastConnectState(MQTT_DISCONNECTED),
           lastReconnectAttempt(0),
           lastInfoPublishMs(0) {
         mqttClient.setBufferSize(768);  // match publishDiscovery() buf cap
@@ -415,6 +419,7 @@ class MQTTConnector {
         if (WiFi.status() != WL_CONNECTED) {
             LOG_INFO("[MQTT] WiFi not connected, MQTT disabled");
             enabled = false;
+            lastConnectState = MQTT_DISCONNECTED;
             return;
         }
 
@@ -422,6 +427,7 @@ class MQTTConnector {
             LOG_INFO("[MQTT] No broker configured; MQTT disabled. "
                      "Set host via the Wi-Fi captive portal to enable.");
             enabled = false;
+            lastConnectState = MQTT_DISCONNECTED;
             return;
         }
 
@@ -494,8 +500,21 @@ class MQTTConnector {
             mqttClient.disconnect();
         }
         enabled = false;
+        lastConnectState = MQTT_DISCONNECTED;
     }
 
     bool isEnabled() const { return enabled; }
     bool isConnected() { return enabled && mqttClient.connected(); }
+    int getLastConnectState() { return lastConnectState; }
+    bool hasError() {
+        if (!enabled || mqttClient.connected()) {
+            return false;
+        }
+        return isFatalConnectState(lastConnectState);
+    }
+    static bool isFatalConnectState(int state) {
+        // Fatal/configuration-ish failures (bad auth/protocol/client ID/authorization).
+        return state == MQTT_CONNECT_BAD_PROTOCOL || state == MQTT_CONNECT_BAD_CLIENT_ID ||
+               state == MQTT_CONNECT_BAD_CREDENTIALS || state == MQTT_CONNECT_UNAUTHORIZED;
+    }
 };

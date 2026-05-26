@@ -10,8 +10,7 @@
 
 class HomeScreen : public Screen {
    private:
-    enum BadgeState { BADGE_OFF, BADGE_PENDING, BADGE_ACTIVE, BADGE_OFFLINE };
-    static constexpr bool FORCE_ALEXA_RETRY_DEMO = true;
+    enum BadgeState { BADGE_OFF, BADGE_PENDING, BADGE_ACTIVE, BADGE_OFFLINE, BADGE_ERROR };
 
     unsigned long lastActivityTime;
     const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
@@ -162,9 +161,12 @@ class HomeScreen : public Screen {
             mqttState = BADGE_OFFLINE;
         } else {
             alexaState = alexaConnector.isEnabled() ? BADGE_ACTIVE : BADGE_OFF;
-            mqttState = mqttConnected ? BADGE_ACTIVE : (mqttEnabled ? BADGE_PENDING : BADGE_OFF);
-            if (FORCE_ALEXA_RETRY_DEMO) {
-                alexaState = BADGE_PENDING;  // demo override requested by user
+            if (mqttConnected) {
+                mqttState = BADGE_ACTIVE;
+            } else if (mqttEnabled) {
+                mqttState = mqttConnector.hasError() ? BADGE_ERROR : BADGE_PENDING;
+            } else {
+                mqttState = BADGE_OFF;
             }
         }
 
@@ -176,6 +178,7 @@ class HomeScreen : public Screen {
         drawBadge(65, 14, 60, 36, "MQTT", mqttState,
                   mqttState == BADGE_ACTIVE   ? "ONLINE"
                   : mqttState == BADGE_PENDING ? "RETRY"
+                  : mqttState == BADGE_ERROR   ? "ERROR"
                   : mqttState == BADGE_OFFLINE ? "OFFLINE"
                                                : "OFF");
     }
@@ -190,7 +193,7 @@ class HomeScreen : public Screen {
 
         int dotX = x + w - 8;
         int dotY = y + 6;
-        // Home screen renders at 1 FPS, so animation steps must be >=1s to remain visible.
+        // Keep blink cadence readable at the current low FPS.
         bool blinkOn = ((millis() / 1000) % 2) == 0;
         if (state == BADGE_ACTIVE) {
             display.fillCircle(dotX, dotY, 2);
@@ -201,8 +204,9 @@ class HomeScreen : public Screen {
             } else {
                 display.drawCircle(dotX, dotY, 2);
             }
-        } else if (state == BADGE_OFFLINE) {
-            display.fillRect(dotX - 2, dotY - 1, 5, 3);
+        } else if (state == BADGE_ERROR) {
+            display.drawLine(dotX - 2, dotY - 2, dotX + 2, dotY + 2);
+            display.drawLine(dotX + 2, dotY - 2, dotX - 2, dotY + 2);
         } else {
             display.drawCircle(dotX, dotY, 2);
         }
@@ -257,8 +261,15 @@ class HomeScreen : public Screen {
                 return;
             }
             display.fillRect(fillX + visibleStart, fillY, visibleW, 1);
-        } else if (state == BADGE_OFFLINE) {
-            display.fillRect(fillX, fillY, fillMaxW, 1);
+        } else if (state == BADGE_ERROR) {
+            bool blinkOn = ((millis() / 500) % 2) == 0;
+            if (blinkOn) {
+                display.fillRect(fillX, fillY, fillMaxW, 1);
+            } else {
+                for (int i = 0; i < fillMaxW; i += 2) {
+                    display.fillRect(fillX + i, fillY, 1, 1);
+                }
+            }
         }
     }
 
