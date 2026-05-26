@@ -10,21 +10,19 @@
 
 class HomeScreen : public Screen {
    private:
+    enum BadgeState { BADGE_OFF, BADGE_PENDING, BADGE_ACTIVE };
+
     unsigned long lastActivityTime;
     const unsigned long STATUS_BLANK_TIMEOUT = 10000;  // 10 seconds for status screen blanking
     const unsigned long LED_BLANK_REFRESH_INTERVAL_MS = 600000;  // re-blank NeoRing when pixels unchanged
     bool isBlanked = false;
     unsigned long lastLedBlankRefresh = 0;
-    unsigned long animationTimer = 0;
-    int animationFrame = 0;
 
    public:
     void onEnter() override {
         LOG_DEBUG("[HomeScreen] onEnter");
         lastActivityTime = millis();
         isBlanked = false;
-        animationTimer = millis();
-        animationFrame = 0;
         ringColor();
 
         display.setFPS(1);
@@ -78,11 +76,6 @@ class HomeScreen : public Screen {
             return;
         }
 
-        if (millis() - animationTimer >= 1000) {
-            animationFrame = (animationFrame + 1) % 4;
-            animationTimer = millis();
-        }
-
         display.clear();
         showBeautifulStatusScreen();
         display.update();
@@ -110,20 +103,25 @@ class HomeScreen : public Screen {
 
     void showBeautifulStatusScreen() {
         drawHeader();
-
-        drawCenteredIP();
-
-        drawUptime();
+        drawServiceCards();
+        drawQuickStatsRow();
     }
 
     void drawHeader() {
         display.setTextSize(1);
         display.setTextColor(1);
-        char title[20];
-        snprintf(title, sizeof(title), "IR Hub v%s", FIRMWARE_VERSION);
-        display.print(title, 2, 0);
-
+        display.print("IR Hub", 2, 0);
+        drawVersionTag();
         drawSignalBar();
+        display.drawLine(0, 11, 127, 11);
+    }
+
+    void drawVersionTag() {
+        char version[12];
+        snprintf(version, sizeof(version), "v%s", FIRMWARE_VERSION);
+        int w = display.getTextWidth(version);
+        int x = (128 - w) / 2;
+        display.print(version, x, 0);
     }
 
     void drawSignalBar() {
@@ -138,84 +136,82 @@ class HomeScreen : public Screen {
                 int barHeight = (i + 1) * 2;
                 int barWidth = 3;
                 int x = 108 + (i * 4);
-                int y = 12 - barHeight;
+                int y = 11 - barHeight;
                 display.fillRect(x, y, barWidth, barHeight);
             }
 
         } else {
             display.setTextSize(1);
             display.setTextColor(1);
-            display.print("X", 115, 4);
+            display.print("X", 115, 3);
         }
     }
 
-    void drawCenteredIP() {
-        int cardWidth = 96;
-        int cardHeight = 16;
-        int cardX = (128 - cardWidth) / 2;  // Center the box horizontally
-        int cardY = 30;                     // Moved down from 20 to 24
+    void drawServiceCards() {
+        const bool mqttConnected = mqttConnector.isConnected();
+        const bool mqttEnabled = mqttConnector.isEnabled();
 
-        display.drawRect(cardX, cardY, cardWidth, cardHeight);
+        BadgeState alexaState = alexaConnector.isEnabled() ? BADGE_ACTIVE : BADGE_OFF;
+        BadgeState mqttState = mqttConnected ? BADGE_ACTIVE : (mqttEnabled ? BADGE_PENDING : BADGE_OFF);
 
-        int tabWidth = 28;
-        int tabHeight = 10;
-        display.fillRect(cardX + 2, cardY - tabHeight, tabWidth, tabHeight);
+        drawBadge(3, 14, 60, 36, "Alexa", alexaState,
+                  alexaState == BADGE_ACTIVE ? "ONLINE" : "OFF");
+        drawBadge(65, 14, 60, 36, "MQTT", mqttState,
+                  mqttState == BADGE_ACTIVE ? "ONLINE"
+                  : (mqttState == BADGE_PENDING ? "RETRY" : "OFF"));
+    }
 
-        display.setTextSize(1);
-        display.setTextColor(0);  // Black text on filled tab
-        display.print("IP", cardX + 10, cardY - tabHeight);
+    void drawBadge(int x, int y, int w, int h, const char* label, BadgeState state,
+                   const char* value) {
+        display.drawRect(x, y, w, h);
 
         display.setTextSize(1);
         display.setTextColor(1);
+        display.print(label, x + 4, y + 4);
 
-        char body[20];
-        if (WiFi.status() == WL_CONNECTED) {
-            IPAddress ip = WiFi.localIP();
-            snprintf(body, sizeof(body), "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+        int dotX = x + w - 8;
+        int dotY = y + 6;
+        if (state == BADGE_ACTIVE) {
+            display.fillCircle(dotX, dotY, 2);
         } else {
-            strncpy(body, "Not Connected", sizeof(body));
-            body[sizeof(body) - 1] = '\0';
+            display.drawCircle(dotX, dotY, 2);
+            if (state == BADGE_PENDING && ((millis() / 400) % 2 == 0)) {
+                display.fillCircle(dotX, dotY, 1);
+            }
         }
 
-        int textWidth = display.getTextWidth(body);
-        int textHeight = display.getTextHeight();
-        int textX = cardX + (cardWidth - textWidth) / 2;
-        int textY = cardY + (cardHeight - textHeight) / 2 + 1;
-        display.print(body, textX, textY);
+        int valueX = x + (w - display.getTextWidth(value)) / 2;
+        display.print(value, valueX, y + 17);
+
+        drawCardActivityBar(x, y, w, h, state);
     }
 
-    void drawUptime() {
-        int startX = 22;
-        // Position at the very bottom (64 - 16 = 48 for text baseline, 50 for icon center)
-        int iconY = 58;  // Bottom area for icon
-        int textY = 53;  // Bottom area for text baseline
+    void drawCardActivityBar(int x, int y, int w, int h, BadgeState state) {
+        int barX = x + 3;
+        int barY = y + h - 4;
+        int barW = w - 6;
 
-        display.drawCircle(startX + 4, iconY, 4);
-        display.fillCircle(startX + 4, iconY, 1);
-
-        switch (animationFrame) {
-            case 0:  // 12 o'clock
-                display.drawLine(startX + 4, iconY, startX + 4, iconY - 4);
-                break;
-            case 1:  // 3 o'clock
-                display.drawLine(startX + 4, iconY, startX + 8, iconY);
-                break;
-            case 2:  // 6 o'clock
-                display.drawLine(startX + 4, iconY, startX + 4, iconY + 4);
-                break;
-            case 3:  // 9 o'clock
-                display.drawLine(startX + 4, iconY, startX, iconY);
-                break;
+        if (state == BADGE_ACTIVE) {
+            display.fillRect(barX, barY, barW, 2);
+        } else if (state == BADGE_PENDING) {
+            int pulse = ((millis() / 250) % 4) + 1;
+            int pulseW = (barW * pulse) / 4;
+            display.drawRect(barX, barY, barW, 2);
+            display.fillRect(barX, barY, pulseW, 2);
+        } else {
+            display.drawRect(barX, barY, barW, 2);
         }
+    }
 
-        char buf[24];
-        unsigned long uptime = millis() / 1000;
-        unsigned long hours = uptime / 3600;
-        unsigned long minutes = (uptime % 3600) / 60;
-        unsigned long seconds = uptime % 60;
-        snprintf(buf, sizeof(buf), "Uptime %lu:%02lu:%02lu", hours, minutes, seconds);
+    void drawQuickStatsRow() {
+        const bool wifiConnected = WiFi.status() == WL_CONNECTED;
+        const char* wifiLabel = wifiConnected ? "WiFi:OK" : "WiFi:OFF";
+        display.drawLine(0, 52, 127, 52);
+        display.print(wifiLabel, 2, 55);
 
-        display.setTextSize(1);
-        display.print(buf, startX + 12, textY);
+        char deviceLabel[24];
+        snprintf(deviceLabel, sizeof(deviceLabel), "Devices:%u", (unsigned)deviceManager.deviceCount());
+        int devX = 126 - display.getTextWidth(deviceLabel);
+        display.print(deviceLabel, devX, 55);
     }
 };
