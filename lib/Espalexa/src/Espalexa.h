@@ -638,40 +638,6 @@ public:
     if (strstr(request, "M-SEARCH") == nullptr) return;
 
     EA_DEBUGLN(request);
-
-    // IRHUB temporary instrumentation: log who's M-SEARCHing us, and the
-    // exact ST/MAN values so we can verify our filter isn't dropping real
-    // Echos. Uses "\nST:" so we don't accidentally match the "ST:" inside
-    // "HOST:".
-    {
-      IPAddress remote = espalexaUdp.remoteIP();
-      char ip[24];
-      snprintf(ip, sizeof(ip), "%u.%u.%u.%u", remote[0], remote[1], remote[2], remote[3]);
-      auto headerValue = [&](const char* prefix, char* out, size_t outLen) {
-        const char* p = strstr(request, prefix);
-        if (!p) { out[0] = 0; return; }
-        p += strlen(prefix);
-        while (*p == ' ' || *p == '\t') p++;
-        const char* end = strstr(p, "\r\n");
-        size_t n = end ? (size_t)(end - p) : strlen(p);
-        if (n > outLen - 1) n = outLen - 1;
-        memcpy(out, p, n);
-        out[n] = 0;
-      };
-      char st[80] = "", man[40] = "", mx[8] = "";
-      headerValue("\nST:", st, sizeof(st));
-      headerValue("\nMAN:", man, sizeof(man));
-      headerValue("\nMX:", mx, sizeof(mx));
-      Serial.print(F("[INFO] [Alexa-SSDP] M-SEARCH from "));
-      Serial.print(ip);
-      Serial.print(F(" ST='"));
-      Serial.print(st);
-      Serial.print(F("' MAN="));
-      Serial.print(man);
-      Serial.print(F(" MX="));
-      Serial.println(mx);
-    }
-
     if (strstr(request, "ssdp:disc")  != nullptr &&  //short for "ssdp:discover"
         (strstr(request, "upnp:rootd") != nullptr || //short for "upnp:rootdevice"
          strstr(request, "ssdp:all")   != nullptr ||
@@ -679,8 +645,6 @@ public:
     {
       EA_DEBUGLN("Responding search req...");
       respondToSearch();
-    } else {
-      Serial.println(F("[WARN] [Alexa-SSDP] M-SEARCH filter rejected this packet"));
     }
   }
 
@@ -754,32 +718,6 @@ public:
     EA_DEBUGLN("AlexaApiCall");
     if (req.indexOf("api") <0) return false; //return if not an API call
     EA_DEBUGLN("ok");
-
-    // IRHUB temporary instrumentation: every Hue API request is logged to
-    // the main IR Hub serial stream so we can correlate Alexa discovery
-    // failures with which endpoints (if any) the Echo actually fetches.
-    // Safe to leave on at production scale because real Alexa traffic is
-    // 1-2 req/sec at most. Remove if/when this becomes noisy.
-    {
-      String src = "?";
-      #ifndef ESPALEXA_ASYNC
-      if (server) {
-        IPAddress c = server->client().remoteIP();
-        char ip[24];
-        snprintf(ip, sizeof(ip), "%u.%u.%u.%u", c[0], c[1], c[2], c[3]);
-        src = ip;
-      }
-      #endif
-      Serial.print(F("[INFO] [Alexa-HTTP] "));
-      Serial.print(src);
-      Serial.print(F(" "));
-      Serial.print(req);
-      if (body.length() > 0) {
-        Serial.print(F(" body="));
-        Serial.print(body);
-      }
-      Serial.println();
-    }
 
     if (body.indexOf("devicetype") > 0) //client wants a hue api username, we don't care and give static
     {
