@@ -224,18 +224,23 @@ class AlexaConnector {
             return;
         }
         // We run on a vendored Espalexa (lib/Espalexa/) that exposes
-        // EspalexaDevice::setStableId(). Register as an `onoff` plug (real
-        // LOM001 model in our fork — no fake brightness slider in the
-        // Alexa app), then pin the Hue uniqueid to our DeviceManager id so
-        // Alexa's cloud cache keeps pointing at the right physical IR
-        // command regardless of registration order, add/remove churn, or
-        // reboots.
+        // EspalexaDevice::setStableId(). Register as a `dimmable` Hue
+        // white lamp (LWB010) rather than a `onoff` plug — on multiple
+        // Echo generations the Alexa app omits the toggle from a plug's
+        // detail page, but it's always present for bulbs. The brightness
+        // slider this exposes is harmless: handleDeviceCallback() treats
+        // any value > 0 as ON, so nudging the slider just re-sends the
+        // recorded "on" IR command (which is idempotent for the typical
+        // TV/STB/AC remote). We then pin the Hue uniqueid to our
+        // DeviceManager id so Alexa's cloud cache keeps pointing at the
+        // right physical IR command regardless of registration order,
+        // add/remove churn, or reboots.
         uint8_t alexaIdx = espalexa.addDevice(
             device.name.c_str(),
             [this, deviceName = device.name](EspalexaDevice* d) {
                 handleDeviceCallback(deviceName, d->getValue());
             },
-            EspalexaDeviceType::onoff);
+            EspalexaDeviceType::dimmable);
         if (alexaIdx == 0) {
             // addDevice returns 0 when the ESPALEXA_MAXDEVICES (10) cap is
             // hit. Surface loudly — symptom is silent "Alexa is missing
@@ -257,7 +262,7 @@ class AlexaConnector {
         if (d != nullptr) {
             d->setStableId(stable);
         }
-        LOG_INFO("[Alexa] Registered '%s' as Hue smart-plug, slot=%u stableId=%u",
+        LOG_INFO("[Alexa] Registered '%s' as Hue white lamp, slot=%u stableId=%u",
                  device.name.c_str(), (unsigned)alexaIdx, (unsigned)stable);
     }
 

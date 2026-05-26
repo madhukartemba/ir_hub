@@ -255,9 +255,17 @@ private:
       return;
     }
 
-    // Dimmable / colour devices keep the legacy field set (Alexa hasn't
-    // been observed rejecting these because at least one customer was
-    // reporting them as `dimmable` in the previous build).
+    // Dimmable / colour devices: keep the upstream-Espalexa-exact JSON
+    // shape (alert="none", manufacturername="Philips") because that's
+    // what tens of thousands of Espalexa users have shipped successfully
+    // to Alexa. The ONLY divergences from upstream here are:
+    //   - productname: human-readable per-type string instead of
+    //     "E%u" (upstream concats the numeric device-type which Alexa
+    //     ignores; ours just makes the device list nicer to debug)
+    //   - swversion: a real Hue-looking version instead of
+    //     "espalexa-2.7.0" (Alexa shows this in the device card)
+    // The uniqueid format change (8-byte EUI-64 + 2-hex endpoint) is in
+    // encodeLightId(); see that comment for why.
     char buf_col[80] = "";
     if (static_cast<uint8_t>(t) > 2)
       sprintf_P(buf_col,PSTR(",\"hue\":%u,\"sat\":%u,\"effect\":\"none\",\"xy\":[%f,%f]")
@@ -272,11 +280,11 @@ private:
       sprintf(buf_cm,PSTR("\",\"colormode\":\"%s"), modeString(dev->getColorMode()));
 
     sprintf_P(buf, PSTR(
-        "{\"state\":{\"on\":%s,\"bri\":%u%s%s,\"alert\":\"select%s\",\"mode\":\"homeautomation\",\"reachable\":true},"
+        "{\"state\":{\"on\":%s,\"bri\":%u%s%s,\"alert\":\"none%s\",\"mode\":\"homeautomation\",\"reachable\":true},"
         "\"type\":\"%s\","
         "\"name\":\"%s\","
         "\"modelid\":\"%s\","
-        "\"manufacturername\":\"Signify Netherlands B.V.\","
+        "\"manufacturername\":\"Philips\","
         "\"productname\":\"%s\","
         "\"uniqueid\":\"%s\","
         "\"swversion\":\"1.104.2\"}"),
