@@ -152,10 +152,17 @@ private:
     uint8_t mac[6];
     WiFi.macAddress(mac);
     uint16_t sub = lightSubkey(arrayIdx);
-    // IRHUB: render sub-key as 4 hex digits so two devices whose stableIds
-    // differ only above byte 0 still produce distinct uniqueid strings.
-    sprintf_P(out, PSTR("%02X:%02X:%02X:%02X:%02X:%02X:00:11-%04X"),
-              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], sub);
+    // IRHUB: canonical real-Hue uniqueid format is 8 colon-separated hex
+    // bytes (EUI-64) + dash + 2-hex endpoint, e.g. "00:17:88:01:0b:1d:cd:c5-0b".
+    // Real Hue derives the EUI-64 from the 6-byte MAC by injecting FF:FE
+    // between bytes 3 and 4 (the Zigbee/IEEE 802 convention). Alexa was
+    // observed rejecting our previous 4-hex endpoint (`-%04X`) — the
+    // discovery loop kept retrying handshake+/lights endlessly. Truncating
+    // the endpoint to 2 hex digits caps stableId<=255 which is well within
+    // ESPALEXA_MAXDEVICES (10).
+    sprintf_P(out, PSTR("%02x:%02x:%02x:ff:fe:%02x:%02x:%02x-%02x"),
+              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+              (unsigned)(sub & 0xFFU));
   }
 
   // construct 'globally unique' Json dict key fitting into signed int.
@@ -187,36 +194,100 @@ private:
     return 255U;
   }
 
+  // IRHUB: per-type product name. Matches the real Hue product line so
+  // Alexa's plug/light parser recognises the device shape immediately.
+  const char* productNameString(EspalexaDeviceType t)
+  {
+    switch (t) {
+      case EspalexaDeviceType::onoff:         return "Hue Smart plug";
+      case EspalexaDeviceType::dimmable:      return "Hue white lamp";
+      case EspalexaDeviceType::whitespectrum: return "Hue ambiance lamp";
+      case EspalexaDeviceType::color:         return "Hue color lamp";
+      case EspalexaDeviceType::extendedcolor: return "Hue color lamp";
+      default: return "Hue";
+    }
+  }
+
   //device JSON string: color+temperature device emulates LCT015, dimmable device LWB010, on/off plug LOM001
+  // IRHUB: onoff plugs and dimmable lights now generate distinct JSON
+  // bodies that match real Hue payloads exactly. Live capture of the
+  // discovery loop showed Alexa POSTing /api and GETting /lights in a
+  // tight retry loop because the previous payload included `"bri"` in
+  // state for an "On/Off plug-in unit" (real Hue plugs don't have
+  // brightness), used a non-conforming uniqueid endpoint width, and
+  // advertised an obviously-not-Hue `productname:"E0"` /
+  // `swversion:"espalexa-..."`. Alexa silently rejected every entry and
+  // restarted discovery. The fields below mirror a Hue v2 bridge's plug
+  // and lamp responses verbatim (Signify Netherlands B.V., productid,
+  // 1.104.2 swversion, etc.).
   void deviceJsonString(EspalexaDevice* dev, char* buf)
   {
     // IRHUB: pass the array index (dev->getId() *is* the array index, set
     // by addDevice() via setId(currentDeviceCount)). lightSubkey() handles
     // the +1 conversion and the stable-ID lookup.
-    char buf_lightid[29];  // was 27; widened to fit 4-hex-digit sub-key.
+    char buf_lightid[29];  // fits "XX:XX:XX:XX:XX:XX:XX:XX-XX\0".
     encodeLightId(dev->getId(), buf_lightid);
-    
+
+    const EspalexaDeviceType t = dev->getType();
+    const char* prod = productNameString(t);
+
+    if (t == EspalexaDeviceType::onoff) {
+      // Real Hue Smart Plug JSON: no `bri`, alert "select", config block
+      // present, modelid LOM001, manufacturername "Signify Netherlands
+      // B.V." (post-2019 Hue), Zigbee-style uniqueid.
+      sprintf_P(buf, PSTR(
+        "{\"state\":{\"on\":%s,\"alert\":\"select\",\"mode\":\"homeautomation\",\"reachable\":true},"
+        "\"type\":\"On/Off plug-in unit\","
+        "\"name\":\"%s\","
+        "\"modelid\":\"LOM001\","
+        "\"manufacturername\":\"Signify Netherlands B.V.\","
+        "\"productname\":\"%s\","
+        "\"capabilities\":{\"certified\":true,\"control\":{},\"streaming\":{\"renderer\":false,\"proxy\":false}},"
+        "\"config\":{\"archetype\":\"plug\",\"function\":\"functional\",\"direction\":\"omnidirectional\","
+        "\"startup\":{\"mode\":\"safety\",\"configured\":true}},"
+        "\"uniqueid\":\"%s\","
+        "\"swversion\":\"1.104.2\","
+        "\"productid\":\"Philips-LOM001-1-PLUGSUNV1\"}"),
+        (dev->getValue()) ? "true" : "false",
+        dev->getName().c_str(),
+        prod,
+        buf_lightid);
+      return;
+    }
+
+    // Dimmable / colour devices keep the legacy field set (Alexa hasn't
+    // been observed rejecting these because at least one customer was
+    // reporting them as `dimmable` in the previous build).
     char buf_col[80] = "";
-    //color support
-    if (static_cast<uint8_t>(dev->getType()) > 2)
+    if (static_cast<uint8_t>(t) > 2)
       sprintf_P(buf_col,PSTR(",\"hue\":%u,\"sat\":%u,\"effect\":\"none\",\"xy\":[%f,%f]")
         ,dev->getHue(), dev->getSat(), dev->getX(), dev->getY());
-      
+
     char buf_ct[16] = "";
-    //white spectrum support
-    if (static_cast<uint8_t>(dev->getType()) > 1 && dev->getType() != EspalexaDeviceType::color)
+    if (static_cast<uint8_t>(t) > 1 && t != EspalexaDeviceType::color)
       sprintf(buf_ct, ",\"ct\":%u", dev->getCt());
-    
+
     char buf_cm[20] = "";
-    if (static_cast<uint8_t>(dev->getType()) > 1)
+    if (static_cast<uint8_t>(t) > 1)
       sprintf(buf_cm,PSTR("\",\"colormode\":\"%s"), modeString(dev->getColorMode()));
-    
-    sprintf_P(buf, PSTR("{\"state\":{\"on\":%s,\"bri\":%u%s%s,\"alert\":\"none%s\",\"mode\":\"homeautomation\",\"reachable\":true},"
-                   "\"type\":\"%s\",\"name\":\"%s\",\"modelid\":\"%s\",\"manufacturername\":\"Philips\",\"productname\":\"E%u"
-                   "\",\"uniqueid\":\"%s\",\"swversion\":\"espalexa-2.7.0-irhub.1\"}")
-                   
-    , (dev->getValue())?"true":"false", dev->getLastValue()-1, buf_col, buf_ct, buf_cm, typeString(dev->getType()),
-    dev->getName().c_str(), modelidString(dev->getType()), static_cast<uint8_t>(dev->getType()), buf_lightid);
+
+    sprintf_P(buf, PSTR(
+        "{\"state\":{\"on\":%s,\"bri\":%u%s%s,\"alert\":\"select%s\",\"mode\":\"homeautomation\",\"reachable\":true},"
+        "\"type\":\"%s\","
+        "\"name\":\"%s\","
+        "\"modelid\":\"%s\","
+        "\"manufacturername\":\"Signify Netherlands B.V.\","
+        "\"productname\":\"%s\","
+        "\"uniqueid\":\"%s\","
+        "\"swversion\":\"1.104.2\"}"),
+      (dev->getValue()) ? "true" : "false",
+      dev->getLastValue() - 1,
+      buf_col, buf_ct, buf_cm,
+      typeString(t),
+      dev->getName().c_str(),
+      modelidString(t),
+      prod,
+      buf_lightid);
   }
   
   //Espalexa status page /espalexa
@@ -409,7 +480,10 @@ private:
       snprintf(keyBuf, sizeof(keyBuf), "%s\"%d\":",
                (i == 0) ? "" : ",", encodeLightKey(i));
       server->sendContent(keyBuf);
-      char buf[512];
+      // IRHUB: bumped from 512 -> 768 when deviceJsonString started
+      // emitting full Hue plug payloads (~560 B). 512 used to overflow
+      // silently and Alexa would receive truncated JSON.
+      char buf[768];
       deviceJsonString(devices[i], buf);
       server->sendContent(buf);
     }
@@ -564,6 +638,40 @@ public:
     if (strstr(request, "M-SEARCH") == nullptr) return;
 
     EA_DEBUGLN(request);
+
+    // IRHUB temporary instrumentation: log who's M-SEARCHing us, and the
+    // exact ST/MAN values so we can verify our filter isn't dropping real
+    // Echos. Uses "\nST:" so we don't accidentally match the "ST:" inside
+    // "HOST:".
+    {
+      IPAddress remote = espalexaUdp.remoteIP();
+      char ip[24];
+      snprintf(ip, sizeof(ip), "%u.%u.%u.%u", remote[0], remote[1], remote[2], remote[3]);
+      auto headerValue = [&](const char* prefix, char* out, size_t outLen) {
+        const char* p = strstr(request, prefix);
+        if (!p) { out[0] = 0; return; }
+        p += strlen(prefix);
+        while (*p == ' ' || *p == '\t') p++;
+        const char* end = strstr(p, "\r\n");
+        size_t n = end ? (size_t)(end - p) : strlen(p);
+        if (n > outLen - 1) n = outLen - 1;
+        memcpy(out, p, n);
+        out[n] = 0;
+      };
+      char st[80] = "", man[40] = "", mx[8] = "";
+      headerValue("\nST:", st, sizeof(st));
+      headerValue("\nMAN:", man, sizeof(man));
+      headerValue("\nMX:", mx, sizeof(mx));
+      Serial.print(F("[INFO] [Alexa-SSDP] M-SEARCH from "));
+      Serial.print(ip);
+      Serial.print(F(" ST='"));
+      Serial.print(st);
+      Serial.print(F("' MAN="));
+      Serial.print(man);
+      Serial.print(F(" MX="));
+      Serial.println(mx);
+    }
+
     if (strstr(request, "ssdp:disc")  != nullptr &&  //short for "ssdp:discover"
         (strstr(request, "upnp:rootd") != nullptr || //short for "upnp:rootdevice"
          strstr(request, "ssdp:all")   != nullptr ||
@@ -571,6 +679,8 @@ public:
     {
       EA_DEBUGLN("Responding search req...");
       respondToSearch();
+    } else {
+      Serial.println(F("[WARN] [Alexa-SSDP] M-SEARCH filter rejected this packet"));
     }
   }
 
@@ -644,6 +754,32 @@ public:
     EA_DEBUGLN("AlexaApiCall");
     if (req.indexOf("api") <0) return false; //return if not an API call
     EA_DEBUGLN("ok");
+
+    // IRHUB temporary instrumentation: every Hue API request is logged to
+    // the main IR Hub serial stream so we can correlate Alexa discovery
+    // failures with which endpoints (if any) the Echo actually fetches.
+    // Safe to leave on at production scale because real Alexa traffic is
+    // 1-2 req/sec at most. Remove if/when this becomes noisy.
+    {
+      String src = "?";
+      #ifndef ESPALEXA_ASYNC
+      if (server) {
+        IPAddress c = server->client().remoteIP();
+        char ip[24];
+        snprintf(ip, sizeof(ip), "%u.%u.%u.%u", c[0], c[1], c[2], c[3]);
+        src = ip;
+      }
+      #endif
+      Serial.print(F("[INFO] [Alexa-HTTP] "));
+      Serial.print(src);
+      Serial.print(F(" "));
+      Serial.print(req);
+      if (body.length() > 0) {
+        Serial.print(F(" body="));
+        Serial.print(body);
+      }
+      Serial.println();
+    }
 
     if (body.indexOf("devicetype") > 0) //client wants a hue api username, we don't care and give static
     {
@@ -741,7 +877,8 @@ public:
         unsigned idx = decodeLightKey(devId);
         if (idx < currentDeviceCount)
         {
-          char buf[512];
+          // IRHUB: bumped from 512 -> 768; see streamLightsDict() comment.
+          char buf[768];
           deviceJsonString(devices[idx], buf);
           server->send(200, "application/json", buf);
         } else {
