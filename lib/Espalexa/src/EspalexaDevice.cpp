@@ -27,13 +27,10 @@ EspalexaDevice::EspalexaDevice(String deviceName, DeviceCallbackFunction gnCallb
   _deviceName = deviceName;
   _callbackDev = gnCallback;
   _type = t;
-  // IRHUB: removed the silent `onoff -> dimmable` rewrite that upstream
-  // shipped (with the comment "on/off is broken"). The real bug was the
-  // empty type/modelid strings for EspalexaDeviceType::onoff in
-  // Espalexa.h's typeString()/modelidString() — those are now populated
-  // with the real Hue Smart Plug (LOM001) values, so `onoff` works and
-  // shows up in the Alexa app as a clean on/off plug card with no
-  // brightness slider.
+  // IRHUB: removed upstream's silent `onoff -> dimmable` rewrite. The
+  // real bug was empty type/modelid strings for `onoff` in Espalexa.h;
+  // those are populated with real Hue Smart Plug (LOM001) values now,
+  // so `onoff` renders correctly as a plug card in the Alexa app.
   if (t == EspalexaDeviceType::whitespectrum) _mode = EspalexaColorMode::ct;
   _val = initialValue;
   _val_last = _val;
@@ -269,39 +266,20 @@ void EspalexaDevice::setId(uint8_t id)
   _id = id;
 }
 
-// IRHUB: stable per-device Hue uniqueid (see EspalexaDevice.h for rationale).
-void EspalexaDevice::setStableId(uint16_t stableId)
-{
-  _stableId = stableId;
-}
+// IRHUB: stable per-device Hue uniqueid — see header for rationale.
+void EspalexaDevice::setStableId(uint16_t stableId) { _stableId = stableId; }
+uint16_t EspalexaDevice::getStableId() const        { return _stableId; }
+bool     EspalexaDevice::hasStableId() const        { return _stableId != 0xFFFF; }
 
-uint16_t EspalexaDevice::getStableId() const
-{
-  return _stableId;
-}
-
-bool EspalexaDevice::hasStableId() const
-{
-  return _stableId != 0xFFFF;
-}
-
-// IRHUB: per-device 6-byte EUI-48 for Hue `uniqueid` (see EspalexaDevice.h).
+// IRHUB: per-device EUI-48 for Hue uniqueid prefix — see header for rationale.
 void EspalexaDevice::setUniqueIdMac(const uint8_t mac[6])
 {
   if (mac == nullptr) { _hasUidMac = false; return; }
   for (uint8_t i = 0; i < 6; i++) _uidMac[i] = mac[i];
   _hasUidMac = true;
 }
-
-bool EspalexaDevice::hasUniqueIdMac() const
-{
-  return _hasUidMac;
-}
-
-const uint8_t* EspalexaDevice::getUniqueIdMac() const
-{
-  return _uidMac;
-}
+bool           EspalexaDevice::hasUniqueIdMac() const { return _hasUidMac; }
+const uint8_t* EspalexaDevice::getUniqueIdMac() const { return _uidMac; }
 
 //you need to re-discover the device for the Alexa name to change
 void EspalexaDevice::setName(String name)

@@ -237,28 +237,16 @@ class AlexaConnector {
         wifiEnabled = true;
         WiFi.mode(WIFI_STA);
 
-        // IRHUB: load (or, on first boot / after factory reset, generate)
-        // the persistent random EUI-48 that uniquely identifies this hub
-        // to Alexa. Rotating this on factory reset is what guarantees
-        // Amazon's cloud cache cannot re-attach stale entities to our
-        // rebuilt device list. Must run BEFORE espalexa.setBridgeMac().
+        // Load (or, on first boot / after factory reset, generate) the
+        // persistent random EUI-48 that uniquely identifies this hub to
+        // Alexa. MUST run before setBridgeMac() — begin() snapshots it.
         loadOrGenerateBridgeMac();
         espalexa.setBridgeMac(bridgeMacBytes_);
 
-        // IRHUB: tell our vendored Espalexa to advertise a UNIQUE
-        // friendlyName before begin() so the bridge identity is set on
-        // the very first description.xml / /api/config response Alexa
-        // fetches. Otherwise multiple IR Hubs on the same LAN all show
-        // up as "Espalexa (192.168.0.x:80)" in the Alexa app, which makes
-        // it impossible for the user to tell them apart — and at least
-        // some Echo gens dedupe bridges by friendlyName, causing 4 of 5
-        // to silently disappear from discovery.
-        //
-        // Suffix is the LAST 6 HEX of the persistent random bridge MAC
-        // (not the WiFi MAC). Tying it to the rotated identity means
-        // every factory reset gives the user a visibly-different bridge
-        // name in the Alexa app — a clear "this is a new bridge" signal
-        // that helps users tell whether their cleanup worked.
+        // Suffix the bridge friendlyName with the last 3 bytes of the
+        // rotated MAC so (a) multiple hubs on one LAN are distinguishable
+        // and (b) every factory reset gives a visibly-different name —
+        // a clear "this is a new bridge" signal in the Alexa app.
         {
             char suffixBuf[7];
             snprintf(suffixBuf, sizeof(suffixBuf), "%02x%02x%02x",
@@ -305,38 +293,33 @@ class AlexaConnector {
         onStateChangeCallback = callback;
     }
 
+    // Register one IR-Hub device as a virtual Hue light on the bridge.
+    //
+    // Device type — registered as a `dimmable` Hue white lamp rather than
+    // a Hue plug because multiple Echo generations omit the on/off toggle
+    // from a plug's detail page. The brightness slider this exposes is
+    // harmless: handleDeviceCallback treats any value > 0 as ON.
+    //
+    // Friendly name — prepended with the 6-char uuid prefix
+    // ("0a850a SONY 1"). Alexa's app groups smart-home cards by the
+    // first word of the friendly name, so a unique-per-device first
+    // token is the cheapest way to bypass that grouping. Users rename
+    // the card inside the Alexa app for voice control; the rename stays
+    // Alexa-side and never reaches the hub, so our internal identity
+    // stays stable.
+    //
+    // Uniqueid — the EUI-64 prefix is derived from the first 6 hex bytes
+    // of the device UUID (with the LAA bit forced on). This is the
+    // primary axis Alexa uses to dedupe cards — see Espalexa::
+    // perDeviceModelId banner for the full story. The 2-hex endpoint
+    // suffix is pinned to `device.alexaSlot` so Alexa's cloud cache
+    // keeps pointing at the right physical IR command across reorders.
     void registerDevice(const Device& device) {
         if (!wifiEnabled) {
             return;
         }
-        // We run on a vendored Espalexa (lib/Espalexa/) that exposes
-        // EspalexaDevice::setStableId(). Register as a `dimmable` Hue
-        // white lamp (LWB010) rather than a `onoff` plug — on multiple
-        // Echo generations the Alexa app omits the toggle from a plug's
-        // detail page, but it's always present for bulbs. The brightness
-        // slider this exposes is harmless: handleDeviceCallback() treats
-        // any value > 0 as ON, so nudging the slider just re-sends the
-        // recorded "on" IR command (which is idempotent for the typical
-        // TV/STB/AC remote).
-        //
-        // Friendly-name strategy: PREPEND the 6-char uuid prefix
-        // ("0a850a SONY 1"). The first word matters: Alexa's app dedupes
-        // smart-home cards that share the same friendly-name first word
-        // (so "SONY 1 0a850a" and "SONY 2 abc715" collapsed into one
-        // visible card — even though both entities existed in Alexa's
-        // cloud and both routed commands correctly per serial logs).
-        // Putting the per-device-unique uuid prefix as the first token
-        // bypasses that grouping. Users are expected to rename the card
-        // inside the Alexa app to whatever they want for voice control
-        // (e.g. "Bedroom TV"); the rename stays Alexa-side and never
-        // reaches the hub, so our internal identity stays stable.
-        //
-        // The Hue uniqueid is pinned to `device.alexaSlot` — a 1..255
-        // byte assigned at creation time by DeviceManager — so Alexa's
-        // cloud cache keeps pointing at the right physical IR command
-        // regardless of registration order or add/remove churn.
-        String uuidSuffix = device.uuid.substring(0, 6);
-        String alexaName = uuidSuffix + " " + device.name;
+
+        String alexaName = device.uuid.substring(0, 6) + " " + device.name;
 
         uint8_t alexaIdx = espalexa.addDevice(
             alexaName.c_str(),
@@ -345,37 +328,22 @@ class AlexaConnector {
             },
             EspalexaDeviceType::dimmable);
         if (alexaIdx == 0) {
-            // addDevice returns 0 when the ESPALEXA_MAXDEVICES (20) cap is
-            // hit. Surface loudly — symptom is silent "Alexa is missing
-            // some of my devices".
             LOG_ERROR("[Alexa] addDevice failed for '%s' — likely at "
-                      "ESPALEXA_MAXDEVICES cap",
+                      "ESPALEXA_MAXDEVICES (20) cap",
                       alexaName.c_str());
             return;
         }
 
-        // device.alexaSlot is the 1..255 byte DeviceManager assigned at
-        // creation time. Espalexa internally encodes the Hue uniqueid
-        // endpoint as `(stableId + 1) & 0xFF`, so we pass slot - 1 to
-        // arrive back at our intended endpoint byte.
-        uint16_t stable = (uint16_t)(device.alexaSlot - 1);
         EspalexaDevice* d = espalexa.getDevice((uint8_t)(alexaIdx - 1));
         if (d != nullptr) {
-            d->setStableId(stable);
+            // Espalexa encodes the uniqueid endpoint as (stableId + 1) & 0xFF
+            // — pass slot - 1 to arrive back at our intended endpoint byte.
+            d->setStableId((uint16_t)(device.alexaSlot - 1));
 
-            // IRHUB: install a per-device EUI-48 derived from the
-            // device UUID's first 6 hex bytes. This becomes the first
-            // 6 bytes of the Hue `uniqueid` (e.g. "0a:85:0a:ff:fe:72:
-            // a1:01-XX"), so each light on the bridge presents a
-            // physically-distinct Zigbee address to Alexa. Alexa's
-            // app dedupe was previously collapsing two cards that
-            // shared the same uniqueid prefix (the bridge MAC) — this
-            // is the last shared identity field, and removing the
-            // sharing here closes the final dedup vector. Bit 1 of
-            // byte 0 (locally administered) is forced on so the value
-            // is a well-formed LAA address.
-            uint8_t uidMac[6] = {0, 0, 0, 0, 0, 0};
+            // Per-device EUI-48 for the Hue uniqueid prefix. LAA bit forced
+            // on so the result is a well-formed locally-administered address.
             if (device.uuid.length() >= 12) {
+                uint8_t uidMac[6];
                 for (uint8_t i = 0; i < 6; i++) {
                     char hex[3] = {device.uuid.charAt(i * 2),
                                    device.uuid.charAt(i * 2 + 1), '\0'};

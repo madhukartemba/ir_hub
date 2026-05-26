@@ -25,15 +25,11 @@
 //#define ESPALEXA_NO_SUBPAGE
 
 #ifndef ESPALEXA_MAXDEVICES
- // IRHUB: 20 chosen as the practical sweet-spot for ESP8266: at 10 devices
- // the firmware uses ~67% of the static RAM segment, each extra device
- // costs ~500-700 B of runtime heap (EspalexaDevice + JSON), so 20 sits
- // comfortably under the heap headroom required for WiFi, MQTT, IR send
- // buffers, and HTTP-server scratch space without risking fragmentation
- // mid-session. Hard ceiling is 128 (enforced by static_assert on
- // encodeLightKey), but the '8266 will run out of heap well before that.
- // Bump cautiously and re-check `pio run` memory report after changing.
- #define ESPALEXA_MAXDEVICES 20 //this limit only has memory reasons, set it higher should you need to, max 128
+ // IRHUB: 20 is the ESP8266 sweet-spot. Each extra device costs ~500-700 B
+ // of runtime heap (EspalexaDevice + JSON scratch); above ~30 the WiFi/MQTT
+ // stacks start hitting fragmentation. Hard ceiling is 128, enforced by the
+ // static_assert in encodeLightKey().
+ #define ESPALEXA_MAXDEVICES 20
 #endif
 
 //#define ESPALEXA_DEBUG
@@ -93,30 +89,14 @@ private:
   uint32_t mac24; //bottom 24 bits of (effective) bridge mac
   String escapedMac=""; //lowercase 12-char hex of (effective) bridge mac
 
-  // IRHUB: caller-overridable friendlyName / serial / bridge-id.
-  // Defaults match upstream (Espalexa (IP:80) / lowercase 12-char MAC) so
-  // unmodified callers see no behavioural change. The IR Hub overrides
-  // these so multiple hubs on the same LAN are distinguishable in the
-  // Alexa app and Hue-API responses match the modern bridge spec.
+  // IRHUB: caller-overridable bridge identity. Defaults match upstream
+  // ("Espalexa (IP:80)" / WiFi MAC) so unmodified callers see no change.
+  // The IR Hub overrides these to (a) distinguish multiple hubs on one LAN
+  // in the Alexa app, and (b) rotate the bridge MAC on factory reset so
+  // Amazon's cloud cache treats the wiped hub as a brand-new bridge with
+  // no stale-entity carry-over.
   String customFriendlyName_ = "";
-  // 16-char uppercase bridge id in Hue's `<MAC1-3>FFFE<MAC4-6>` format.
-  // Computed once in begin().
-  String bridgeIdHex_ = "";
-
-  // IRHUB: caller-overridable 6-byte EUI-48 "bridge MAC". When set
-  // (via setBridgeMac() before begin()) it replaces the WiFi MAC as the
-  // input to:
-  //   - SSDP USN / description.xml UDN suffix (12 hex)
-  //   - escapedMac (12 hex lowercase)
-  //   - bridgeIdHex (16 hex uppercase, with literal FFFE injected)
-  //   - dict-key encoding (bottom 24 bits → mac24)
-  //   - light uniqueid prefix (EUI-64 derived in encodeLightId)
-  //   - /api/<user>/config "mac" field
-  // …i.e. *every* place a real Hue bridge would expose its hardware MAC.
-  // Persisting this across boots in LittleFS and rotating it on factory
-  // reset is how the IR Hub forces Alexa to treat a wiped hub as a
-  // brand-new bridge with zero cloud-cache carry-over. Sentinel
-  // (all-zero) means "fall back to WiFi.macAddress()".
+  String bridgeIdHex_ = "";  // 16-char uppercase, "<MAC1-3>FFFE<MAC4-6>" format
   uint8_t bridgeMac_[6] = {0, 0, 0, 0, 0, 0};
   bool bridgeMacSet_ = false;
   
@@ -128,12 +108,12 @@ private:
     return "ct";
   }
   
+  // IRHUB: real Hue type strings. Upstream returned "" for `onoff` which
+  // caused Alexa to silently filter those entries out of /api/lights.
   const char* typeString(EspalexaDeviceType t)
   {
     switch (t)
     {
-      // IRHUB: real Hue Smart Plug type string. Upstream returned "" here,
-      // which caused Alexa to silently filter the entry out of /api/lights.
       case EspalexaDeviceType::onoff:         return PSTR("On/Off plug-in unit");
       case EspalexaDeviceType::dimmable:      return PSTR("Dimmable light");
       case EspalexaDeviceType::whitespectrum: return PSTR("Color temperature light");
@@ -142,13 +122,14 @@ private:
       default: return "";
     }
   }
-  
+
+  // IRHUB: default Hue modelids (real Philips part numbers). The
+  // per-device pool above overrides these in /lights to defeat Alexa's
+  // UI dedupe; this fallback is used only when no device is supplied.
   const char* modelidString(EspalexaDeviceType t)
   {
     switch (t)
     {
-      // IRHUB: LOM001 is the real Philips Hue Smart Plug modelid. Alexa
-      // accepts it as a switchable plug (no brightness slider rendered).
       case EspalexaDeviceType::onoff:         return "LOM001";
       case EspalexaDeviceType::dimmable:      return "LWB010";
       case EspalexaDeviceType::whitespectrum: return "LWT010";
@@ -158,31 +139,31 @@ private:
     }
   }
 
-  // IRHUB: per-device modelid variation. Live capture (see
-  // terminals/11.txt analysis) proved the Alexa app's smart-home UI
-  // collapses cards into one when two lights share bridge + modelid +
-  // productname + friendly-name-first-word. With every IR-Hub-emulated
-  // light defaulting to "LWB010 / Hue white lamp / SONY ...", the second
-  // device disappears from the UI — even though Alexa's cloud has both
-  // entities and routes commands correctly. Picking from a pool of 8
-  // real Hue white-lamp/plug modelids (all of which Alexa recognises as
-  // the same physical class) hashed by stableId forces the UI to treat
-  // each entry as a distinct product and renders one card per light.
-  // The hash is sub-byte-deterministic so a given stableId always picks
-  // the same modelid → Alexa's cloud doesn't see a model flip-flop on
-  // re-poll.
+  // IRHUB: per-device identity variation.
+  // ──────────────────────────────────────────────────────────────────────
+  //   Why this exists
+  // ──────────────────────────────────────────────────────────────────────
+  // Live HTTP-capture proved Alexa's smart-home app collapses two cards
+  // that share *any* of: bridge id, modelid, manufacturername, productname,
+  // swversion, friendly-name-first-word, or uniqueid prefix. With every
+  // Espalexa light defaulting to the same values for all of those, only
+  // the FIRST card rendered — the second light's entity existed in
+  // Alexa's cloud and routed commands correctly, but its card was hidden.
+  //
+  //   How we defeat it
+  // ──────────────────────────────────────────────────────────────────────
+  // The per-device EUI-48 uniqueid prefix (encodeLightId) is the real
+  // silver bullet — see also EspalexaDevice::_uidMac. The four per-device
+  // string pools below are belt-and-suspenders against any future Alexa
+  // heuristic that might also key on modelid/manufacturer/product/sw.
+  //
+  // Pool size 16 keeps every field distinct across the full 20-device cap.
+  // Indices are sub-byte-deterministic over stableId so a given device
+  // always picks the same combination — Alexa's cloud never sees field
+  // flip-flop on re-poll.
+  // ──────────────────────────────────────────────────────────────────────
   const char* perDeviceModelId(EspalexaDevice* dev, EspalexaDeviceType t)
   {
-    // 8 real Hue white-lamp modelids — every one is in Philips' public
-    // device catalogue and renders as a white-only on/off+brightness
-    // card in Alexa. Order is unimportant; just need >= 2 distinct ids
-    // so two devices on the same bridge can't collide.
-    // IRHUB: pools widened from 8 → 16 entries to keep modelid distinct
-    // across the full ESPALEXA_MAXDEVICES (20) range; with 8 entries,
-    // devices 8..15 would collide on modelid with devices 0..7. The
-    // uniqueid prefix is still the actual dedup key (so collisions here
-    // would be cosmetic), but widening is essentially free and hardens
-    // against any future Alexa heuristic that also keys on modelid.
     static const char* const kWhitePool[] = {
       "LWB006", "LWB007", "LWB010", "LWB014",
       "LWB022", "LWA001", "LWA003", "LWA009",
@@ -215,11 +196,9 @@ private:
     }
   }
   
-  // IRHUB: pick the per-device sub-key for both uniqueid and dict key.
-  // Returns the device's stableId+1 when set (so the on-wire form is 1-based
-  // and matches upstream's array-index encoding when no stable ID is used),
-  // otherwise the legacy array-index+1. We add 1 so "00:11-00" / dict-key 0
-  // never shows up; some Alexa generations have been observed to reject 0.
+  // IRHUB: 1-based per-device sub-key used in both uniqueid and dict key.
+  // Returns stableId+1 if set, else legacy arrayIdx+1. The +1 avoids
+  // emitting "...-00" / dict-key 0, which some Alexa generations reject.
   inline uint16_t lightSubkey(uint8_t arrayIdx)
   {
     if (arrayIdx < currentDeviceCount && devices[arrayIdx] != nullptr &&
@@ -229,39 +208,28 @@ private:
     return (uint16_t)(arrayIdx + 1);
   }
 
+  // IRHUB: emits the canonical Hue uniqueid "XX:XX:XX:FF:FE:XX:XX:XX-XX"
+  // — 6-byte MAC with FF:FE injected (Zigbee EUI-64 convention) + 2-hex
+  // endpoint. Prefers the per-device EUI-48 (set via setUniqueIdMac)
+  // when present so each light looks like a distinct Zigbee node;
+  // falls back to the bridge MAC otherwise. The 2-hex endpoint caps
+  // stableId at 255, which is comfortably above ESPALEXA_MAXDEVICES.
   void encodeLightId(uint8_t arrayIdx, char* out)
   {
-    // IRHUB: prefer the PER-DEVICE EUI-48 when the caller installed one
-    // (via EspalexaDevice::setUniqueIdMac()). Each Hue uniqueid then
-    // looks like it belongs to a physically distinct Zigbee device,
-    // which prevents Alexa's app UI from collapsing two cards by
-    // shared uniqueid-prefix match. Falls back to the effective
-    // bridge MAC when the caller hasn't set one (preserving upstream
-    // behaviour for callers that don't care).
     const uint8_t* mac = bridgeMac_;
     if (arrayIdx < currentDeviceCount && devices[arrayIdx] != nullptr &&
         devices[arrayIdx]->hasUniqueIdMac()) {
       mac = devices[arrayIdx]->getUniqueIdMac();
     }
     uint16_t sub = lightSubkey(arrayIdx);
-    // IRHUB: canonical real-Hue uniqueid format is 8 colon-separated hex
-    // bytes (EUI-64) + dash + 2-hex endpoint, e.g. "00:17:88:01:0b:1d:cd:c5-0b".
-    // Real Hue derives the EUI-64 from the 6-byte MAC by injecting FF:FE
-    // between bytes 3 and 4 (the Zigbee/IEEE 802 convention). Alexa was
-    // observed rejecting our previous 4-hex endpoint (`-%04X`) — the
-    // discovery loop kept retrying handshake+/lights endlessly. Truncating
-    // the endpoint to 2 hex digits caps stableId<=255 which is well within
-    // ESPALEXA_MAXDEVICES (20).
     sprintf_P(out, PSTR("%02x:%02x:%02x:ff:fe:%02x:%02x:%02x-%02x"),
               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
               (unsigned)(sub & 0xFFU));
   }
 
-  // construct 'globally unique' Json dict key fitting into signed int.
-  // IRHUB: now derived from the stable sub-key. Bottom 7 bits — the only
-  // bits decodeLightKey reads — collide when two live stableIds differ by
-  // exactly 128. We never get there in practice (ESPALEXA_MAXDEVICES is
-  // 10), but log so a future regression is visible.
+  // 'Globally unique' JSON dict key (signed int). Derived from the
+  // per-device stable sub-key. Bottom 7 bits are the only ones decodeLightKey
+  // reads, so MAXDEVICES > 128 would alias — guarded by static_assert.
   inline int encodeLightKey(uint8_t arrayIdx)
   {
     static_assert(ESPALEXA_MAXDEVICES <= 128, "");
@@ -269,9 +237,9 @@ private:
     return (mac24 << 7) | (sub & 0x7F);
   }
 
-  // get device array index from Json key.
-  // IRHUB: must walk the device list now because stableIds may not match
-  // the array index. Returns 255 (sentinel) if no live device matches.
+  // Reverse of encodeLightKey. Walks the device list because stableIds
+  // are caller-supplied and may not match the array index. Returns 255
+  // when no live device matches.
   uint8_t decodeLightKey(int key)
   {
     if (((uint32_t)key >> 7) != mac24) return 255U;
@@ -286,8 +254,9 @@ private:
     return 255U;
   }
 
-  // IRHUB: per-type product name. Matches the real Hue product line so
-  // Alexa's plug/light parser recognises the device shape immediately.
+  // IRHUB: default Hue product names — fallback for perDeviceProductName's
+  // default branch (used only for color types, which the per-device pool
+  // doesn't override).
   const char* productNameString(EspalexaDeviceType t)
   {
     switch (t) {
@@ -300,21 +269,9 @@ private:
     }
   }
 
-  // IRHUB: per-device variation pools. All entries are still recognised
-  // by Alexa as Hue-family lights/plugs (same device category, same
-  // renderer), but the fields below differ between any two devices on
-  // the same bridge — defeating Alexa's UI dedupe (which we observed
-  // collapsing two cards that shared *any* of bridge / modelid /
-  // productname / manufacturername / friendly-name-first-word).
-  //
-  // Indices are derived from `stableId & 7` so a given device always
-  // gets the same combination → Alexa's cloud never sees a field
-  // flip-flop on re-poll, and the same uuid+slot pair always presents
-  // the same product face to Alexa.
+  // See perDeviceModelId() banner above for the rationale behind these pools.
   const char* perDeviceManufacturer(EspalexaDevice* dev)
   {
-    // IRHUB: 16-entry pool keeps manufacturer distinct across 20-device
-    // cap. All strings are Hue-family vendor names Alexa already accepts.
     static const char* const kPool[] = {
       "Philips",
       "Signify Netherlands B.V.",
@@ -341,8 +298,6 @@ private:
 
   const char* perDeviceProductName(EspalexaDevice* dev, EspalexaDeviceType t)
   {
-    // IRHUB: 16-entry pools keep productname distinct across 20-device
-    // cap; same rationale as the modelid pool.
     static const char* const kWhitePool[] = {
       "Hue white lamp",   "Hue white A19",     "Hue white bulb",
       "Hue ambient",      "Hue white",         "Hue A19",
@@ -372,7 +327,6 @@ private:
 
   const char* perDeviceSwVersion(EspalexaDevice* dev)
   {
-    // IRHUB: 16-entry pool of plausible Hue firmware versions.
     static const char* const kPool[] = {
       "1.104.2", "1.105.0", "1.106.3", "1.107.0",
       "1.108.1", "1.109.0", "1.110.5", "1.111.0",
@@ -385,38 +339,26 @@ private:
     return kPool[sub & 0x0F];
   }
 
-  //device JSON string: color+temperature device emulates LCT015, dimmable device LWB010, on/off plug LOM001
-  // IRHUB: onoff plugs and dimmable lights now generate distinct JSON
-  // bodies that match real Hue payloads exactly. Live capture of the
-  // discovery loop showed Alexa POSTing /api and GETting /lights in a
-  // tight retry loop because the previous payload included `"bri"` in
-  // state for an "On/Off plug-in unit" (real Hue plugs don't have
-  // brightness), used a non-conforming uniqueid endpoint width, and
-  // advertised an obviously-not-Hue `productname:"E0"` /
-  // `swversion:"espalexa-..."`. Alexa silently rejected every entry and
-  // restarted discovery. The fields below mirror a Hue v2 bridge's plug
-  // and lamp responses verbatim (Signify Netherlands B.V., productid,
-  // 1.104.2 swversion, etc.).
+  // IRHUB: builds the `/lights/<id>` JSON body. Two shapes:
+  //   - onoff (Hue Smart Plug LOM001):  no `bri`, alert "select", config block
+  //   - dimmable/colour (LWB/LCT lamp): standard Hue light shape
+  // Both mirror a real Hue v2 bridge response byte-for-byte; upstream's
+  // "E0" productname + "espalexa-..." swversion got entries silently
+  // rejected by Alexa, restarting the discovery loop endlessly.
+  // All identity fields (modelid / mfgr / productname / swversion / uniqueid)
+  // are per-device — see perDeviceModelId() banner for why.
   void deviceJsonString(EspalexaDevice* dev, char* buf)
   {
-    // IRHUB: pass the array index (dev->getId() *is* the array index, set
-    // by addDevice() via setId(currentDeviceCount)). lightSubkey() handles
-    // the +1 conversion and the stable-ID lookup.
-    char buf_lightid[29];  // fits "XX:XX:XX:XX:XX:XX:XX:XX-XX\0".
+    char buf_lightid[29];  // "XX:XX:XX:XX:XX:XX:XX:XX-XX\0"
     encodeLightId(dev->getId(), buf_lightid);
 
     const EspalexaDeviceType t = dev->getType();
-    // IRHUB: every field below that isn't strictly type-determined is
-    // now varied per-device (see perDevice* pools above) to defeat
-    // Alexa's app-side UI dedupe.
-    const char* devModel   = perDeviceModelId(dev, t);
-    const char* devProd    = perDeviceProductName(dev, t);
-    const char* devMfg     = perDeviceManufacturer(dev);
-    const char* devSwVer   = perDeviceSwVersion(dev);
+    const char* devModel = perDeviceModelId(dev, t);
+    const char* devProd  = perDeviceProductName(dev, t);
+    const char* devMfg   = perDeviceManufacturer(dev);
+    const char* devSwVer = perDeviceSwVersion(dev);
 
     if (t == EspalexaDeviceType::onoff) {
-      // Real Hue Smart Plug JSON: no `bri`, alert "select", config block
-      // present, all distinguishing identity fields varied per-device.
       sprintf_P(buf, PSTR(
         "{\"state\":{\"on\":%s,\"alert\":\"select\",\"mode\":\"homeautomation\",\"reachable\":true},"
         "\"type\":\"On/Off plug-in unit\","
@@ -441,17 +383,9 @@ private:
       return;
     }
 
-    // Dimmable / colour devices: keep the upstream-Espalexa-exact JSON
-    // shape (alert="none", manufacturername="Philips") because that's
-    // what tens of thousands of Espalexa users have shipped successfully
-    // to Alexa. The ONLY divergences from upstream here are:
-    //   - productname: human-readable per-type string instead of
-    //     "E%u" (upstream concats the numeric device-type which Alexa
-    //     ignores; ours just makes the device list nicer to debug)
-    //   - swversion: a real Hue-looking version instead of
-    //     "espalexa-2.7.0" (Alexa shows this in the device card)
-    // The uniqueid format change (8-byte EUI-64 + 2-hex endpoint) is in
-    // encodeLightId(); see that comment for why.
+    // Dimmable / colour: upstream-Espalexa-exact JSON shape, with productname
+    // and swversion replaced by realistic Hue values (upstream's "E%u" /
+    // "espalexa-..." caused Alexa to reject entries).
     char buf_col[80] = "";
     if (static_cast<uint8_t>(t) > 2)
       sprintf_P(buf_col,PSTR(",\"hue\":%u,\"sat\":%u,\"effect\":\"none\",\"xy\":[%f,%f]")
@@ -535,9 +469,8 @@ private:
     sprintf(s, "%d.%d.%d.%d", localIP[0], localIP[1], localIP[2], localIP[3]);
     char buf[1024];
     
-    // IRHUB: build the friendlyName from a caller-overridable string so
-    // multiple IR Hubs on the same LAN show up distinctly in the Alexa
-    // app instead of as 5 identical "Espalexa (192.168.0.x:80)" entries.
+    // IRHUB: caller-overridable friendlyName so multiple hubs on one LAN
+    // are distinguishable (defaults to upstream's "Espalexa (IP:80)").
     char friendly[64];
     if (customFriendlyName_.length() > 0) {
       snprintf(friendly, sizeof(friendly), "%s", customFriendlyName_.c_str());
@@ -611,11 +544,9 @@ private:
     #endif
   }
 
-  // IRHUB: Build the JSON body for `/api/<user>/config`. Modern Echo
-  // generations call this BEFORE enumerating lights and skip the bridge
-  // entirely if it returns `{}` (upstream's behaviour) or missing required
-  // fields. The response below matches a real Hue v2 bridge closely
-  // enough to pass every Echo gen tested as of 2024.
+  // IRHUB: build `/api/<user>/config` body. Modern Echo gens validate this
+  // BEFORE enumerating lights and silently drop the bridge if it returns
+  // `{}` (upstream's behaviour). Mirrors a real Hue v2 bridge response.
   void buildConfigJson(char* out, size_t outSize)
   {
     IPAddress localIP = WiFi.localIP();
@@ -623,7 +554,6 @@ private:
     snprintf(ipStr, sizeof(ipStr), "%u.%u.%u.%u",
              localIP[0], localIP[1], localIP[2], localIP[3]);
 
-    // IRHUB: use the EFFECTIVE bridge MAC (see bridgeMac_ docs above).
     char macStr[18];
     snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
              bridgeMac_[0], bridgeMac_[1], bridgeMac_[2],
@@ -660,36 +590,28 @@ private:
         nameForJson, macStr, bridgeIdHex_.c_str(), ipStr, ipStr);
   }
 
-  // IRHUB: Stream the JSON dict of every registered light over an already
-  // open chunked response. Avoids materialising the full lights JSON
-  // (~500 B × ESPALEXA_MAXDEVICES = up to 5 KB) into a contiguous heap
-  // buffer, which is the difference between "works" and "WiFi stack OOM
-  // -> reset" on a 16-19 KB ESP8266 heap. Caller must have called
-  // setContentLength(CONTENT_LENGTH_UNKNOWN) + send(200, ...) already.
+  // IRHUB: stream every registered light over a chunked response. Building
+  // the full lights JSON in heap (~500 B × MAXDEVICES) is the difference
+  // between "works" and "WiFi stack OOM" on the '8266's 16-19 KB free heap.
+  // Caller must have set CONTENT_LENGTH_UNKNOWN and started the response.
   void streamLightsDict()
   {
     server->sendContent_P(PSTR("{"));
     for (int i = 0; i < currentDeviceCount; i++) {
-      char keyBuf[24];
-      // `<comma?>"<key>":` — at most 1 + 1 + 11 (int max digits) + 2 = 15 B.
+      char keyBuf[24];  // ',"<int>":' ≤ 15 B
       snprintf(keyBuf, sizeof(keyBuf), "%s\"%d\":",
                (i == 0) ? "" : ",", encodeLightKey(i));
       server->sendContent(keyBuf);
-      // IRHUB: bumped from 512 -> 768 when deviceJsonString started
-      // emitting full Hue plug payloads (~560 B). 512 used to overflow
-      // silently and Alexa would receive truncated JSON.
-      char buf[768];
+      char buf[768];  // sized for full Hue plug payload (~560 B)
       deviceJsonString(devices[i], buf);
       server->sendContent(buf);
     }
     server->sendContent_P(PSTR("}"));
   }
 
-  // IRHUB: GET /api/<user>/config. Buffer sized for the full template
-  // (~580 B) plus all substitutions (name ~32 B, mac 17 B, bridgeid 16 B,
-  // IP/gw ~15 B each) with a comfortable margin. Bumped from 640 to 1024
-  // after a truncation regression was caught by curl: snprintf reported a
-  // 634-byte write, which left the JSON object unterminated.
+  // IRHUB: GET /api/<user>/config. 1024-byte buffer leaves margin over the
+  // ~640 B template + substitutions; a prior 640-byte buffer truncated and
+  // left the JSON unterminated.
   void serveConfig()
   {
     char buf[1024];
@@ -697,13 +619,9 @@ private:
     server->send(200, "application/json", buf);
   }
 
-  // IRHUB: GET /api/<user>  — Hue's "full datastore" endpoint. Returns
-  // lights + config + empty stubs for everything else. Some Echo gens
-  // walk this single endpoint instead of /lights + /config separately.
-  // Streamed via ESP8266WebServer's chunked transfer encoding so we never
-  // hold the full ~3 KB response in heap at once. A previous attempt that
-  // built the response as a single String fragmented the heap and the
-  // device reset mid-response ("Connection reset by peer" on the wire).
+  // IRHUB: GET /api/<user> — Hue's "full datastore" endpoint. Some Echo
+  // gens walk this instead of /lights + /config separately. Streamed
+  // chunked so we never hold the full ~3 KB response in heap at once.
   void serveFullState()
   {
     char cfg[1024];
@@ -717,10 +635,7 @@ private:
     server->sendContent(cfg);
     server->sendContent_P(PSTR(",\"schedules\":{},\"scenes\":{},\"rules\":{},"
                                "\"sensors\":{},\"resourcelinks\":{}}"));
-    // Empty chunk terminates the chunked response. ESP8266WebServer's
-    // sendContent("") does this automatically when content-length is
-    // CONTENT_LENGTH_UNKNOWN.
-    server->sendContent("");
+    server->sendContent("");  // terminates chunked response
   }
 
   //respond to UDP SSDP M-SEARCH
@@ -732,11 +647,9 @@ private:
 
     char buf[1024];
 
-    // IRHUB: use the canonical 16-char Hue bridge id (e.g. 308398FFFE80B5FE)
-    // for the hue-bridgeid header — modern Echo generations cross-check
-    // this against the value in /api/<user>/config and skip bridges that
-    // don't match. Upstream sent the lowercase 12-char MAC which is what
-    // some Echo gens silently rejected.
+    // IRHUB: canonical 16-char Hue bridge id (e.g. 308398FFFE80B5FE).
+    // Echo gens cross-check this against /api/<user>/config; upstream's
+    // lowercase 12-char MAC was silently rejected.
     sprintf_P(buf,PSTR("HTTP/1.1 200 OK\r\n"
       "EXT:\r\n"
       "CACHE-CONTROL: max-age=100\r\n" // SSDP_INTERVAL
@@ -772,9 +685,9 @@ public:
     EA_DEBUG("MAXDEVICES ");
     EA_DEBUGLN(ESPALEXA_MAXDEVICES);
 
-    // IRHUB: pick the effective bridge MAC. If the caller hasn't
-    // installed one via setBridgeMac() we fall back to WiFi's real MAC,
-    // preserving upstream-equivalent behaviour for non-IR-Hub callers.
+    // IRHUB: snapshot the effective bridge MAC (caller-supplied or WiFi
+    // fallback) into the derived identity fields. Everything below — SSDP,
+    // description.xml, /config, uniqueid prefix — reads these.
     if (!bridgeMacSet_) {
       WiFi.macAddress(bridgeMac_);
     }
@@ -784,19 +697,12 @@ public:
              bridgeMac_[0], bridgeMac_[1], bridgeMac_[2],
              bridgeMac_[3], bridgeMac_[4], bridgeMac_[5]);
     escapedMac = String(macHex);
+    mac24 = strtol(escapedMac.substring(6, 12).c_str(), 0, 16);
 
-    String macSubStr = escapedMac.substring(6, 12);
-    mac24 = strtol(macSubStr.c_str(), 0, 16);
-
-    // IRHUB: precompute the canonical Hue `bridgeid` (16 hex chars,
-    // uppercase, with literal "FFFE" injected between MAC halves). Both
-    // the SSDP `hue-bridgeid` header and the `/api/<user>/config` JSON
-    // need this format — modern Echo generations validate it.
-    {
-      String upperMac = escapedMac;
-      upperMac.toUpperCase();
-      bridgeIdHex_ = upperMac.substring(0, 6) + "FFFE" + upperMac.substring(6, 12);
-    }
+    // Canonical Hue bridgeid: <MAC1-3>FFFE<MAC4-6>, uppercase.
+    String upperMac = escapedMac;
+    upperMac.toUpperCase();
+    bridgeIdHex_ = upperMac.substring(0, 6) + "FFFE" + upperMac.substring(6, 12);
 
     #ifdef ESPALEXA_ASYNC
     serverAsync = externalServer;
@@ -1007,9 +913,6 @@ public:
       if (devId == 0) //client wants all lights
       {
         EA_DEBUGLN("lAll");
-        // IRHUB: stream the lights dict (chunked) instead of building
-        // one big String, so we don't fragment the heap when many
-        // devices are registered. See streamLightsDict() rationale.
         server->setContentLength(CONTENT_LENGTH_UNKNOWN);
         server->send(200, "application/json", "");
         streamLightsDict();
@@ -1020,8 +923,7 @@ public:
         unsigned idx = decodeLightKey(devId);
         if (idx < currentDeviceCount)
         {
-          // IRHUB: bumped from 512 -> 768; see streamLightsDict() comment.
-          char buf[768];
+          char buf[768];  // sized for full Hue plug payload
           deviceJsonString(devices[idx], buf);
           server->send(200, "application/json", buf);
         } else {
@@ -1032,24 +934,19 @@ public:
       return true;
     }
 
-    // IRHUB: GET /api/<user>/config. Required by modern Echo gens — they
-    // validate the bridge here before even hitting /lights. Returning {}
-    // (upstream's behaviour) causes the bridge to be silently dropped.
+    // IRHUB: /api/<user>/config — Echo gens validate the bridge here
+    // before hitting /lights. Upstream returned {} which silently dropped us.
     if (req.indexOf("/config") > 0) {
       EA_DEBUGLN("cfg");
       serveConfig();
       return true;
     }
 
-    // IRHUB: GET /api/<user>. The Hue "full datastore" endpoint. Match
-    // when the URI is exactly /api/<something> with no further path
-    // segments (i.e. only one '/' after "/api/"). Some Echo gens prefer
-    // this single endpoint over /lights + /config.
+    // IRHUB: bare /api/<user> — Hue's "full datastore" endpoint. Some Echo
+    // gens prefer this over walking /lights + /config separately.
     int apiPos = req.indexOf("/api/");
     if (apiPos >= 0) {
       int userStart = apiPos + 5;
-      // If the remainder of the URI contains no further '/', this is a
-      // bare /api/<user> request → serve full state.
       if (req.indexOf('/', userStart) < 0 && req.length() > userStart) {
         EA_DEBUGLN("full");
         serveFullState();
@@ -1068,43 +965,32 @@ public:
     discoverable = d;
   }
 
-  // IRHUB: override the bridge's UPnP friendlyName / Hue config "name"
-  // (which is what the Alexa app renders under Devices -> Hue). Pass an
-  // empty string to revert to the upstream default ("Espalexa (IP:80)").
-  // Call before begin() ideally; if called after, the change applies to
-  // the next /description.xml or /api/<user>/config fetch — Alexa
-  // re-fetches on its own discovery cycle so it'll pick up the new name.
+  // IRHUB: override the bridge name shown under Devices in the Alexa app.
+  // Empty string reverts to the upstream default. Ideally called before
+  // begin(); changes after take effect on Alexa's next discovery cycle.
   void setFriendlyName(const String& name)
   {
     customFriendlyName_ = name;
   }
 
-  // IRHUB: install a caller-managed 6-byte EUI-48 to use as the bridge
-  // identity instead of the WiFi MAC. MUST be called BEFORE begin() —
-  // begin() snapshots this into escapedMac / mac24 / bridgeIdHex and
-  // those derived values are read by every subsequent SSDP / HTTP /
-  // uniqueid emit. Pass a random locally-administered MAC (bit 1 of
-  // byte 0 set, bit 0 of byte 0 clear) that you re-roll on factory
-  // reset; that's the mechanism that gives the IR Hub a fresh Alexa
-  // identity post-wipe and prevents Amazon's cloud cache from
-  // re-attaching stale entities to the rebuilt device list.
+  // IRHUB: install a caller-managed 6-byte EUI-48 as the bridge identity.
+  // MUST be called BEFORE begin() — begin() snapshots this into escapedMac,
+  // mac24, and bridgeIdHex. Pass a random locally-administered MAC that
+  // you re-roll on factory reset; that's how we give Alexa a fresh bridge
+  // identity post-wipe and prevent stale-entity carry-over from its cache.
   void setBridgeMac(const uint8_t mac[6])
   {
     for (uint8_t i = 0; i < 6; i++) bridgeMac_[i] = mac[i];
     bridgeMacSet_ = true;
   }
 
-  // IRHUB: canonical 16-char Hue bridge id (e.g. "308398FFFE80B5FE").
-  // Useful for callers (like the IR Hub's auxiliary SSDP NOTIFY socket)
-  // that need to advertise the same identity Espalexa is using.
+  // IRHUB: canonical 16-char Hue bridge id (e.g. "308398FFFE80B5FE"). For
+  // callers that need to advertise the same identity Espalexa is using.
   const String& getBridgeIdHex() const { return bridgeIdHex_; }
 
-  // IRHUB: broadcast `ssdp:byebye` NOTIFY frames so Alexa expires its
-  // cached bridge entry promptly. Hue bridges send these before a clean
-  // shutdown; without them, Alexa keeps the bridge in its cache for the
-  // full `max-age` window (~100 s) and reuses stale uniqueids on the next
-  // boot — exactly the "wrong device name, right device fires" symptom
-  // that motivated this fork.
+  // IRHUB: multicast `ssdp:byebye` NOTIFY frames so Alexa expires the
+  // bridge entry promptly. Without this Alexa caches the bridge for the
+  // full max-age (~100 s) and re-attaches stale uniqueids after reboot.
   void byebye()
   {
     if (!udpConnected) return;
@@ -1137,9 +1023,9 @@ public:
             "::urn:schemas-upnp-org:device:basic:1");
   }
 
-  // IRHUB: stop the UDP socket and HTTP server. Used before ESP.restart()
-  // so we don't leave stale sockets dangling in lwIP across the reboot.
-  // After stop() the instance must be re-begin()'d before use.
+  // IRHUB: shut down UDP + HTTP cleanly (used before ESP.restart() so we
+  // don't leave stale sockets in lwIP). After stop() the instance must
+  // be re-begin()'d before use.
   void stop()
   {
     byebye();
