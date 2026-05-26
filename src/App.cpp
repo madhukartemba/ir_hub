@@ -128,14 +128,11 @@ void configureRuntimeCallbacks() {
 
 void showReadyScreen(bool wifiConnected) {
     delay(1000);
-    display.clear();
-    display.printCentered("IR Hub", 20);
+    display.drawBrandStatus(wifiConnected ? "Ready!" : "Ready! (Offline)");
     if (wifiConnected) {
-        display.printCentered("Ready!", 40);
         speaker.successBeep();
         ledRing.solid(COLOR_SUCCESS);
     } else {
-        display.printCentered("Ready! (Offline)", 40);
         speaker.errorBeep();
         ledRing.solid(COLOR_ERROR);
     }
@@ -176,21 +173,7 @@ void setup() {
         boot_safety::criticalFailure("Display", "init failed");
     }
 
-    display.clear();
-    if (U8G2* raw = display.getDisplay()) {
-        raw->setFont(u8g2_font_helvB10_tr);
-        const char* title = "IR Hub";
-        int titleW = raw->getStrWidth(title);
-        raw->drawStr((display.getWidth() - titleW) / 2, 28, title);
-
-        raw->setFont(u8g2_font_helvR08_tr);
-        const char* credit = "By Madhukar";
-        int creditW = raw->getStrWidth(credit);
-        raw->drawStr((display.getWidth() - creditW) / 2, 60, credit);
-    } else {
-        display.printCentered("IR Hub", 20);
-        display.printCentered("By Madhukar", 44);
-    }
+    display.drawBrandSplash();
     display.update();
 
     if (!haptics.probe()) {

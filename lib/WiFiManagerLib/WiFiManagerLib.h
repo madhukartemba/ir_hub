@@ -106,9 +106,7 @@ class WiFiManagerLib {
                                      mqttPassParam_.getValue())) {
                 LOG_WARN("[Portal] MQTT credentials not saved; check LittleFS");
             }
-            display.clear();
-            display.printCentered("WiFi Saved!", 20);
-            display.printCentered("Connecting...", 40);
+            display.drawBrandStatus2("Wi-Fi saved", "Connecting...");
             display.update();
         });
 
@@ -205,9 +203,7 @@ class WiFiManagerLib {
         hasSavedCredentials = wifiManager.getWiFiIsSaved();
 
         if (hasSavedCredentials) {
-            display.clear();
-            display.printCentered("IR Hub", 20);
-            display.printCentered("Connecting...", 40);
+            display.drawBrandStatus("Connecting...");
             display.update();
 
             LOG_INFO("[WiFi] Found saved credentials, attempting connection...");
@@ -230,9 +226,7 @@ class WiFiManagerLib {
             LOG_DEBUG("[WiFi] SSID: %s", WiFi.SSID().c_str());
             LOG_DEBUG("[WiFi] RSSI: %d dBm", WiFi.RSSI());
 
-            display.clear();
-            display.printCentered("IR Hub", 20);
-            display.printCentered("WiFi Connected!", 40);
+            display.drawBrandStatus("Wi-Fi connected!");
             display.update();
         } else {
             if (wifiManager.getConfigPortalActive()) {
@@ -257,9 +251,7 @@ class WiFiManagerLib {
         this->otaErrorColor = otaErrorColor;
 
         LOG_DEBUG("[OTA] Setting up OTA...");
-        display.clear();
-        display.printCentered("IR Hub", 20);
-        display.printCentered("Setting up OTA...", 40);
+        display.drawBrandStatus("Setting up OTA...");
         display.update();
 
         const char* otaHost = computeStableHostname();
@@ -325,10 +317,8 @@ class WiFiManagerLib {
         isOtaSetup = true;
         LOG_INFO("[OTA] Ready");
 
-        display.clear();
-        display.printCentered("IR Hub", 10);
-        display.printCentered("IP: " + WiFi.localIP().toString(), 25);
-        display.printCentered("OTA: Ready", 40);
+        String otaIpLine = "IP: " + WiFi.localIP().toString();
+        display.drawBrandStatus2(otaIpLine.c_str(), "OTA ready");
         display.update();
         delay(2000);
     }

@@ -152,19 +152,164 @@ class Display {
         }
     }
 
+    // Boot / setup branding — fixed baselines so "IR Hub" and lines never jump between screens.
+    static constexpr int kBrandTitleBaselineY = 28;
+    static constexpr int kBrandLine1BaselineY = 44;
+    static constexpr int kBrandLine2BaselineY = 56;
+    static constexpr int kBrandLine3BaselineY = 60;
+
+    void drawBrandTitle() {
+        if (!display) return;
+        display->setFont(u8g2_font_helvB10_tr);
+        const char* title = "IR Hub";
+        int w = display->getStrWidth(title);
+        display->drawStr((SCREEN_WIDTH - w) / 2, kBrandTitleBaselineY, title);
+        display->setFont(u8g2_font_helvR08_tr);
+    }
+
+    void drawBrandLine(const char* text, int baselineY) {
+        if (!display || !text) return;
+        display->setFont(u8g2_font_helvR08_tr);
+        int w = display->getStrWidth(text);
+        display->drawStr((SCREEN_WIDTH - w) / 2, baselineY, text);
+    }
+
+    void drawBrandSplash() {
+        clear();
+        drawBrandTitle();
+        drawBrandLine("By Madhukar", kBrandLine2BaselineY);
+    }
+
+    void drawBrandStatus(const char* statusLine) {
+        clear();
+        drawBrandTitle();
+        drawBrandLine(statusLine, kBrandLine1BaselineY);
+    }
+
+    void drawBrandStatus2(const char* line1, const char* line2) {
+        clear();
+        drawBrandTitle();
+        drawBrandLine(line1, kBrandLine1BaselineY);
+        drawBrandLine(line2, kBrandLine2BaselineY);
+    }
+
+    void drawBrandBody3(const char* line1, const char* line2, const char* line3) {
+        drawBrandTitle();
+        drawBrandLine(line1, kBrandLine1BaselineY);
+        drawBrandLine(line2, kBrandLine2BaselineY);
+        drawBrandLine(line3, kBrandLine3BaselineY);
+    }
+
+    // Destructive-action confirmation screens (title + up to 3 body lines + footer).
+    static constexpr int kConfirmTitleY = 0;
+    static constexpr int kConfirmDividerY = 12;
+    static constexpr int kConfirmBody1Y = 18;
+    static constexpr int kConfirmBody2Y = 28;
+    static constexpr int kConfirmBody3Y = 38;
+    static constexpr int kConfirmFooterY = 52;
+    static constexpr int kConfirmChoice1Y = 40;
+    static constexpr int kConfirmChoice2Y = 52;
+
+    void drawConfirmHeader(const char* title) {
+        clear();
+        setTextSize(1);
+        printCentered(title, kConfirmTitleY);
+        drawLine(0, kConfirmDividerY, SCREEN_WIDTH, kConfirmDividerY);
+    }
+
+    void drawConfirmBody2(const char* line1, const char* line2) {
+        printCentered(line1, kConfirmBody1Y);
+        printCentered(line2, kConfirmBody2Y);
+    }
+
+    void drawConfirmBody3(const char* line1, const char* line2, const char* line3) {
+        printCentered(line1, kConfirmBody1Y);
+        printCentered(line2, kConfirmBody2Y);
+        printCentered(line3, kConfirmBody3Y);
+    }
+
+    void drawConfirmLongPressFooter() {
+        printCentered("Long press confirm", kConfirmFooterY);
+    }
+
+    void drawConfirmLongPress(const char* title, const char* line1, const char* line2,
+                              const char* line3) {
+        drawConfirmHeader(title);
+        drawConfirmBody3(line1, line2, line3);
+        drawConfirmLongPressFooter();
+    }
+
+    int centeredTextTopY(int y = -1) {
+        if (y != -1) {
+            return y;
+        }
+        return (SCREEN_HEIGHT - getTextHeight()) / 2;
+    }
+
+    int centeredTextBaselineY(int topY) { return topY + getTextHeight() - 2; }
+
+    void getCenteredTextInkBounds(const char* text, int topY, int& outX, int& outInkTop, int& outInkW,
+                                  int& outInkH) {
+        outInkW = getTextWidth(text);
+        outX = (SCREEN_WIDTH - outInkW) / 2;
+        if (!display) {
+            outInkTop = topY;
+            outInkH = getTextHeight();
+            return;
+        }
+        const int baselineY = centeredTextBaselineY(topY);
+        const int ascent = display->getAscent();
+        const int descent = display->getDescent();
+        outInkTop = baselineY - ascent;
+        outInkH = ascent + descent;
+    }
+
     void printCentered(const String& text, int y = -1) { printCentered(text.c_str(), y); }
     void printCentered(const char* text, int y = -1) {
         if (!display) return;
+        printCenteredSelectable(text, centeredTextTopY(y), false);
+    }
 
-        int textWidth = getTextWidth(text);
-        int x = (SCREEN_WIDTH - textWidth) / 2;
+    void printCenteredSelectable(const String& text, int topY, bool selected, int padX = 10,
+                                 int padY = 4, int padBottomExtra = 0, int rectYOffset = 0) {
+        printCenteredSelectable(text.c_str(), topY, selected, padX, padY, padBottomExtra,
+                                rectYOffset);
+    }
+    void printCenteredSelectable(const char* text, int topY, bool selected, int padX = 10,
+                                 int padY = 4, int padBottomExtra = 0, int rectYOffset = 0) {
+        if (!display || !text) return;
 
-        if (y == -1) {
-            y = (SCREEN_HEIGHT - getTextHeight()) / 2;
+        int textX = 0;
+        int inkTop = 0;
+        int inkW = 0;
+        int inkH = 0;
+        getCenteredTextInkBounds(text, topY, textX, inkTop, inkW, inkH);
+
+        if (selected) {
+            const int centerX = textX + inkW / 2;
+            const int centerY = inkTop + inkH / 2;
+            int rectW = inkW + padX * 2;
+            int rectH = inkH + padY * 2 + padBottomExtra;
+            int rectX = centerX - rectW / 2;
+            int rectY = centerY - rectH / 2 + rectYOffset;
+            if (rectX < 0) {
+                rectW += rectX;
+                rectX = 0;
+            }
+            if (rectX + rectW > SCREEN_WIDTH) {
+                rectW = SCREEN_WIDTH - rectX;
+            }
+            if (rectY < 0) {
+                rectH += rectY;
+                rectY = 0;
+            }
+            if (rectY + rectH > SCREEN_HEIGHT) {
+                rectH = SCREEN_HEIGHT - rectY;
+            }
+            drawRect(rectX, rectY, rectW, rectH);
         }
 
-        int adjustedY = y + getTextHeight() - 2;
-        display->setCursor(x, adjustedY);
+        display->setCursor(textX, centeredTextBaselineY(topY));
         display->print(text);
     }
     void printAligned(const String& text, TextAlign align, int y = 0, int x = 0) {

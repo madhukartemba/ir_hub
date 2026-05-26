@@ -20,24 +20,8 @@ class ClearDataConfirmation : public Screen {
     }
 
     void onUpdate() override {
-        display.clear();
-
-        display.setTextSize(1);
-        display.printCentered("Erase Saved Data?", 0);
-
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Draw warning message
-        display.setTextSize(1);
-        display.printCentered("This will delete", 20);
-        display.printCentered("ALL stored data", 30);
-        display.printCentered("and restart device", 40);
-
-        // Draw instructions
-        display.setTextSize(1);
-        display.printCentered("Long press to confirm", 48);
-        display.printCentered("Click to exit", 54);
-
+        display.drawConfirmLongPress("Erase Saved Data?", "This will delete", "ALL stored data",
+                                     "and restart device");
         display.update();
     }
 
@@ -49,14 +33,11 @@ class ClearDataConfirmation : public Screen {
     void clearAllDataAndRestart() {
         display.clear();
         display.setTextSize(1);
-        display.printCentered("Erasing data...", 22);
-        display.printCentered("Please wait", 36);
+        display.drawConfirmBody2("Erasing data...", "Please wait");
         display.update();
         ledRing.solid(COLOR_ERROR);
         ledRing.finishTransition();
 
-        // Close network sessions cleanly so PubSubClient doesn't spam
-        // reconnect attempts during the format.
         LOG_INFO("[ClearData] Disconnecting MQTT + WiFi before format()");
         mqttConnector.shutdown();
         WiFi.disconnect(true);
@@ -68,8 +49,8 @@ class ClearDataConfirmation : public Screen {
         speaker.successBeep();
 
         display.clear();
-        display.printCentered("Saved data erased", 22);
-        display.printCentered("Restarting...", 38);
+        display.setTextSize(1);
+        display.drawConfirmBody2("Saved data erased", "Restarting...");
         display.update();
         delay(800);
 

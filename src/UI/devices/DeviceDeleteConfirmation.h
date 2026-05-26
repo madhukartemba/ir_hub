@@ -54,19 +54,11 @@ class DeviceDeleteConfirmation : public Screen {
     }
 
     void displayConfirmation() {
-        // Show title
-        display.setTextSize(1);
-        display.printCentered("Delete Device?", 0);
-
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        // Show device info — short uuid prefix keeps the line ≤16 chars wide.
-        display.print("Device " + device.uuid.substring(0, 6), 0, 20);
-        display.print(device.name, 0, 30);
-
-        // Show confirmation options
-        display.printCentered(confirmed ? "> YES <" : "YES", 45);
-        display.printCentered(confirmed ? "NO" : "> NO <", 55);
+        display.drawConfirmHeader("Delete Device?");
+        display.print("Device " + device.uuid.substring(0, 6), 0, Display::kConfirmBody1Y);
+        display.print(device.name, 0, Display::kConfirmBody2Y);
+        display.printCentered(confirmed ? "> YES <" : "YES", Display::kConfirmChoice1Y);
+        display.printCentered(confirmed ? "NO" : "> NO <", Display::kConfirmChoice2Y);
     }
 
     void onExit() override {

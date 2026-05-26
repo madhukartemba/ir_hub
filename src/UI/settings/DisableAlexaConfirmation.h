@@ -20,15 +20,8 @@ class DisableAlexaConfirmation : public Screen {
     }
 
     void onUpdate() override {
-        display.clear();
-        display.setTextSize(1);
-        display.printCentered("Disable Alexa?", 0);
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        display.printCentered("Alexa discovery", 22);
-        display.printCentered("and control will", 32);
-        display.printCentered("stop immediately", 42);
-        display.printCentered("Long press confirm", 50);
+        display.drawConfirmLongPress("Disable Alexa?", "Alexa discovery", "and control will",
+                                     "stop immediately");
         display.update();
     }
 

@@ -24,7 +24,7 @@ class SetupOnboardingScreen : public Screen {
     unsigned long pageStartedAt = 0;
     bool autoAdvanceEnabled = true;
     bool timeoutVisualStateApplied = false;
-    bool timeoutProceedSelected = false;  // false = No (default), true = Yes
+    bool continueOfflineSelected = true;  // default: continue without Wi-Fi
     bool finishing = false;
     unsigned long finishingAt = 0;
 
@@ -37,13 +37,13 @@ class SetupOnboardingScreen : public Screen {
         pageStartedAt = millis();
         autoAdvanceEnabled = true;
         timeoutVisualStateApplied = false;
-        timeoutProceedSelected = false;
+        continueOfflineSelected = true;
         // Slow spinner to keep onboarding calmer and less distracting.
         ledRing.spinner(8, COLOR_INFO, 0.30f);
 
         button.setClickCallback([this]() {
             if (!wifiManager.isSetupInProgress()) {
-                timeoutProceedSelected = !timeoutProceedSelected;
+                continueOfflineSelected = !continueOfflineSelected;
                 return;
             }
             autoAdvanceEnabled = false;
@@ -52,9 +52,8 @@ class SetupOnboardingScreen : public Screen {
         button.setLongPressCallback([this]() {
             // Allow explicit exit only after setup flow has ended without Wi-Fi.
             if (wifiManager.didSetupTimeout()) {
-                if (timeoutProceedSelected) {
-                    userPrefsSetSkipWiFiSetup(true);
-                    leaveScreen();  // Proceed without Wi-Fi
+                if (continueOfflineSelected) {
+                    proceedWithoutWiFiAndRestart();
                 }
                 return;
             }
@@ -135,7 +134,6 @@ class SetupOnboardingScreen : public Screen {
     }
 
     void drawHeader(const char* title) {
-        display.clear();
         display.setTextSize(1);
         display.printCentered(title, 0);
         display.drawLine(0, 12, display.getWidth(), 12);
@@ -145,7 +143,7 @@ class SetupOnboardingScreen : public Screen {
         drawHeader("Setup");
         display.printCentered("Join IR Hub AP", 20);
         display.printCentered(wifiManager.setupApName(), 32);
-        display.printCentered("Next page has WiFi QR", 44);
+        display.printCentered("Next page has WiFi QR", 52);
     }
 
     String wifiApQrPayload() const {
@@ -166,7 +164,7 @@ class SetupOnboardingScreen : public Screen {
         drawHeader("Complete Setup");
         display.printCentered("Open: 192.168.4.1", 20);
         display.printCentered("Pick your home Wi-Fi", 32);
-        display.printCentered("MQTT is optional", 44);
+        display.printCentered("MQTT is optional", 52);
     }
 
     void drawHelpQrFull() {
@@ -176,24 +174,26 @@ class SetupOnboardingScreen : public Screen {
     }
 
     void drawTimedOut() {
+        display.clear();
         drawHeader("Setup Paused");
-        display.printCentered("Proceed without Wi-Fi?", 18);
-        display.printCentered("No", 34);
-        display.printCentered("Yes", 48);
+        display.printCentered("Proceed without Wi-Fi?", 14);
+        display.printCenteredSelectable("Try setup again", 30, !continueOfflineSelected, 10, 4, 2,
+                                        1);
+        display.printCenteredSelectable("Continue offline", 49, continueOfflineSelected, 10, 4, 2,
+                                        1);
+    }
 
-        if (timeoutProceedSelected) {
-            // Highlight "Yes"
-            display.drawRect(46, 46, 36, 13);
-        } else {
-            // Highlight "No" (default)
-            display.drawRect(49, 32, 30, 13);
-        }
+    void proceedWithoutWiFiAndRestart() {
+        userPrefsSetSkipWiFiSetup(true);
+        display.drawBrandStatus("Continuing offline");
+        display.update();
+        speaker.shortBeep();
+        delay(600);
+        ESP.restart();
     }
 
     void drawConnected() {
-        drawHeader("Connected");
-        display.printCentered("Wi-Fi connected!", 24);
-        display.printCentered("Finishing setup...", 38);
+        display.drawBrandStatus2("Wi-Fi connected!", "Finishing setup...");
     }
 
     void drawQrCodeFullscreen(const char* text) {

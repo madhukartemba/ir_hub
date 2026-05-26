@@ -22,16 +22,8 @@ class FactoryResetConfirmation : public Screen {
     }
 
     void onUpdate() override {
-        display.clear();
-        display.setTextSize(1);
-        display.printCentered("Factory Reset?", 0);
-        display.drawLine(0, 12, display.getWidth(), 12);
-
-        display.printCentered("Will reset Wi-Fi", 20);
-        display.printCentered("+ all saved data", 30);
-        display.printCentered("+ pending OTA", 40);
-
-        display.printCentered("Long press confirm", 50);
+        display.drawConfirmLongPress("Factory Reset?", "Will reset Wi-Fi", "+ all saved data",
+                                     "+ pending OTA");
         display.update();
     }
 
@@ -43,8 +35,7 @@ class FactoryResetConfirmation : public Screen {
     void factoryResetAndRestart() {
         display.clear();
         display.setTextSize(1);
-        display.printCentered("Factory reset...", 20);
-        display.printCentered("Please wait", 34);
+        display.drawConfirmBody2("Factory reset...", "Please wait");
         display.update();
         ledRing.solid(COLOR_ERROR);
         ledRing.finishTransition();
@@ -67,13 +58,13 @@ class FactoryResetConfirmation : public Screen {
         if (fsOk) {
             speaker.successBeep();
             display.clear();
-            display.printCentered("Factory reset done", 22);
-            display.printCentered("Restarting...", 38);
+            display.setTextSize(1);
+            display.drawConfirmBody2("Factory reset done", "Restarting...");
         } else {
             speaker.errorBeep();
             display.clear();
-            display.printCentered("Reset partial", 22);
-            display.printCentered("Restarting...", 38);
+            display.setTextSize(1);
+            display.drawConfirmBody2("Reset partial", "Restarting...");
         }
         display.update();
         delay(900);

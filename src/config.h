@@ -61,8 +61,8 @@
 #    define DISPLAY_DRIVER DisplayDriver::NEOPIXEL
 
 #    define WIFI_AP_NAME "IRHub V3 Setup"
-#    define WIFI_AP_TIMEOUT 180      // 3 minutes timeout
-#    define WIFI_CONNECT_TIMEOUT 60  // 1 minute timeout
+#    define WIFI_AP_TIMEOUT 30       // 3 minutes timeout
+#    define WIFI_CONNECT_TIMEOUT 30  // 1 minute timeout
 
 #endif  // USE_VERSION_3
 
