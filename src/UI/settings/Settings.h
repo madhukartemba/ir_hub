@@ -5,6 +5,7 @@
 #include "ClearDataConfirmation.h"
 #include "DisableAlexaConfirmation.h"
 #include "FactoryResetConfirmation.h"
+#include "MqttStatusDetailScreen.h"
 #include "ResetWiFiConfirmation.h"
 #include "SystemInfoScreen.h"
 #include "UpdateCheckScreen.h"
@@ -12,7 +13,21 @@
 
 class Settings : public Screen {
    private:
+    enum class MenuLevel {
+        ROOT,
+        PREFERENCES,
+        CONNECTIVITY,
+        UPDATES,
+        SYSTEM,
+        DATA_RESET,
+    };
+
     enum class Action {
+        OPEN_PREFERENCES,
+        OPEN_CONNECTIVITY,
+        OPEN_UPDATES,
+        OPEN_SYSTEM,
+        OPEN_DATA_RESET,
         SOUND,
         ALEXA,
         HAPTICS,
@@ -33,6 +48,7 @@ class Settings : public Screen {
     const char* menuItems[kMaxItems];
     Action menuActions[kMaxItems];
     int menuCount = 0;
+    MenuLevel currentMenu = MenuLevel::ROOT;
 
     int selectedIndex = 0;
     bool isRestarting = false;
@@ -51,7 +67,8 @@ class Settings : public Screen {
 
         hasHaptics = haptics.isPresent();  // isPresent, not isReady (uncalibrated chip)
         hasOta = otaUpdater.isEnabled();
-        buildMenu();
+        currentMenu = MenuLevel::ROOT;
+        buildMenuForCurrentLevel();
         selectedIndex = 0;
         isRestarting = false;
 
@@ -93,32 +110,53 @@ class Settings : public Screen {
     void onExit() override { LOG_DEBUG("[Settings] onExit"); }
 
    private:
-    void buildMenu() {
+    void buildMenuForCurrentLevel() {
         menuCount = 0;
 
-        addRow(Action::SOUND);
-        addRow(Action::ALEXA);
-        if (hasHaptics) {
-            addRow(Action::HAPTICS);
+        switch (currentMenu) {
+            case MenuLevel::ROOT:
+                addRow(Action::OPEN_PREFERENCES);
+                addRow(Action::OPEN_CONNECTIVITY);
+                addRow(Action::OPEN_UPDATES);
+                addRow(Action::OPEN_SYSTEM);
+                addRow(Action::OPEN_DATA_RESET);
+                addRow(Action::BACK);
+                break;
+            case MenuLevel::PREFERENCES:
+                addRow(Action::SOUND);
+                if (hasHaptics) {
+                    addRow(Action::HAPTICS);
+                }
+                addRow(Action::BACK);
+                break;
+            case MenuLevel::CONNECTIVITY:
+                addRow(Action::WIFI_WIPE);
+                addRow(Action::ALEXA);
+                addRow(Action::MQTT_STATUS_INFO);
+                addRow(Action::BACK);
+                break;
+            case MenuLevel::UPDATES:
+                if (hasOta) {
+                    addRow(Action::CHECK_UPDATE);
+                    addRow(Action::FIRMWARE_INFO);
+                    addRow(Action::LAST_CHECK_INFO);
+                    addRow(Action::UPDATE_STATUS_INFO);
+                } else {
+                    addRow(Action::UPDATE_STATUS_INFO);
+                }
+                addRow(Action::BACK);
+                break;
+            case MenuLevel::SYSTEM:
+                addRow(Action::INFO_SCREEN);
+                addRow(Action::RESTART);
+                addRow(Action::BACK);
+                break;
+            case MenuLevel::DATA_RESET:
+                addRow(Action::CLEAR_DATA);
+                addRow(Action::FACTORY_RESET);
+                addRow(Action::BACK);
+                break;
         }
-
-        if (hasOta) {
-            addRow(Action::CHECK_UPDATE);
-            addRow(Action::FIRMWARE_INFO);
-            addRow(Action::LAST_CHECK_INFO);
-            addRow(Action::UPDATE_STATUS_INFO);
-        }
-        addRow(Action::MQTT_STATUS_INFO);
-        addRow(Action::INFO_SCREEN);
-
-        addRow(Action::RESTART);
-        if (!userPrefsSkipWiFiSetup()) {
-            addRow(Action::WIFI_WIPE);
-        }
-        addRow(Action::CLEAR_DATA);
-        addRow(Action::FACTORY_RESET);
-
-        addRow(Action::BACK);
     }
 
     void addRow(Action action) {
@@ -162,7 +200,7 @@ class Settings : public Screen {
 
     void refreshMqttStatusLabel() {
         if (!wifiManager.isConnected()) {
-            snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: No Wi-Fi");
+            snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: Offline");
             return;
         }
         if (!mqttConnector.isEnabled()) {
@@ -173,11 +211,25 @@ class Settings : public Screen {
             snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: Connected");
             return;
         }
+        if (mqttConnector.hasError()) {
+            snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: Error");
+            return;
+        }
         snprintf(mqttStatusLabel, sizeof(mqttStatusLabel), "MQTT: Connecting");
     }
 
     const char* labelFor(Action action) {
         switch (action) {
+            case Action::OPEN_PREFERENCES:
+                return "Preferences";
+            case Action::OPEN_CONNECTIVITY:
+                return "Connectivity";
+            case Action::OPEN_UPDATES:
+                return "Updates";
+            case Action::OPEN_SYSTEM:
+                return "System";
+            case Action::OPEN_DATA_RESET:
+                return "Reset";
             case Action::SOUND:
                 return userPrefsSoundEnabled() ? "Sound: On" : "Sound: Off";
             case Action::ALEXA:
@@ -199,9 +251,9 @@ class Settings : public Screen {
             case Action::RESTART:
                 return "Restart";
             case Action::CLEAR_DATA:
-                return "Erase Saved Data";
+                return "Remove Devices";
             case Action::WIFI_WIPE:
-                return "Reset Wi-Fi";
+                return "Configure Wi-Fi/MQTT";
             case Action::FACTORY_RESET:
                 return "Factory Reset";
             case Action::BACK:
@@ -212,6 +264,31 @@ class Settings : public Screen {
 
     void handleAction(Action action) {
         switch (action) {
+            case Action::OPEN_PREFERENCES:
+                currentMenu = MenuLevel::PREFERENCES;
+                selectedIndex = 0;
+                buildMenuForCurrentLevel();
+                break;
+            case Action::OPEN_CONNECTIVITY:
+                currentMenu = MenuLevel::CONNECTIVITY;
+                selectedIndex = 0;
+                buildMenuForCurrentLevel();
+                break;
+            case Action::OPEN_UPDATES:
+                currentMenu = MenuLevel::UPDATES;
+                selectedIndex = 0;
+                buildMenuForCurrentLevel();
+                break;
+            case Action::OPEN_SYSTEM:
+                currentMenu = MenuLevel::SYSTEM;
+                selectedIndex = 0;
+                buildMenuForCurrentLevel();
+                break;
+            case Action::OPEN_DATA_RESET:
+                currentMenu = MenuLevel::DATA_RESET;
+                selectedIndex = 0;
+                buildMenuForCurrentLevel();
+                break;
             case Action::SOUND:
                 toggleSound();
                 break;
@@ -224,9 +301,12 @@ class Settings : public Screen {
             case Action::FIRMWARE_INFO:
             case Action::LAST_CHECK_INFO:
             case Action::UPDATE_STATUS_INFO:
-            case Action::MQTT_STATUS_INFO:
                 // Read-only rows.
                 speaker.shortBeep();
+                break;
+            case Action::MQTT_STATUS_INFO:
+                speaker.shortBeep();
+                router.push(new MqttStatusDetailScreen());
                 break;
             case Action::INFO_SCREEN:
                 LOG_DEBUG("[Settings] onButtonLongPress INFO_SCREEN");
@@ -256,8 +336,15 @@ class Settings : public Screen {
                 router.push(new FactoryResetConfirmation());
                 break;
             case Action::BACK:
-                LOG_DEBUG("[Settings] onButtonLongPress BACK");
-                router.pop();
+                if (currentMenu == MenuLevel::ROOT) {
+                    LOG_DEBUG("[Settings] onButtonLongPress BACK (root)");
+                    router.pop();
+                } else {
+                    LOG_DEBUG("[Settings] onButtonLongPress BACK (submenu)");
+                    currentMenu = MenuLevel::ROOT;
+                    selectedIndex = 0;
+                    buildMenuForCurrentLevel();
+                }
                 break;
         }
     }
@@ -319,9 +406,27 @@ class Settings : public Screen {
 
     void drawMenu() {
         display.setTextSize(1);
-        display.printCentered("Settings", 0);
+        display.printCentered(titleForCurrentMenu(), 0);
         display.drawLine(0, 12, display.getWidth(), 12);
         MenuUtils::drawScrollableMenu(menuItems, menuCount, selectedIndex, 3, 20);
+    }
+
+    const char* titleForCurrentMenu() {
+        switch (currentMenu) {
+            case MenuLevel::ROOT:
+                return "Settings";
+            case MenuLevel::PREFERENCES:
+                return "Preferences";
+            case MenuLevel::CONNECTIVITY:
+                return "Connectivity";
+            case MenuLevel::SYSTEM:
+                return "System";
+            case MenuLevel::UPDATES:
+                return "Updates";
+            case MenuLevel::DATA_RESET:
+                return "Reset";
+        }
+        return "Settings";
     }
 
     void drawRestarting() {

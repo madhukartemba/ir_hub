@@ -484,6 +484,7 @@ class MQTTConnector {
             return;
         }
         if (!mqttClient.connected()) {
+            lastConnectState = mqttClient.state();
             tryReconnect();
             return;
         }
@@ -512,6 +513,33 @@ class MQTTConnector {
         }
         return isFatalConnectState(lastConnectState);
     }
+    static const char* connectStateShort(int state) {
+        switch (state) {
+            case MQTT_CONNECTED:
+                return "Connected";
+            case MQTT_DISCONNECTED:
+                return "Disconnected";
+            case MQTT_CONNECTION_LOST:
+                return "Connection lost";
+            case MQTT_CONNECTION_TIMEOUT:
+                return "Connection timeout";
+            case MQTT_CONNECT_FAILED:
+                return "Connect failed";
+            case MQTT_CONNECT_BAD_PROTOCOL:
+                return "Bad protocol";
+            case MQTT_CONNECT_BAD_CLIENT_ID:
+                return "Bad client ID";
+            case MQTT_CONNECT_UNAVAILABLE:
+                return "Server unavailable";
+            case MQTT_CONNECT_BAD_CREDENTIALS:
+                return "Bad credentials";
+            case MQTT_CONNECT_UNAUTHORIZED:
+                return "Unauthorized";
+            default:
+                return "Unknown";
+        }
+    }
+    const char* lastConnectStateShort() { return connectStateShort(lastConnectState); }
     static bool isFatalConnectState(int state) {
         // Fatal/configuration-ish failures (bad auth/protocol/client ID/authorization).
         return state == MQTT_CONNECT_BAD_PROTOCOL || state == MQTT_CONNECT_BAD_CLIENT_ID ||
