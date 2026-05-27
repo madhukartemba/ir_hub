@@ -36,7 +36,7 @@ class AlexaConnector {
     static constexpr uint8_t kSsdpStartupBurstCount = 5;
     static constexpr unsigned long kSsdpStartupBurstIntervalMs = 2UL * 1000UL;
     uint8_t ssdpStartupBurstRemaining = 0;
-    String escapedMacCached;
+    char escapedMacCached[13] = {0};  // 12 hex chars + nul; populated lazily
     uint8_t bridgeMacBytes_[6] = {0, 0, 0, 0, 0, 0};
     static constexpr const char* kBridgeIdPath = "/alexa_bridge_id.bin";
 
@@ -88,14 +88,12 @@ class AlexaConnector {
     }
 
     void cacheEscapedMac() {
-        if (!escapedMacCached.isEmpty()) {
+        if (escapedMacCached[0] != '\0') {
             return;
         }
-        char buf[13];
-        snprintf(buf, sizeof(buf), "%02x%02x%02x%02x%02x%02x",
+        snprintf(escapedMacCached, sizeof(escapedMacCached), "%02x%02x%02x%02x%02x%02x",
                  bridgeMacBytes_[0], bridgeMacBytes_[1], bridgeMacBytes_[2],
                  bridgeMacBytes_[3], bridgeMacBytes_[4], bridgeMacBytes_[5]);
-        escapedMacCached = String(buf);
     }
 
     void sendSsdpNotify(const char* nt, const char* usnSuffix) {
@@ -119,8 +117,8 @@ class AlexaConnector {
                                                   "USN: uuid:2f402f80-da50-11e1-9b23-%s%s\r\n"
                                                   "hue-bridgeid: %s\r\n"
                                                   "\r\n"),
-                           ipStr, nt, escapedMacCached.c_str(), usnSuffix,
-                           escapedMacCached.c_str());
+                           ipStr, nt, escapedMacCached, usnSuffix,
+                           escapedMacCached);
         if (n <= 0 || (size_t)n >= sizeof(buf)) {
             LOG_WARN("[Alexa] SSDP NOTIFY truncated (n=%d)", n);
             return;
@@ -140,7 +138,7 @@ class AlexaConnector {
         cacheEscapedMac();
         char uuidNt[64];
         snprintf(uuidNt, sizeof(uuidNt), "uuid:2f402f80-da50-11e1-9b23-%s",
-                 escapedMacCached.c_str());
+                 escapedMacCached);
         sendSsdpNotify("upnp:rootdevice", "::upnp:rootdevice");
         sendSsdpNotify(uuidNt, "");
         sendSsdpNotify("urn:schemas-upnp-org:device:basic:1",
@@ -295,16 +293,26 @@ class AlexaConnector {
             return;
         }
 
-        String alexaName = device.uuid.substring(0, 6) + " " + device.name;
+        // Build "<uuid6> <name>" on the stack — keeps registration heap-free.
+        char alexaName[40];
+        const char* uuidStr = device.uuid.c_str();
+        char prefix[7];
+        size_t prefixLen = 0;
+        while (prefixLen < 6 && uuidStr[prefixLen] != '\0') {
+            prefix[prefixLen] = uuidStr[prefixLen];
+            prefixLen++;
+        }
+        prefix[prefixLen] = '\0';
+        snprintf(alexaName, sizeof(alexaName), "%s %s", prefix, device.name.c_str());
 
         uint8_t alexaIdx = espalexa.addDevice(
-            alexaName.c_str(),
+            alexaName,
             [this](EspalexaDevice* d) { handleDeviceCallback(d); },
             EspalexaDeviceType::dimmable);
         if (alexaIdx == 0) {
             LOG_ERROR("[Alexa] addDevice failed for '%s' — likely at "
                       "ESPALEXA_MAXDEVICES (20) cap",
-                      alexaName.c_str());
+                      alexaName);
             return;
         }
 
@@ -332,7 +340,7 @@ class AlexaConnector {
         ref->index = deviceIndex;
 
         LOG_INFO("[Alexa] Registered '%s' as Hue white lamp, slot=%u alexaSlot=%u uuid=%s",
-                 alexaName.c_str(), (unsigned)alexaIdx, (unsigned)device.alexaSlot,
+                 alexaName, (unsigned)alexaIdx, (unsigned)device.alexaSlot,
                  device.uuid.c_str());
     }
 

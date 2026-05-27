@@ -27,9 +27,12 @@ namespace {
 constexpr unsigned long kOtaCheckIntervalMs = 1UL * 60UL * 60UL * 1000UL;
 
 constexpr unsigned long kHeapLogIntervalMs = 60UL * 1000UL;
-constexpr uint32_t kHeapFreePanicBytes = 4096;
-constexpr uint16_t kHeapBlockPanicBytes = 2048;
-constexpr uint8_t kHeapFragPanicPct = 80;
+// OTA TLS handshake legitimately dips heap down to ~4 KB free for a couple of
+// seconds. Keep this low enough that a well-timed superviseHeap() call during
+// the dip does NOT panic-reboot the device mid-check.
+constexpr uint32_t kHeapFreePanicBytes = 2560;
+constexpr uint16_t kHeapBlockPanicBytes = 1536;
+constexpr uint8_t kHeapFragPanicPct = 85;
 
 unsigned long lastHeapLog = 0;
 bool wasWifiConnected = false;

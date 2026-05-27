@@ -24,10 +24,14 @@ class MQTTConnector {
     PubSubClient mqttClient;
     bool enabled;
     int lastConnectState;
-    String hubMacHex;
+    // 12 hex chars + nul — kept on the heap-free side to cut persistent String overhead
+    char hubMacHex[13];
     unsigned long lastReconnectAttempt;
     static constexpr unsigned long kReconnectIntervalMs = 5000;
-    static constexpr unsigned long kInfoPublishIntervalMs = 60000;
+    // Hub info is diagnostic; publishing every minute creates needless heap churn
+    // (WiFi.SSID() temp-allocates a String, snprintf walks a 320-byte buffer, etc.).
+    // 5 minutes is plenty fresh for HA UI and trims the per-minute allocations.
+    static constexpr unsigned long kInfoPublishIntervalMs = 5UL * 60UL * 1000UL;
     unsigned long lastInfoPublishMs;
 
     std::function<void(const Device& device, bool state)> onStateChangeCallback;
@@ -39,13 +43,11 @@ class MQTTConnector {
         }
     }
 
-    static String buildStaMacHex() {
+    static void buildStaMacHex(char (&out)[13]) {
         uint8_t mac[6];
         WiFi.macAddress(mac);
-        char buf[13];
-        snprintf(buf, sizeof(buf), "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4],
-                 mac[5]);
-        return String(buf);
+        snprintf(out, sizeof(out), "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3],
+                 mac[4], mac[5]);
     }
 
     static constexpr size_t kTopicBufSize = 96;  // stack topic buffers (heap-free MQTT path)
@@ -53,30 +55,30 @@ class MQTTConnector {
     size_t discoveryTopicForUuid(const char* uuid, char* out, size_t outSize) const {
         return snprintf(out, outSize,
                         "homeassistant/switch/ir_hub_%s_device_%s/config",
-                        hubMacHex.c_str(), uuid);
+                        hubMacHex, uuid);
     }
 
     size_t commandTopicForUuid(const char* uuid, char* out, size_t outSize) const {
         return snprintf(out, outSize, "ir_hub/%s/device/%s/set",
-                        hubMacHex.c_str(), uuid);
+                        hubMacHex, uuid);
     }
 
     size_t stateTopicForUuid(const char* uuid, char* out, size_t outSize) const {
         return snprintf(out, outSize, "ir_hub/%s/device/%s/state",
-                        hubMacHex.c_str(), uuid);
+                        hubMacHex, uuid);
     }
 
     size_t otaCheckTopic(char* out, size_t outSize) const {
-        return snprintf(out, outSize, "ir_hub/%s/ota/check", hubMacHex.c_str());
+        return snprintf(out, outSize, "ir_hub/%s/ota/check", hubMacHex);
     }
 
     size_t infoTopic(char* out, size_t outSize) const {
-        return snprintf(out, outSize, "ir_hub/%s/info", hubMacHex.c_str());
+        return snprintf(out, outSize, "ir_hub/%s/info", hubMacHex);
     }
 
     size_t infoDiscoveryTopic(const char* key, char* out, size_t outSize) const {
         return snprintf(out, outSize, "homeassistant/sensor/ir_hub_%s_%s/config",
-                        hubMacHex.c_str(), key);
+                        hubMacHex, key);
     }
 
     bool publishInfoDiscoverySensor(const char* key, const char* name, const char* valueTemplate,
@@ -86,9 +88,9 @@ class MQTTConnector {
         infoTopic(stateTopic, sizeof(stateTopic));
 
         char uniqueId[56];
-        snprintf(uniqueId, sizeof(uniqueId), "ir_hub_%s_%s", hubMacHex.c_str(), key);
+        snprintf(uniqueId, sizeof(uniqueId), "ir_hub_%s_%s", hubMacHex, key);
         char identifier[24];
-        snprintf(identifier, sizeof(identifier), "ir_hub_%s", hubMacHex.c_str());
+        snprintf(identifier, sizeof(identifier), "ir_hub_%s", hubMacHex);
 
         JsonDocument doc;
         doc["name"] = name;
@@ -148,25 +150,29 @@ class MQTTConnector {
             return false;
         }
 
+        // Build the payload by hand — much cheaper than spinning up a JsonDocument
+        // every minute (which would otherwise heap-copy the SSID + allocate an internal pool).
         IPAddress ip = WiFi.localIP();
-        char ipStr[16];
-        snprintf(ipStr, sizeof(ipStr), "%u.%u.%u.%u", (unsigned)ip[0], (unsigned)ip[1],
-                 (unsigned)ip[2], (unsigned)ip[3]);
-
-        JsonDocument doc;
-        doc["firmware"] = FIRMWARE_VERSION;
-        doc["ssid"] = WiFi.SSID();
-        doc["ip"] = ipStr;
-        doc["rssi"] = WiFi.RSSI();
-        doc["uptime_s"] = millis() / 1000UL;
-        doc["free_heap"] = ESP.getFreeHeap();
-        doc["max_block"] = ESP.getMaxFreeBlockSize();
-        doc["heap_frag"] = ESP.getHeapFragmentation();
-
         char payload[320];
-        size_t n = serializeJson(doc, payload, sizeof(payload));
-        if (n >= sizeof(payload)) {
-            LOG_ERROR("[MQTT] Hub info JSON too large");
+        int n = snprintf(payload, sizeof(payload),
+                         "{\"firmware\":\"%s\","
+                         "\"ssid\":\"%s\","
+                         "\"ip\":\"%u.%u.%u.%u\","
+                         "\"rssi\":%d,"
+                         "\"uptime_s\":%lu,"
+                         "\"free_heap\":%u,"
+                         "\"max_block\":%u,"
+                         "\"heap_frag\":%u}",
+                         FIRMWARE_VERSION,
+                         WiFi.SSID().c_str(),
+                         (unsigned)ip[0], (unsigned)ip[1], (unsigned)ip[2], (unsigned)ip[3],
+                         (int)WiFi.RSSI(),
+                         (unsigned long)(millis() / 1000UL),
+                         (unsigned)ESP.getFreeHeap(),
+                         (unsigned)ESP.getMaxFreeBlockSize(),
+                         (unsigned)ESP.getHeapFragmentation());
+        if (n <= 0 || (size_t)n >= sizeof(payload)) {
+            LOG_ERROR("[MQTT] Hub info JSON too large (n=%d)", n);
             return false;
         }
 
@@ -186,9 +192,9 @@ class MQTTConnector {
         char identifier[24]; // "ir_hub_" + 12 mac hex + null
         commandTopicForUuid(device.uuid.c_str(), cmdTopic, sizeof(cmdTopic));
         stateTopicForUuid(device.uuid.c_str(), stTopic, sizeof(stTopic));
-        snprintf(uniqueId, sizeof(uniqueId), "ir_hub_%s_%s", hubMacHex.c_str(),
+        snprintf(uniqueId, sizeof(uniqueId), "ir_hub_%s_%s", hubMacHex,
                  device.uuid.c_str());
-        snprintf(identifier, sizeof(identifier), "ir_hub_%s", hubMacHex.c_str());
+        snprintf(identifier, sizeof(identifier), "ir_hub_%s", hubMacHex);
 
         JsonDocument doc;
         doc["name"] = device.name;
@@ -243,7 +249,7 @@ class MQTTConnector {
 
     bool subscribeCommands() {
         char sub[kTopicBufSize];
-        snprintf(sub, sizeof(sub), "ir_hub/%s/device/+/set", hubMacHex.c_str());
+        snprintf(sub, sizeof(sub), "ir_hub/%s/device/+/set", hubMacHex);
         bool ok = mqttClient.subscribe(sub);
         if (!ok) {
             LOG_ERROR("[MQTT] Failed to subscribe to command topics");
@@ -293,7 +299,7 @@ class MQTTConnector {
             return;
         }
 
-        const size_t macLen = hubMacHex.length();
+        const size_t macLen = strlen(hubMacHex);
         const size_t kPrefixFixed = sizeof("ir_hub/") - 1;        // 7
         const size_t kMid = sizeof("/device/") - 1;               // 8
         const size_t kSuffix = sizeof("/set") - 1;                // 4
@@ -305,7 +311,7 @@ class MQTTConnector {
         if (memcmp(topic, "ir_hub/", kPrefixFixed) != 0) {
             return;
         }
-        if (memcmp(topic + kPrefixFixed, hubMacHex.c_str(), macLen) != 0) {
+        if (memcmp(topic + kPrefixFixed, hubMacHex, macLen) != 0) {
             return;
         }
         if (memcmp(topic + kPrefixFixed + macLen, "/device/", kMid) != 0) {
@@ -349,7 +355,7 @@ class MQTTConnector {
 
     bool connectBroker() {
         char clientId[24];  // "ir_hub_" (7) + 12 mac hex + null = 20
-        snprintf(clientId, sizeof(clientId), "ir_hub_%s", hubMacHex.c_str());
+        snprintf(clientId, sizeof(clientId), "ir_hub_%s", hubMacHex);
         const char* user = mqttCredentialsUser();  // nullptr creds => anonymous connect
         const char* pass = mqttCredentialsPass();
         const char* userArg = (user && *user) ? user : nullptr;
@@ -404,6 +410,7 @@ class MQTTConnector {
           lastConnectState(MQTT_DISCONNECTED),
           lastReconnectAttempt(0),
           lastInfoPublishMs(0) {
+        hubMacHex[0] = '\0';
         mqttClient.setBufferSize(640);  // reduced from 768 to lower persistent heap
         mqttClient.setKeepAlive(60);
     }
@@ -445,10 +452,10 @@ class MQTTConnector {
         mqttClient.setCallback(staticCallback);
         enabled = true;
 
-        hubMacHex = buildStaMacHex();
+        buildStaMacHex(hubMacHex);
         LOG_INFO("[MQTT] Broker %s:%u, topic ns ir_hub/%s/device/...",
                  mqttCredentialsHost(), (unsigned)mqttCredentialsPort(),
-                 hubMacHex.c_str());
+                 hubMacHex);
 
         if (connectBroker()) {
             LOG_INFO("[MQTT] Home Assistant MQTT enabled");

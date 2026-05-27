@@ -123,9 +123,17 @@ class OtaUpdater {
 
    private:
     static constexpr unsigned long kBootDelayMs = 30UL * 1000UL;
+    // Auto-checks: enter the path with comfortable headroom (TLS peak ~11 KB).
     static constexpr uint32_t kMinHeapForManifest = 14 * 1024;
+    // Manual checks (user pressed a button / MQTT command): allow a hair lower so
+    // a user-initiated check is rarely refused.
     static constexpr uint32_t kMinHeapForManualManifest = 13 * 1024;
     static constexpr uint16_t kMinMaxBlockForManifest = 7 * 1024;  // BearSSL needs ~6 KB contiguous
+    // Extra safety guard after WiFiClientSecure has been allocated but before the
+    // TLS handshake fires. If headroom is below this, abort cleanly instead of
+    // letting BearSSL trip an exception inside http.GET().
+    static constexpr uint32_t kMinHeapBeforeGet = 7 * 1024;
+    static constexpr uint16_t kMinMaxBlockBeforeGet = 5 * 1024;
     static constexpr int kTlsRxBuffer = 1024;  // MFLN; 512 breaks Cloudflare cert chain
     static constexpr int kTlsTxBuffer = 512;
 
@@ -142,6 +150,11 @@ class OtaUpdater {
     CheckStatus lastCheckStatus_ = CheckStatus::NEVER;
 
     std::function<void(const char*, const char*)> onUpdatePending_;
+
+    // Set by fetchManifest() when it bails out because of low heap *after* the
+    // pre-check guard, so performCheck() can report LOW_HEAP instead of a
+    // generic CHECK_FAILED.
+    bool lowHeapDuringFetch_ = false;
 
     void markCheckComplete(CheckStatus status) {
         lastCheckStatus_ = status;
@@ -172,11 +185,15 @@ class OtaUpdater {
             return CheckStatus::LOW_HEAP;
         }
 
+        lowHeapDuringFetch_ = false;
         String firmwareUrl;
         String newVersion;
         String firmwareMd5;
         uint32_t firmwareSize = 0;
         if (!fetchManifest(firmwareUrl, newVersion, firmwareSize, firmwareMd5)) {
+            if (lowHeapDuringFetch_) {
+                return CheckStatus::LOW_HEAP;
+            }
             return CheckStatus::CHECK_FAILED;
         }
 
@@ -233,12 +250,29 @@ class OtaUpdater {
         http.setTimeout(10000);
         http.useHTTP10(true);
         http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-        http.setUserAgent(String("IRHub/") + currentVersion_);
+        // Note: intentionally NOT calling setUserAgent — every variant of it allocates a
+        // String, and we need every byte of heap for the upcoming TLS handshake.
         if (!http.begin(*client, manifestUrl_)) {
             LOG_WARN("[OTA-HTTP] http.begin failed for manifest");
             return false;
         }
         sample("after http.begin");
+
+        // Last guard: BearSSL is about to bring up the TLS state for the handshake.
+        // If we'd dip below the safety floor, abort cleanly rather than crash.
+        {
+            uint32_t freeNow = ESP.getFreeHeap();
+            uint16_t blockNow = ESP.getMaxFreeBlockSize();
+            if (freeNow < kMinHeapBeforeGet || blockNow < kMinMaxBlockBeforeGet) {
+                LOG_WARN("[OTA-HTTP] Aborting before GET — low heap "
+                         "(free=%u<%u, max_block=%u<%u)",
+                         (unsigned)freeNow, (unsigned)kMinHeapBeforeGet,
+                         (unsigned)blockNow, (unsigned)kMinMaxBlockBeforeGet);
+                http.end();
+                lowHeapDuringFetch_ = true;
+                return false;
+            }
+        }
 
         int code = http.GET();
         sample("after http.GET");  // TLS handshake completes here — usually the spike
